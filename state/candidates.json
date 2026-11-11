@@ -1,0 +1,444 @@
+{
+ "date": "2026-11-11",
+ "items": [
+  {
+   "id": "gh:openmontageinc/openmontage",
+   "source": "github",
+   "kw": "claude code video",
+   "title": "OpenMontage",
+   "url": "https://github.com/OpenMontageInc/OpenMontage",
+   "stars": 79542,
+   "date": "2026-11-09",
+   "facts": [
+    "Nom du dépôt GitHub : OpenMontageInc/OpenMontage",
+    "Étoiles GitHub : 79 542",
+    "Description officielle (anglais) : World's first open-source, agentic video production system. 12 production pipelines, 100+ tools, 700+ agent skill and production-knowledge files. Turn your AI coding assistant into a full video production studio.",
+    "Langage principal : Python",
+    "Licence : AGPL-3.0",
+    "Thèmes : agent, agentic-ai, ai, claude, copilot, cursor, elevenlabs, ffmpeg",
+    "Dernière mise à jour : 2026-11-09"
+   ]
+  },
+  {
+   "id": "gh:vincentwei1021/video-shotcraft",
+   "source": "github",
+   "kw": "claude code video",
+   "title": "video-shotcraft",
+   "url": "https://github.com/Vincentwei1021/video-shotcraft",
+   "stars": 18604,
+   "date": "2026-11-09",
+   "facts": [
+    "Nom du dépôt GitHub : Vincentwei1021/video-shotcraft",
+    "Étoiles GitHub : 18 604",
+    "Description officielle (anglais) : AI video skill for Claude Code & Codex — cinematic, editable product promos with Remotion: 124 shot recipe cards, 150 motion previews, beat sync, sound design, Motion Workbench & JianYing (CapCut CN) export.",
+    "Langage principal : TypeScript",
+    "Licence : Apache-2.0",
+    "Thèmes : agent-skills, ai-agents, ai-video, claude-code, claude-code-skills, claude-skills, codex, motion-design",
+    "Dernière mise à jour : 2026-11-09"
+   ]
+  },
+  {
+   "id": "gh:lemomo-ai/lemo-opuscar",
+   "source": "github",
+   "kw": "claude code video",
+   "title": "lemo-opuscar",
+   "url": "https://github.com/lemomo-ai/lemo-opuscar",
+   "stars": 14664,
+   "date": "2026-11-10",
+   "facts": [
+    "Nom du dépôt GitHub : lemomo-ai/lemo-opuscar",
+    "Étoiles GitHub : 14 664",
+    "Description officielle (anglais) : A toolbox of film styles made in code for Claude Code: 66 ready to use, and your own. Each style is a style prompt plus a demo film made entirely in code by Claude Opus 5.5, with no video model. By Lemomo. · 一套用代码做片的风格工具箱：66 种现成风格，也能做出你自己的",
+    "Langage principal : JavaScript",
+    "Licence : MIT",
+    "Thèmes : agent-skills, ai-agents, ai-short-film, ai-video, animation, canvas, claude, claude-code",
+    "Dernière mise à jour : 2026-11-10"
+   ]
+  },
+  {
+   "id": "gh:rehan-remade/universal-modder",
+   "source": "github",
+   "kw": "claude code video",
+   "title": "universal-modder",
+   "url": "https://github.com/rehan-remade/universal-modder",
+   "stars": 9602,
+   "date": "2026-11-11",
+   "facts": [
+    "Nom du dépôt GitHub : rehan-remade/universal-modder",
+    "Étoiles GitHub : 9 602",
+    "Description officielle (anglais) : Point Claude at any game. Skills, tools and the fal MCP that let Claude Code mod almost any PC game you own: recon, reverse engineering, fal-generated art/3D/audio, in-game testing, showcase videos.",
+    "Langage principal : Python",
+    "Licence : MIT",
+    "Thèmes : age-of-empires, claude-code, claude-code-plugin, fal, game-assets, game-modding, mcp, modding",
+    "Dernière mise à jour : 2026-11-11"
+   ]
+  },
+  {
+   "id": "gh:kajisho5/ffmpeg-skill",
+   "source": "github",
+   "kw": "claude code video",
+   "title": "ffmpeg-skill",
+   "url": "https://github.com/kajisho5/ffmpeg-skill",
+   "stars": 5051,
+   "date": "2026-11-11",
+   "facts": [
+    "Nom du dépôt GitHub : kajisho5/ffmpeg-skill",
+    "Étoiles GitHub : 5 051",
+    "Description officielle (anglais) : Local video editor for coding agents: 42 FFmpeg tools with a machine-readable contract and an MCP server, for Claude Code, Cursor and Codex. Cut, captions, reframe, loudness, platform exports. No cloud, no API keys.",
+    "Langage principal : Python",
+    "Licence : MIT",
+    "Thèmes : agent-skills, ai-agents, audio-processing, captions, claude-code, codex, coding-agent, cursor",
+    "Dernière mise à jour : 2026-11-11"
+   ]
+  },
+  {
+   "id": "gh:vincentwei1021/anything2explainer",
+   "source": "github",
+   "kw": "claude code video",
+   "title": "anything2explainer",
+   "url": "https://github.com/Vincentwei1021/anything2explainer",
+   "stars": 3215,
+   "date": "2026-11-09",
+   "facts": [
+    "Nom du dépôt GitHub : Vincentwei1021/anything2explainer",
+    "Étoiles GitHub : 3 215",
+    "Description officielle (anglais) : Topic in, narrated explainer video out. A Claude Code / Codex skill that turns any topic into a black-canvas motion-graphics explainer video with TTS voiceover, subtitles and a chapter progress bar. Chinese or English; every frame drawn in code with Remotion.",
+    "Langage principal : TypeScript",
+    "Thèmes : agent-skills, ai-agents, ai-video, claude-code, claude-code-skill, codex, edge-tts, educational-video",
+    "Dernière mise à jour : 2026-11-09"
+   ]
+  },
+  {
+   "id": "gh:johnheibel/pdoomvideo",
+   "source": "github",
+   "kw": "claude code video",
+   "title": "PDoomVideo",
+   "url": "https://github.com/JohnHeibel/PDoomVideo",
+   "stars": 2905,
+   "date": "2026-09-25",
+   "facts": [
+    "Nom du dépôt GitHub : JohnHeibel/PDoomVideo",
+    "Étoiles GitHub : 2 905",
+    "Description officielle (anglais) : Source code for the Claude Opus 5.5 music video for I'm Upping My P(doom)",
+    "Langage principal : JavaScript",
+    "Dernière mise à jour : 2026-09-25"
+   ]
+  },
+  {
+   "id": "gh:nateherkai/herk-edit-kit",
+   "source": "github",
+   "kw": "claude code video",
+   "title": "herk-edit-kit",
+   "url": "https://github.com/nateherkai/herk-edit-kit",
+   "stars": 2740,
+   "date": "2026-10-14",
+   "facts": [
+    "Nom du dépôt GitHub : nateherkai/herk-edit-kit",
+    "Étoiles GitHub : 2 740",
+    "Description officielle (anglais) : Herk Edit Kit by Nate Herk: edit videos, reels, and YouTube Shorts with Codex or Claude Code. 15 skills, transcript-driven cuts, storytelling, 406 motion-graphics cards, and HyperFrames templates.",
+    "Langage principal : HTML",
+    "Thèmes : claude-code, codex, herk-edit-kit, hyperframes, motion-graphics, nate-herk, reels, video-editing",
+    "Dernière mise à jour : 2026-10-14"
+   ]
+  },
+  {
+   "id": "gh:digitalsamba/claude-code-video-toolkit",
+   "source": "github",
+   "kw": "claude code video",
+   "title": "claude-code-video-toolkit",
+   "url": "https://github.com/digitalsamba/claude-code-video-toolkit",
+   "stars": 2514,
+   "date": "2026-11-10",
+   "facts": [
+    "Nom du dépôt GitHub : digitalsamba/claude-code-video-toolkit",
+    "Étoiles GitHub : 2 514",
+    "Description officielle (anglais) : Make videos with Claude Code: script, AI voiceover, music, video clips and render, on open-source models that cost cents",
+    "Langage principal : Python",
+    "Licence : MIT",
+    "Thèmes : agent-skills, ai-video, ai-video-generator, claude, claude-code, developer-tools, elevenlabs, ltx-video",
+    "Dernière mise à jour : 2026-11-10"
+   ]
+  },
+  {
+   "id": "gh:shinyobjectz/raea",
+   "source": "github",
+   "kw": "motion graphics",
+   "title": "raea",
+   "url": "https://github.com/shinyobjectz/raea",
+   "stars": 2055,
+   "date": "2026-11-11",
+   "facts": [
+    "Nom du dépôt GitHub : shinyobjectz/raea",
+    "Étoiles GitHub : 2 055",
+    "Description officielle (anglais) : Render Anything Engine: tell your AI what to make. Videos, motion graphics, 3D and games as React and TypeScript, rendered on your own GPU. Rust + Bevy, macOS, Linux and Windows.",
+    "Langage principal : TypeScript",
+    "Thèmes : 3d, agent-skills, ai-agents, ai-video, bevy, claude-code, game-engine, gpu",
+    "Dernière mise à jour : 2026-11-11"
+   ]
+  },
+  {
+   "id": "gh:bangtutorial/bang-motion",
+   "source": "github",
+   "kw": "motion graphics",
+   "title": "bang-motion",
+   "url": "https://github.com/bangtutorial/bang-motion",
+   "stars": 2030,
+   "date": "2026-09-15",
+   "facts": [
+    "Nom du dépôt GitHub : bangtutorial/bang-motion",
+    "Étoiles GitHub : 2 030",
+    "Description officielle (anglais) : Agent skill for browser motion graphics — openers, promos, bumpers, kinetic typography, and five explainer styles that move like video, not slides. Single index.html output. Works with Claude Code, Codex, Gemini CLI, Cursor.",
+    "Langage principal : HTML",
+    "Licence : MIT",
+    "Dernière mise à jour : 2026-09-15"
+   ]
+  },
+  {
+   "id": "gh:veedstudio/open-edit",
+   "source": "github",
+   "kw": "motion graphics",
+   "title": "open-edit",
+   "url": "https://github.com/veedstudio/open-edit",
+   "stars": 1794,
+   "date": "2026-11-05",
+   "facts": [
+    "Nom du dépôt GitHub : veedstudio/open-edit",
+    "Étoiles GitHub : 1 794",
+    "Description officielle (anglais) : Open-source, agent-driven editing pipeline: create subtitles, motion graphics, slides, edit and render videos.",
+    "Langage principal : TypeScript",
+    "Licence : Apache-2.0",
+    "Thèmes : ai-agents, captions, claude-code, ffmpeg, macos, subtitles, transcription, video",
+    "Dernière mise à jour : 2026-11-05"
+   ]
+  },
+  {
+   "id": "gh:tejashmakwana/motionmaxxing",
+   "source": "github",
+   "kw": "motion graphics",
+   "title": "motionmaxxing",
+   "url": "https://github.com/Tejashmakwana/motionmaxxing",
+   "stars": 1526,
+   "date": "2026-10-06",
+   "facts": [
+    "Nom du dépôt GitHub : Tejashmakwana/motionmaxxing",
+    "Étoiles GitHub : 1 526",
+    "Description officielle (anglais) : Looksmaxxing for motion graphics. An agent skill that turns AI slop videos into films that look made by a motion designer.",
+    "Langage principal : JavaScript",
+    "Licence : Apache-2.0",
+    "Thèmes : agent-skills, ai, claude-code, gsap, hyperframes, motion-graphics, motionmaxxing, video",
+    "Dernière mise à jour : 2026-10-06"
+   ]
+  },
+  {
+   "id": "gh:nextlevelbuilder/ui-ux-pro-max-skill",
+   "source": "github",
+   "kw": "claude design",
+   "title": "ui-ux-pro-max-skill",
+   "url": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+   "stars": 147993,
+   "date": "2026-11-10",
+   "facts": [
+    "Nom du dépôt GitHub : nextlevelbuilder/ui-ux-pro-max-skill",
+    "Étoiles GitHub : 147 993",
+    "Description officielle (anglais) : An AI skill that provides design intelligence for building professional UI/UX across multiple platforms.",
+    "Langage principal : Python",
+    "Licence : MIT",
+    "Thèmes : ai-skills, antigravity, claude, claude-code, codex, command-line, copilot, cursor-ai",
+    "Dernière mise à jour : 2026-11-10"
+   ]
+  },
+  {
+   "id": "gh:cathrynlavery/diagram-design",
+   "source": "github",
+   "kw": "claude design",
+   "title": "diagram-design",
+   "url": "https://github.com/cathrynlavery/diagram-design",
+   "stars": 66426,
+   "date": "2026-11-10",
+   "facts": [
+    "Nom du dépôt GitHub : cathrynlavery/diagram-design",
+    "Étoiles GitHub : 66 426",
+    "Description officielle (anglais) : Editorial diagram design for Claude Code, Codex, GitHub Copilot, Cursor, Factory Droid, Qoder, and Pi. 45 diagram types. Self-contained HTML + SVG. No shadows. No Mermaid slop.",
+    "Langage principal : HTML",
+    "Licence : MIT",
+    "Thèmes : agent-skills, claude-code, codex, data-visualization, diagrams, drawio, mermaid, svg",
+    "Dernière mise à jour : 2026-11-10"
+   ]
+  },
+  {
+   "id": "gh:nutlope/hallmark",
+   "source": "github",
+   "kw": "claude design",
+   "title": "hallmark",
+   "url": "https://github.com/Nutlope/hallmark",
+   "stars": 52957,
+   "date": "2026-11-10",
+   "facts": [
+    "Nom du dépôt GitHub : Nutlope/hallmark",
+    "Étoiles GitHub : 52 957",
+    "Description officielle (anglais) : Anti-AI-slop design skill for Claude Code, Cursor, and Codex.",
+    "Langage principal : CSS",
+    "Licence : MIT",
+    "Dernière mise à jour : 2026-11-10"
+   ]
+  },
+  {
+   "id": "gh:anthropics/claude-quickstarts",
+   "source": "github",
+   "kw": "claude design",
+   "title": "claude-quickstarts",
+   "url": "https://github.com/anthropics/claude-quickstarts",
+   "stars": 20694,
+   "date": "2026-11-06",
+   "facts": [
+    "Nom du dépôt GitHub : anthropics/claude-quickstarts",
+    "Étoiles GitHub : 20 694",
+    "Description officielle (anglais) : A collection of projects designed to help developers quickly get started with building deployable applications using the Claude API",
+    "Langage principal : Python",
+    "Licence : MIT",
+    "Dernière mise à jour : 2026-11-06"
+   ]
+  },
+  {
+   "id": "gh:conardli/garden-skills",
+   "source": "github",
+   "kw": "claude design",
+   "title": "garden-skills",
+   "url": "https://github.com/ConardLi/garden-skills",
+   "stars": 14927,
+   "date": "2026-11-08",
+   "facts": [
+    "Nom du dépôt GitHub : ConardLi/garden-skills",
+    "Étoiles GitHub : 14 927",
+    "Description officielle (anglais) : ConardLi's open-source Skills collection, featuring web design, knowledge retrieval, image generation, and more.",
+    "Langage principal : JavaScript",
+    "Licence : MIT",
+    "Thèmes : agent, claude, gpt-image-2, rag, skills, web-design",
+    "Dernière mise à jour : 2026-11-08"
+   ]
+  },
+  {
+   "id": "gh:heydamir/unslop",
+   "source": "github",
+   "kw": "claude design",
+   "title": "unslop",
+   "url": "https://github.com/heydamir/unslop",
+   "stars": 14124,
+   "date": "2026-11-08",
+   "facts": [
+    "Nom du dépôt GitHub : heydamir/unslop",
+    "Étoiles GitHub : 14 124",
+    "Description officielle (anglais) : A Claude skill that turns vibecoded, AI-looking UI into a designed interface",
+    "Langage principal : JavaScript",
+    "Licence : CC-BY-4.0",
+    "Dernière mise à jour : 2026-11-08"
+   ]
+  },
+  {
+   "id": "gh:cobusgreyling/loop-engineering",
+   "source": "github",
+   "kw": "claude design",
+   "title": "loop-engineering",
+   "url": "https://github.com/cobusgreyling/loop-engineering",
+   "stars": 11747,
+   "date": "2026-11-11",
+   "facts": [
+    "Nom du dépôt GitHub : cobusgreyling/loop-engineering",
+    "Étoiles GitHub : 11 747",
+    "Description officielle (anglais) : Practical patterns, starters & CLI tools for loop engineering with AI coding agents. Design systems that prompt and orchestrate agents (inspired by Addy Osmani and Boris Cherny). Includes loop-audit, loop-init, loop-cost.",
+    "Langage principal : TypeScript",
+    "Licence : MIT",
+    "Thèmes : agentic-ai, ai-agents, ai-coding, anthropic, automation, claude, claude-code, codex",
+    "Dernière mise à jour : 2026-11-11"
+   ]
+  },
+  {
+   "id": "gh:devin-axis/ipollowork",
+   "source": "github",
+   "kw": "video skill",
+   "title": "iPolloWork",
+   "url": "https://github.com/Devin-AXIS/iPolloWork",
+   "stars": 7451,
+   "date": "2026-11-11",
+   "facts": [
+    "Nom du dépôt GitHub : Devin-AXIS/iPolloWork",
+    "Étoiles GitHub : 7 451",
+    "Description officielle (anglais) : Enterprise-grade, local-first Agent Workbench for people and agent teams. A unified multi-engine workspace for Codex Harness, DeepSeek Harness, and OpenCode, with unified plugins and Skills, multi-agent projects and tasks, and editable code, documents, present",
+    "Langage principal : TypeScript",
+    "Thèmes : agent-collaboration, agent-skills, ai-agents, ai-work, claude-code, codex, codex-plugin, deepseek-harness",
+    "Dernière mise à jour : 2026-11-11"
+   ]
+  },
+  {
+   "id": "gh:remotion-dev/remotion",
+   "source": "github",
+   "kw": "remotion video",
+   "title": "remotion",
+   "url": "https://github.com/remotion-dev/remotion",
+   "stars": 72369,
+   "date": "2026-11-11",
+   "facts": [
+    "Nom du dépôt GitHub : remotion-dev/remotion",
+    "Étoiles GitHub : 72 369",
+    "Description officielle (anglais) : 🎥      Make videos programmatically with React",
+    "Langage principal : TypeScript",
+    "Thèmes : javascript, react, video",
+    "Dernière mise à jour : 2026-11-11"
+   ]
+  },
+  {
+   "id": "gh:juneyaooo/rea-video",
+   "source": "github",
+   "kw": "remotion video",
+   "title": "rea-video",
+   "url": "https://github.com/JuneYaooo/rea-video",
+   "stars": 6773,
+   "date": "2026-11-11",
+   "facts": [
+    "Nom du dépôt GitHub : JuneYaooo/rea-video",
+    "Étoiles GitHub : 6 773",
+    "Description officielle (anglais) : Reverse-engineer any video, shot by shot: filmed, AI-generated or coded, and how to remake it. 逆向一切视频，逐个镜头看是拍的、AI 生成的还是代码做的，再告诉你怎么复刻。",
+    "Langage principal : Python",
+    "Licence : Apache-2.0",
+    "Thèmes : agent-skills, ai-video, aigc-detection, claude-code, codex, ffmpeg, prompt-engineering, remotion",
+    "Dernière mise à jour : 2026-11-11"
+   ]
+  },
+  {
+   "id": "gh:dmtrkovalenko/fframes",
+   "source": "github",
+   "kw": "remotion video",
+   "title": "fframes",
+   "url": "https://github.com/dmtrKovalenko/fframes",
+   "stars": 3071,
+   "date": "2026-11-08",
+   "facts": [
+    "Nom du dépôt GitHub : dmtrKovalenko/fframes",
+    "Étoiles GitHub : 3 071",
+    "Description officielle (anglais) : programmatic video rendering framework that is actually fast",
+    "Langage principal : Rust",
+    "Licence : MIT",
+    "Thèmes : agentic-ai, motion-graphics, remotion, video",
+    "Dernière mise à jour : 2026-11-08"
+   ]
+  },
+  {
+   "id": "gh:0xsline/openchatcut",
+   "source": "github",
+   "kw": "remotion video",
+   "title": "OpenChatCut",
+   "url": "https://github.com/0xsline/OpenChatCut",
+   "stars": 3056,
+   "date": "2026-11-06",
+   "facts": [
+    "Nom du dépôt GitHub : 0xsline/OpenChatCut",
+    "Étoiles GitHub : 3 056",
+    "Description officielle (anglais) : Open-source, local-first conversational AI video editor with a professional multi-track timeline, Agent Skills, MCP integration, and Remotion rendering.",
+    "Langage principal : TypeScript",
+    "Licence : AGPL-3.0",
+    "Thèmes : agent-skills, agentic-ai, ai-agent, ai-video-editor, capcut, chatcut, claude-code, codex",
+    "Dernière mise à jour : 2026-11-06"
+   ]
+  }
+ ]
+}
