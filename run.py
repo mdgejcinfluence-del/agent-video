@@ -327,7 +327,16 @@ def cmd_doctor(args, cfg, state) -> int:
         if any(secret(k) for k in keys):
             line(all(secret(k) for k in keys), name, "clés : " + ", ".join(k for k in keys if secret(k)))
     base = mediahost.base_url(cfg, ROOT)
-    line(True if base else None, "hébergement des vidéos", base or "pas de dépôt GitHub détecté ici")
+    if pcfg.get("media_host", "github_pages") == "cloudinary":
+        has = bool(secret("CLOUDINARY_URL"))
+        line(True if has else None, "hébergement des vidéos (Cloudinary)", "secret présent" if has else "secret CLOUDINARY_URL absent")
+    elif not base:
+        line(None, "hébergement des vidéos", "pas de dépôt GitHub détecté ici")
+    elif not args.live:
+        line(True, "hébergement des vidéos", base + " (ajoute --live pour le tester)")
+    else:
+        good, detail = mediahost.selftest(cfg, ROOT, int(pcfg.get("keep_videos", 30)))
+        line(good, "hébergement des vidéos", detail)
     print("Quotas du jour : " + (json.dumps(state.load("quota", {}).get(now().strftime("%Y-%m-%d"), {}), ensure_ascii=False) or "{}"))
     return 0 if ok else 1
 

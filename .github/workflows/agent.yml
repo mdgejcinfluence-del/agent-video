@@ -40,7 +40,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      # On part toujours de la dernière version de la branche (et non de celle du moment où la tâche a été
+      # demandée) : si deux réveils se suivent, le second voit bien la mémoire enregistrée par le premier.
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_name }}
 
       - uses: actions/setup-python@v7
         with:
@@ -97,11 +101,24 @@ jobs:
         run: |
           git config user.name "studio-agent"
           git config user.email "studio-agent@users.noreply.github.com"
+          BR="${GITHUB_REF_NAME}"
           git add state
-          if ! git diff --cached --quiet; then
-            git commit -q -m "mémoire : $(date -u +%Y-%m-%dT%H:%MZ)"
-            git pull -q --rebase origin "${GITHUB_REF_NAME}" && git push -q origin "HEAD:${GITHUB_REF_NAME}"
-          fi
+          if git diff --cached --quiet; then echo "mémoire inchangée"; exit 0; fi
+          git commit -q -m "mémoire : $(date -u +%Y-%m-%dT%H:%MZ)"
+          for essai in 1 2 3; do
+            if git push -q origin "HEAD:${BR}"; then echo "mémoire enregistrée dans le dépôt"; exit 0; fi
+            # Le dépôt a changé pendant l'exécution (par exemple config.yaml modifié à la main) :
+            # on reprend sa version, on y repose NOTRE mémoire (state/), et on réessaie.
+            rm -rf "${RUNNER_TEMP}/etat" && cp -r state "${RUNNER_TEMP}/etat"
+            git fetch -q origin "${BR}"
+            git reset -q --hard "origin/${BR}"
+            rm -rf state && cp -r "${RUNNER_TEMP}/etat" state
+            git add state
+            git diff --cached --quiet || git commit -q -m "mémoire : $(date -u +%Y-%m-%dT%H:%MZ)"
+            sleep $((essai * 3))
+          done
+          echo "::error::la mémoire de l'agent n'a pas pu être enregistrée dans le dépôt"
+          exit 1
 
       - name: Garder les vidéos 14 jours (onglet Actions > cette exécution > Artifacts)
         if: always()

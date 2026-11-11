@@ -72,7 +72,9 @@ def publish(files: dict[str, Path], cfg: dict, root: Path, keep: int = 30, log=p
     _git(["checkout", "--orphan", "media_tmp"], work)
     _git(["add", "-A"], work)
     _git(["-c", "user.name=studio-agent", "-c", "user.email=studio-agent@users.noreply.github.com", "commit", "-q", "-m", "media"], work)
-    push = _git(["push", "--force", "origin", "HEAD:refs/heads/studio-media"], work, check=False)
+    sha = _git(["rev-parse", "HEAD"], work).stdout.strip()
+    # l'envoi part du dépôt principal et non du dossier de travail : c'est là que GitHub Actions range ses droits d'écriture
+    push = _git(["push", "--force", "origin", f"{sha}:refs/heads/studio-media"], root, check=False)
     _git(["worktree", "remove", "--force", str(work)], root, check=False)
     shutil.rmtree(work, ignore_errors=True)
     _git(["branch", "-D", "media_tmp"], root, check=False)
@@ -87,7 +89,7 @@ def wait_public(url: str, size: int, timeout: int = 420, log=print) -> bool:
     t0 = time.time()
     while time.time() - t0 < timeout:
         try:
-            r = requests.head(url, timeout=20, allow_redirects=False)
+            r = requests.head(url, timeout=20, allow_redirects=False, headers={"Accept-Encoding": "identity"})
             if r.status_code == 200 and int(r.headers.get("content-length", -1)) == size:
                 return True
         except requests.RequestException:
@@ -95,6 +97,31 @@ def wait_public(url: str, size: int, timeout: int = 420, log=print) -> bool:
         time.sleep(12)
     log(f"hébergement : {url} toujours inaccessible après {timeout} s (GitHub Pages est-il activé sur la branche « studio-media » ?)")
     return False
+
+
+def selftest(cfg: dict, root: Path, keep: int = 30, timeout: int = 300) -> tuple[bool, str]:
+    """Essai réel de l'hébergement : envoie un petit fichier sur la branche, puis vérifie qu'il ressort
+    tel quel à l'adresse publique. C'est exactement le chemin que suit une vidéo avant sa publication."""
+    import tempfile
+    msgs: list[str] = []
+    token = f"essai {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} {os.urandom(4).hex()}\n"
+    t0 = time.time()
+    with tempfile.TemporaryDirectory() as td:
+        probe = Path(td) / "essai.txt"
+        probe.write_text(token, encoding="utf-8")
+        base = publish({"essai.txt": probe}, cfg, root, keep, msgs.append)
+    if not base:
+        return False, (" ; ".join(msgs) or "envoi impossible")[-300:]
+    url = f"{base}/essai.txt"
+    while time.time() - t0 < timeout:
+        try:
+            r = requests.get(url, timeout=20, headers={"Cache-Control": "no-cache"})
+            if r.status_code == 200 and r.text == token:
+                return True, f"fichier d'essai envoyé, puis relu à {url} au bout de {time.time() - t0:.0f} s"
+        except requests.RequestException:
+            pass
+        time.sleep(8)
+    return False, f"fichier envoyé, mais {url} ne le sert pas après {timeout} s (Settings > Pages : branche « studio-media », dossier « / (root) »)"
 
 
 # --------------------------------------------------------------------------- Cloudinary (alternative)
