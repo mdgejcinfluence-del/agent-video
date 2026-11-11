@@ -167,8 +167,8 @@ def _bloc(pb: list[str], where: str, b: dict) -> dict:
                 o["label"] = _txt(pb, where, b.get("label"), 2, 26, "label")
         else:
             eff = [e for e in (b.get("effets") or []) if e in EFFETS]
-            if len(eff) < 2:
-                pb.append(f"{where} : « avant_apres » demande 2 à 5 effets parmi {', '.join(EFFETS)}")
+            if len(eff) < 1:
+                pb.append(f"{where} : « avant_apres » demande 1 à 5 effets parmi {', '.join(EFFETS)}")
             o["effets"] = list(dict.fromkeys(eff))[:5]
             if "titre" in o["effets"]:
                 o["titre"] = _txt(pb, where, b.get("titre"), 3, 24, "titre incrusté")

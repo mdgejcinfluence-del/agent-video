@@ -17,7 +17,8 @@
   "points": [
    "Les couleurs : un peu de contraste réveille l'image",
    "Le zoom : il guide l'œil vers le produit",
-   "Le titre et les sous-titres : on comprend sans le son",
+   "Le titre : il dit le sujet d'un coup d'œil",
+   "Les sous-titres : on comprend sans le son",
    "La barre : elle montre que la fin approche"
   ],
   "limite": "Ces effets rendent une image plus lisible ; ils ne sauvent pas un rush flou, sombre ou hors sujet."
@@ -101,13 +102,13 @@
    ]
   },
   {
-   "title": "Titre et *sous-titres*",
+   "title": "Le *titre*",
    "tuile": {
     "label": "EFFET",
     "n": 3
    },
    "pose": "ordi",
-   "say": "Effets trois et quatre. [a]Sur ce rush brut, [a1]j'ajoute [a2]un titre qui dit le sujet, [a3]et des sous-titres qui suivent la voix.",
+   "say": "Effet trois : le titre. [a]Sur ce rush brut, [a1]j'écris [a2]en haut ce que l'image montre.",
    "blocks": [
     {
      "kind": "avant_apres",
@@ -115,11 +116,30 @@
      "voir": "une main qui pose un pot de crème au centre du cadre",
      "cadre": "portrait",
      "effets": [
-      "titre",
+      "titre"
+     ],
+     "titre": "Nouveau *soin*"
+    }
+   ]
+  },
+  {
+   "title": "Les *sous-titres*",
+   "tuile": {
+    "label": "EFFET",
+    "n": 4
+   },
+   "pose": "bras_croises",
+   "say": "Effet quatre : les sous-titres. [a]Sur un rush brut, [a1]j'ajoute [a2]les mots que dit la voix : on comprend même sans le son.",
+   "blocks": [
+    {
+     "kind": "avant_apres",
+     "q": "hands holding product jar cream",
+     "voir": "deux mains qui tiennent un pot de crème",
+     "cadre": "portrait",
+     "effets": [
       "sous_titres"
      ],
-     "titre": "Nouveau *soin*",
-     "sous_titre": "pot de crème"
+     "sous_titre": "ton produit ici"
     }
    ]
   },

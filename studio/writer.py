@@ -134,7 +134,7 @@ def systeme(cfg: dict) -> str:
         ' {"kind":"chrono","valeur":"…","unite":"…"} (seulement avec un chiffre qui vient d\'un fait vérifié)   {"kind":"fenetre","titre":"Assistant IA","question":"…","reponse":"…"}',
         ' {"kind":"mot","text":"16 caractères au plus","sous":"facultatif"}   {"kind":"etiquette","text":"26 caractères au plus"}   {"kind":"tuiles_video","n":2 à 4}',
         ' {"kind":"rush","q":"…","voir":"…","cadre":"portrait","label":"facultatif, 26 caractères au plus"}',
-        ' {"kind":"avant_apres","q":"…","voir":"…","cadre":"portrait","effets":[2 à 5 parmi ' + ", ".join(schema.EFFETS) + '],"titre":"titre incrusté, 24 caractères au plus","sous_titre":"2 à 4 mots"}',
+        ' {"kind":"avant_apres","q":"…","voir":"…","cadre":"portrait","effets":[1 à 5 parmi ' + ", ".join(schema.EFFETS) + '],"titre":"titre incrusté, 24 caractères au plus","sous_titre":"2 à 4 mots"}',
         "Repères dans « say » : [a] fait apparaître le 1er bloc au mot qui suit, [a1] [a2]… ses éléments dans l'ordre (éléments d'une liste, 2 cartes, pictogrammes ; pour « avant_apres » : [a1] = passage à la version montée, puis [a2]… = chaque effet). [b], [b1]… pour le 2e bloc.",
         f"Longueur : {schema.MOTS[0]} à {schema.MOTS[1]} mots prononcés au total (vise 150 à 185). Écran 1 : 8 à 32 mots. Autres écrans : 12 à 55 mots.",
         "Un écran ne peut pas contenir à la fois une séquence « portrait » et une longue liste : une séquence « avant_apres » occupe l'écran à elle seule.",
