@@ -1,32 +1,33 @@
-# Le « serveur » gratuit de l'agent : GitHub réveille cette tâche aux heures ci-dessous,
-# l'agent fait son travail (mesures -> veille -> choix du sujet -> vidéo -> porte de publication),
-# enregistre sa mémoire dans le dépôt, puis la machine s'éteint. Ton ordinateur peut rester éteint.
+# Le « serveur » gratuit de l'agent : GitHub réveille cette tâche aux heures ci-dessous. L'agent fait son
+# travail tout seul (mesures -> bilan tous les 3 jours -> veille -> choix du sujet -> écriture -> rushs ->
+# vidéo -> publication), enregistre sa mémoire dans le dépôt, puis la machine s'éteint.
 #
 # Aucune clé n'est écrite dans le code : elles sont lues dans Settings > Secrets and variables > Actions.
-# Les 3 qui comptent : NVIDIA_API_KEY et GROQ_API_KEY (écriture des scénarios), BUFFER_API_KEY (publication).
-# Tant que config.yaml contient « dry_run: true », chaque réveil est un essai : rien n'est publié.
-# En publication réelle, chaque vidéo attend ton accord : relance cette tâche à la main avec
-# la commande « valider » et l'identifiant de la vidéo (ou « tout »).
+#   GEMINI_API_KEY                    le cerveau : écrit les scénarios, regarde les rushs, rédige le bilan
+#   PEXELS_API_KEY, PIXABAY_API_KEY   la recherche de séquences filmées libres de droits
+#   BUFFER_API_KEY                    la publication (Facebook, Instagram, TikTok) et les statistiques
+# Tant qu'aucune clé de publication n'existe, chaque réveil est un essai : rien n'est publié.
+# Le jour où elle est ajoutée, l'agent publie, sans validation et sans autre réglage.
+# Pour tout arrêter : « dry_run: true » dans config.yaml, ou désactiver cette tâche (bouton « … » en haut à droite).
 #
-# Les heures sont en UTC. Cotonou = UTC+1 : 06:20 UTC = 07:20 chez toi.
-# Si tu changes schedule.slots dans config.yaml, change aussi les lignes « cron »
-# (chaque créneau moins 10 minutes, converti en UTC).
+# Les heures sont en UTC. Cotonou = UTC+1 : 08:40 UTC = 09:40 chez toi, soit 20 minutes avant le créneau de 10:00.
+# Si tu changes schedule.slots dans config.yaml, change aussi les lignes « cron ».
 name: Agent vidéo
 
 on:
   schedule:
-    - cron: "20 6 * * *"     # créneau 07:30 (heure de Cotonou)
-    - cron: "20 11 * * *"    # créneau 12:30
-    - cron: "20 17 * * *"    # créneau 18:30
-    - cron: "20 19 * * *"    # créneau 20:30
-    - cron: "40 9,22 * * *"  # relevé des statistiques + rattrapage d'un créneau manqué
+    - cron: "40 8 * * *"      # créneau 10:00 (heure de Cotonou)
+    - cron: "40 11 * * *"     # créneau 13:00
+    - cron: "40 16 * * *"     # créneau 18:00
+    - cron: "10 19 * * *"     # créneau 20:30
+    - cron: "40 5,22 * * *"   # relevé des statistiques, bilan, veille, rattrapage d'un créneau manqué
   workflow_dispatch:
     inputs:
       commande:
-        description: "tick (réveil normal) | valider (publier une vidéo en attente) | attente | demo | doctor | plan | sujets | preuves | veille"
+        description: "tick (réveil normal) | demo (les 6 vidéos de réserve) | bilan | doctor | plan | sujets | veille | rushs"
         default: "tick"
-      video:
-        description: "Pour « valider » : identifiant de la vidéo (ex. 20261112-0730-photo), ou « tout »"
+      mots:
+        description: "Pour « rushs » : la recherche à essayer, en anglais (ex. hands packing box)"
         default: ""
       forcer:
         description: "Fabriquer une vidéo tout de suite, même hors créneau"
@@ -43,7 +44,7 @@ concurrency:
 jobs:
   agent:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
     steps:
       # On part toujours de la dernière version de la branche (et non de celle du moment où la tâche a été
       # demandée) : si deux réveils se suivent, le second voit bien la mémoire enregistrée par le premier.
@@ -73,16 +74,16 @@ jobs:
       - name: Agent
         env:
           COMMANDE: ${{ inputs.commande || 'tick' }}
-          VIDEO: ${{ inputs.video || '' }}
+          MOTS: ${{ inputs.mots || '' }}
           FORCER: ${{ inputs.forcer && '--force' || '' }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}            # fourni par GitHub à chaque exécution (rien à créer)
-          # --- les 3 clés à ajouter dans les Secrets du dépôt
-          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          # --- les clés à ajouter dans les Secrets du dépôt
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
           # --- facultatives (laisse-les absentes si tu ne t'en sers pas)
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
@@ -96,14 +97,13 @@ jobs:
         run: |
           case "$COMMANDE" in
             tick)    python run.py tick $FORCER ;;
-            valider) python run.py valider "${VIDEO:-tout}" ;;
-            attente) python run.py attente ;;
             demo)    python run.py demo ;;
+            bilan)   python run.py bilan ;;
             doctor)  python run.py doctor --live ;;
             plan)    python run.py plan ;;
             sujets)  python run.py sujets ;;
-            preuves) python run.py preuves ;;
             veille)  python run.py veille ;;
+            rushs)   python run.py rushs "${MOTS:-hands typing laptop}" ;;
             *)       echo "commande inconnue : $COMMANDE" && exit 2 ;;
           esac
 

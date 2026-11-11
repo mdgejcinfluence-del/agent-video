@@ -1,0 +1,134 @@
+{
+ "famille": "erreurs",
+ "hook_type": "probleme",
+ "title": "3 erreurs qui font zapper ta vidéo dès le début",
+ "couverture": [
+  "3 ERREURS",
+  "QUI FONT",
+  "*ZAPPER*"
+ ],
+ "keyword": "ERREURS",
+ "promesse": "la suite : filmer sans rater l'image",
+ "suite": {
+  "reserve": "r6_telephone"
+ },
+ "legende": {
+  "accroche": "Ta vidéo est zappée avant la fin ? Trois erreurs reviennent tout le temps 👇",
+  "points": [
+   "Un début trop lent : commence par le résultat",
+   "Pas de sous-titres : beaucoup de gens regardent sans le son",
+   "Aucune consigne à la fin : dis clairement quoi faire"
+  ],
+  "limite": "Ces réglages aident à être regardé jusqu'au bout ; ils ne remplacent pas un sujet qui intéresse vraiment ton public."
+ },
+ "hashtags": [
+  "#astucevideo",
+  "#creationdecontenu",
+  "#montagevideo",
+  "#reels",
+  "#videoverticale",
+  "#entrepreneuriat"
+ ],
+ "faits": [],
+ "outils": [],
+ "scenes": [
+  {
+   "title": "3 erreurs qui font *zapper*",
+   "pose": "stop",
+   "say": "Ta vidéo est zappée avant la fin ? [a]Trois erreurs reviennent tout le temps. La troisième, presque tout le monde la fait.",
+   "blocks": [
+    {
+     "kind": "mot",
+     "text": "Zap !",
+     "sous": "Et ta vidéo est déjà oubliée"
+    }
+   ]
+  },
+  {
+   "title": "Un début *trop lent*",
+   "tuile": {
+    "label": "ERREUR",
+    "n": 1
+   },
+   "pose": "reflechit",
+   "say": "Erreur un : un début trop lent. [a1]Tu dis bonjour, tu te présentes… et la personne est déjà partie. [a2]Commence par le résultat.",
+   "blocks": [
+    {
+     "kind": "cartes",
+     "cards": [
+      {
+       "tag": "Début lent",
+       "text": "Bonjour à tous…",
+       "ton": "non",
+       "note": "Zappé"
+      },
+      {
+       "tag": "Début direct",
+       "text": "Voici le résultat",
+       "ton": "oui",
+       "note": "On reste"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Pas de *sous-titres*",
+   "tuile": {
+    "label": "ERREUR",
+    "n": 2
+   },
+   "pose": "telephone",
+   "say": "Erreur deux : pas de sous-titres. Beaucoup de gens regardent sans le son. [a]Regarde cette séquence brute. [a1]Avec [a2]un titre [a3]et des sous-titres, on comprend tout, même en silence.",
+   "blocks": [
+    {
+     "kind": "avant_apres",
+     "q": "product jar hand placing",
+     "voir": "une main qui pose un pot de crème au centre du cadre",
+     "cadre": "portrait",
+     "effets": [
+      "titre",
+      "sous_titres",
+      "barre"
+     ],
+     "titre": "Nouveau *soin*",
+     "sous_titre": "pot de crème"
+    }
+   ]
+  },
+  {
+   "title": "Aucune *consigne* à la fin",
+   "tuile": {
+    "label": "ERREUR",
+    "n": 3
+   },
+   "pose": "pointe",
+   "say": "Erreur trois : aucune consigne à la fin. [a]Dis clairement quoi faire : [a1]s'abonner, [a2]commenter, [a3]ou écrire pour commander.",
+   "blocks": [
+    {
+     "kind": "liste",
+     "items": [
+      "S'abonner",
+      "Commenter un mot",
+      "Écrire pour commander"
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Retiens *ces 3 points*",
+   "pose": "pouce",
+   "say": "Donc : [a1]un début direct, [a2]des sous-titres, [a3]une consigne claire. Trois réglages simples, qui changent la façon dont on te regarde.",
+   "blocks": [
+    {
+     "kind": "check",
+     "items": [
+      "Un début direct",
+      "Des sous-titres",
+      "Une consigne claire"
+     ]
+    }
+   ]
+  }
+ ]
+}

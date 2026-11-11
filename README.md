@@ -1,296 +1,219 @@
-# Agent vidéo — des démonstrations « preuve à l'appui » pour deux publics, qui mènent à ta formation
+# Agent vidéo — un compte de vidéos courtes qui tourne tout seul
 
-Un programme qui se réveille seul, vérifie ses sources, choisit un sujet, écrit le scénario, fabrique
-la vidéo (motion design, voix, sous-titres, musique), contrôle ce qu'elle affirme, puis la présente
-à ta validation avant de la publier sur TikTok, Instagram et Facebook. Coût des services : 0 €.
+Cet agent fabrique et publie des vidéos verticales de 40 à 70 secondes, sans personne aux commandes :
+il choisit le sujet, écrit le texte, cherche de vraies séquences filmées dans des banques libres de droits,
+vérifie qu'elles montrent bien ce que dit la voix, fait le montage, publie, relève les statistiques et
+corrige sa route tous les trois jours. GitHub le réveille aux heures prévues ; ton ordinateur peut rester éteint.
 
-```
-réveil ─► mesures ─► veille ─► stratège ─► scénariste ─► garde-fous ─► voix ─► rendu ─► contrôle ─► porte de publication ─► mémoire
-          (Buffer)   (pages     (public,    (NVIDIA →     (preuve,      (edge →  (HTML →   qualité     (preuve signée, promo     (state/)
-                     officielles) sujet,     Groq → …,     nombres,      Piper)   MP4)                  confirmée, ta validation)
-                                 preuve)    ou réserve)   formulations)
-```
-
-## Le positionnement
-
-Tiré de l'étude de marché du 11 novembre 2026 : on ne vend pas « Claude sait faire des vidéos ».
-On montre **un résultat utile à une personne précise**, on prouve comment il a été obtenu, et on
-vend la méthode pour le refaire avec ses propres éléments.
-
-**Deux publics, deux séries, jamais mélangés dans une même vidéo.**
-
-| | Série « Vidéos pour ton commerce » | Série « Motion design reproductible » |
-|---|---|---|
-| Pour qui | commerçants, artisans, prestataires | créateurs de contenu et freelances |
-| Ce que la vidéo montre | un produit, une offre, une publicité prête à publier | une demande écrite, le code, l'aperçu, la correction, le rendu |
-| Ce qu'on n'y voit jamais | du code, un terminal, une liste d'outils | une promesse de revenu, de vues ou de « remplacement d'un monteur » |
-| Identité visuelle | ivoire, vert profond, jaune | nuit, violet, citron |
-
-**Pas de preuve, pas de vidéo.** Une vidéo ne montre que ce qui existe dans un dossier
-`preuves/<id>/` : la demande écrite, le code réellement écrit, les images et les vidéos réellement
-rendues. Le moteur ne dessine aucun faux écran. Quand l'exemple est inventé, la mention
-« EXEMPLE FICTIF » reste à l'écran du début à la fin.
-
-**Le fil d'une vidéo (35 à 45 secondes), toujours le même :**
-
-| Moment | Ce qui se passe |
-|---|---|
-| 0–5 s | Le résultat est à l'image dès la première image ; la voix dit l'accroche, puis nomme la personne. |
-| 5–25 s | Trois étapes liées, chacune avec sa preuve : extrait de la demande, lignes de code, rendu, avant/après, défaut entouré puis corrigé. |
-| 25–33 s | Ce qui a été vérifié, et une limite utile : un prérequis, un coût, ce qui n'est pas inclus. |
-| 33–45 s | La phrase de fin, dite et écrite mot pour mot, identique pour les deux publics. |
-
-**La phrase de fin** : « Commente MOT si tu veux la suite. La formation complète est en promo, lien
-en bio. » `MOT` est remplacé par le mot-clé de la vidéo ; rien d'autre ne change. Elle est écrite
-par le code : le modèle ne peut ni la reformuler ni y ajouter une amorce. Aucun envoi n'est promis
-(commenter ne fait rien recevoir). « La suite » est la vidéo suivante de la même série : l'agent
-vérifie qu'elle existe avant de publier.
-
-## Ce que tu dois fournir pour publier
-
-L'agent prépare tout seul. Il ne publie que lorsque ces points sont vrais — et c'est toi qui les rends vrais :
-
-1. **De vrais cas.** Les deux dossiers fournis servent à montrer le format :
-   `createur-intro-serie` (une vraie démonstration, à relire et à signer) et
-   `commerce-karite-exemple` (**exemple fictif** : produit, prix et photo inventés).
-   Pour la série commerce, il faut la photo, le prix et la consigne d'un vrai commerce :
-   voir [`preuves/LISEZMOI.md`](preuves/LISEZMOI.md).
-2. **Ta signature sur chaque dossier** (`valide_par` dans `preuve.yaml`) : tu as vérifié le produit,
-   le prix, les droits et les affirmations.
-3. **La promotion** : `offer.promo.confirmee: true` et sa date de fin dans `config.yaml`. La phrase
-   de fin dit « en promo » ; après la date, la publication se suspend toute seule.
-4. **La page d'aiguillage** (`offer.lien_bio`) : le lien de ta bio, avec deux boutons visibles,
-   « Commerçant » et « Créateur / freelance », chacun vers sa page de vente.
-5. **Les 3 clés** (plus bas), puis `publish.dry_run: false`.
-
-Ensuite, chaque vidéo attend ton accord (réglage `publish.validation`). `python3 run.py doctor`
-et `python3 run.py plan` te disent à tout moment ce qui manque.
+Tant qu'aucune clé de publication n'est en place, il est en **mode essai** : il fabrique et contrôle les vidéos,
+rien n'est publié. Le jour où tu ajoutes la clé, il publie, sans autre réglage.
 
 ---
 
-## Où on en est : ce qui a tourné, ce qui n'a pas tourné
+## 1. Ce qu'il te reste à faire : les clés
+
+Tout se passe dans ton dépôt GitHub : **Settings → Secrets and variables → Actions → New repository secret**.
+Une clé ne s'écrit jamais ailleurs (ni dans le code, ni dans une conversation).
+
+| Nom du secret | À quoi il sert | Où l'obtenir (gratuit) | Sans lui |
+|---|---|---|---|
+| `GEMINI_API_KEY` | Le cerveau : écrit les scénarios, regarde les séquences filmées, rédige le bilan | https://aistudio.google.com/apikey — crée la clé dans un projet **sans facturation** | L'agent n'a que ses 6 vidéos de réserve et n'écrit rien de nouveau |
+| `PEXELS_API_KEY` | Cherche des séquences filmées sur Pexels | https://www.pexels.com/api/ (clé immédiate) | Seulement les 14 séquences de la bibliothèque de départ |
+| `PIXABAY_API_KEY` | Cherche des séquences filmées sur Pixabay | https://pixabay.com/api/docs/ (la clé s'affiche une fois connecté) | idem |
+| `BUFFER_API_KEY` | Publie sur Facebook, Instagram et TikTok, et lit les statistiques | https://buffer.com (offre gratuite : 3 canaux), puis *Settings → API* | Mode essai : rien n'est publié |
+
+Les quatre ensemble = l'agent complet. Tu peux les ajouter dans n'importe quel ordre : à chaque réveil, il se sert de ce qu'il trouve.
+À la place de Buffer, les API officielles fonctionnent aussi : `FB_PAGE_ID` + `FB_PAGE_TOKEN`, `IG_USER_ID` + `IG_TOKEN`,
+`TIKTOK_CLIENT_KEY` + `TIKTOK_CLIENT_SECRET` + `TIKTOK_REFRESH_TOKEN` (et `publish.via: native` dans `config.yaml`).
+
+Facultatif, dans `config.yaml` : `brand.name` et `brand.handle` (le nom du compte, affiché sur l'écran de fin),
+`offer.lien_bio` + `offer.promo` (pour que l'agent annonce la formation à la fin de chaque vidéo — il n'en parle que si c'est rempli).
+
+Pour vérifier : onglet **Actions → Agent vidéo → Run workflow → commande `doctor`**.
+
+---
+
+## 2. Le format des vidéos
+
+Toutes les vidéos suivent la même grammaire, celle des comptes d'astuces qui retiennent leur public :
+
+| Élément | Règle |
+|---|---|
+| Première image | Le titre de l'accroche est déjà lisible, le personnage est là, le premier visuel aussi. Pas de bonjour. |
+| Sous-titres | En haut de l'écran, trois mots à la fois, le mot prononcé est surligné. |
+| Écrans | 4 à 7 écrans de 5 à 10 secondes. Un point par écran, annoncé par une tuile numérotée (ÉTAPE 1, ERREUR 2, PLAN 3…). |
+| Rythme | Un élément nouveau apparaît au mot près : liste, cartes « non / oui », pictogrammes, fenêtre, séquence filmée. |
+| Personnage | Une mascotte dessinée (11 poses) qui change de pose à chaque écran. |
+| Séquences filmées | 1 à 3 par vidéo : pour illustrer un geste, ou pour montrer un vrai avant / après de montage. |
+| Limite honnête | Un écran et une ligne de la légende disent ce que la méthode ne fait pas. |
+| Écran de fin | « Abonne-toi », un mot à commenter, et ce que la vidéo suivante apportera. |
+| Légende | Accroche, étapes numérotées, ligne ⚠️, consigne 💬, 🔔, hashtags, crédit des images. |
+
+Identité : papier quadrillé, encre bleu nuit, surligneur jaune — les couleurs du personnage. Tout se règle dans `config.yaml` (`brand.couleurs`).
+
+---
+
+## 3. Ce que l'agent fait à chaque réveil
+
+1. **Mesures** — il lit les statistiques de chaque vidéo publiée (24 h, 72 h, 7 jours) par l'API du réseau, et note chaque vidéo.
+2. **Bilan** — tous les 3 jours : ce qui marche, ce qui ne marche pas, nouveaux poids des familles de sujets, rapport dans `state/BILAN.md`.
+3. **Veille** — il rouvre les pages officielles et reconfirme chaque fait qu'il a le droit de citer.
+4. **Choix** — d'abord la suite promise par une vidéo précédente ; sinon une famille de sujets tirée selon ses poids, puis une idée jamais traitée.
+5. **Écriture** — Gemini écrit le storyboard ; chaque refus des contrôles lui est renvoyé pour correction. Sans clé : une vidéo de réserve.
+6. **Séquences filmées** — recherche sur Pexels et Pixabay, téléchargement, trois contrôles (voir plus bas).
+7. **Montage** — voix, sous-titres au mot près, musique et bruitages générés, rendu image par image.
+8. **Contrôle qualité** — format, durée, son, lisibilité, sous-titres. Un seul échec et la vidéo n'est pas publiée.
+9. **Publication** — sans validation humaine, puis la suite annoncée est inscrite pour être produite dans les jours suivants.
+
+Chaque vidéo a sa **fiche de production** (`out/<id>.md`) : pourquoi ce sujet, les faits et leurs sources, chaque séquence filmée
+avec son auteur et sa page d'origine, le script minuté, les légendes par plateforme, les contrôles.
+
+---
+
+## 4. Les séquences filmées (« rushs »)
+
+L'agent ne reçoit aucune image de ta part. Pour chaque passage qui en demande une, il :
+
+1. **cherche** dans les banques avec quelques mots simples (« hands packing box ») ;
+2. **contrôle la technique** : durée, définition une fois recadrée au format vertical, netteté, vrai mouvement, luminosité, pas de bandes noires ;
+3. **contrôle la cohérence** : Gemini regarde trois images de chaque séquence candidate et dit ce qu'il voit. Une séquence qui ne montre pas
+   ce que dit la phrase est refusée, comme une séquence qui porte un texte, un logo ou une image de synthèse. Sans Gemini, il compare les mots
+   de la recherche aux étiquettes de la banque ;
+4. **respecte les droits** : source, auteur et page d'origine notés dans la fiche, crédit ajouté à la légende ; une personne reconnaissable
+   n'est jamais utilisée dans un passage négatif (erreur, arnaque…) ; une image de banque n'est jamais présentée comme un client ou un résultat.
+
+S'il ne trouve rien d'acceptable, il **ne maquille pas le manque** : il change de sujet.
+
+Le bloc « avant / après » est une vraie démonstration : la séquence brute, puis la même séquence avec des couleurs réglées, un zoom,
+un titre, des sous-titres et une barre de progression — appliqués par le moteur de rendu de l'agent.
+
+---
+
+## 5. Ce que l'agent ne dira jamais
+
+Il publie seul, donc ses garde-fous sont automatiques et sans exception (`studio/garde.py`) :
+
+- aucune promesse de revenu, de vues, de résultat garanti, de rapidité ; aucun « illimité », « viral », « 100 % gratuit » ;
+- aucune expérience inventée (« j'ai testé », « mes clients ») ;
+- aucun envoi promis en privé : la seule promesse de fin est la vidéo suivante, et il la produit ;
+- aucun outil nommé, aucun chiffre avec une unité, aucun « gratuit » sans un **fait vérifié** sur une page officielle (`data/faits.yaml`) ;
+- aucune astuce de contournement (VPN, adresses jetables, essais gratuits à répétition), aucune imitation d'une personne réelle.
+
+Avec Gemini, l'agent enrichit lui-même sa liste de faits : le modèle propose un fait, sa page officielle et une citation ; l'agent ouvre la page
+et ne garde le fait que s'il y retrouve la citation mot pour mot. Chaque jour, il rouvre les pages : une phrase disparue suspend le fait.
+
+---
+
+## 6. Le bilan, tous les 3 jours
+
+`state/BILAN.md` (lisible sur GitHub) contient : le nombre de vidéos mesurées, la note de chacune, les moyennes par famille de sujets,
+par type d'accroche, par créneau et par durée, puis les décisions prises :
+
+- le poids d'une famille monte ou descend d'au plus 35 % à la fois, et aucune famille ne disparaît ;
+- une vidéo nettement au-dessus du lot donne naissance à une variante, placée en tête des idées ;
+- avec Gemini : un diagnostic en clair et de nouvelles idées dans les familles qui marchent.
+
+La note compare la rétention, les partages, les enregistrements et les commentaires à la médiane du compte.
+Les vues seules ne désignent jamais une gagnante. Avec moins de 4 vidéos mesurées, le bilan constate et ne change rien.
+
+---
+
+## 7. Où on en est : ce qui a tourné, ce qui n'a pas tourné
 
 | Brique | État au 11/11/2026 |
 |---|---|
-| Moteur de rendu v2, voix, mixage, contrôle qualité | **A tourné** : les 6 vidéos de réserve ont été fabriquées en entier et passent le contrôle qualité (35,3 à 38,5 s, 1080×1920, 30 img/s, −14,2 LUFS). Une vidéo sort en 1 à 2 minutes. |
-| Dossiers de preuve | **Réels pour la technique** : les rendus de `preuves/*/media/` ont été calculés par Remotion 4.0.542 à partir du projet `preuves/projet-remotion/` (rejoués à l'identique, à l'octet près). Le premier rendu défectueux et sa correction sont de vrais rendus. **Fictif pour le commerce** : produit, prix et photo d'exemple. |
-| Veille des faits | **A tourné** : les 4 pages officielles de Remotion ont été rouvertes et les 6 faits reconfirmés (licence gratuite jusqu'à 3 personnes, tarifs, principe du rendu). |
-| Garde-fous (preuve mot pour mot, nombres, formulations, un seul public, phrase de fin) | **60 tests automatiques passent** (`python3 -m unittest discover -s tests`). |
-| Chaîne complète en mode essai, sans aucune clé | **A tourné sur GitHub** le 11/11/2026 : 5 exécutions lancées à la main, 5 réussies (tests, veille, choix du sujet, vidéo, fiche de production, mémoire), dont un réveil normal qui a rattrapé le créneau de 12:30. Chaque vidéo se télécharge dans *Actions* → l'exécution → *Artifacts*, pendant 14 jours. |
-| Réveils automatiques de GitHub | **Pas encore observés.** Le dépôt date du 11/11/2026 et le réveil de 11:20 UTC n'a pas eu lieu : GitHub retarde ou saute parfois un réveil, surtout sur un dépôt récent. À vérifier dans *Actions* après 18:20, heure de Cotonou. Un créneau manqué est rattrapé par le réveil suivant s'il arrive dans les 4 heures. |
-| Écriture du scénario par NVIDIA / Groq | **Pas encore testée avec un vrai modèle** (aucune clé en place). Le dialogue est testé contre un faux serveur, y compris le refus d'un extrait reformulé. La qualité des scénarios se jugera sur les premiers essais. |
-| Attente de validation, puis publication | Logique testée (faux hébergement, faux Buffer). **Jamais exécutée pour de vrai.** |
-| Publication et mesures par Buffer | **Jamais envoyé au vrai Buffer.** Requêtes écrites d'après sa documentation. |
-| YouTube Shorts | Le texte est préparé dans chaque fiche de production ; **la publication n'est pas reliée** (l'offre gratuite de Buffer couvre 3 canaux). |
-| Son | Mesuré par le calcul (voix 22 à 25 dB au-dessus du fond) et relu par une transcription automatique : la phrase de fin est dite mot pour mot dans les 6 vidéos. **Personne n'a écouté ces vidéos** : écoute-les. |
+| Format « mascotte », moteur de rendu, voix, son, contrôle qualité | **A tourné** en local : une vidéo de réserve fabriquée en entier (46,5 s, 1080×1920, contrôle qualité réussi). Sur GitHub : voir l'onglet *Actions*. |
+| Séquences filmées, sans clé | **A tourné** : 14 séquences Pexels choisies et regardées une par une, téléchargées, contrôlées, recadrées, montées. |
+| Recherche Pexels / Pixabay par leurs API | **Jamais exécutée pour de vrai** (aucune clé en place). Écrite d'après leur documentation ; testée contre des réponses de même forme. |
+| Écriture par Gemini, contrôle des séquences par l'image, bilan rédigé, nouveaux faits | **Jamais exécutés avec une vraie clé.** Testés contre un faux serveur Gemini (catalogue, quotas, corrections, images). La qualité des textes se jugera sur les premières vidéos. |
+| Garde-fous, forme, stratège, bilan chiffré, parcours complet | **51 tests automatiques passent** (`python3 -m unittest discover -s tests`). |
+| Publication et statistiques par Buffer | **Jamais envoyé au vrai Buffer.** Requêtes écrites d'après sa documentation, testées contre un faux serveur. |
+| Réveils automatiques de GitHub | **Pas encore observés** sur ce dépôt (créé le 11/11/2026 ; un réveil prévu ce jour-là n'a pas eu lieu). Toutes les exécutions réussies ont été lancées à la main. |
+| Son | Mesuré par le calcul (niveau, marge de la voix sur le fond). **Personne n'a écouté ces vidéos** : écoute-les. |
 
 ---
 
-## Mise en route sur GitHub
-
-Le code est dans le dépôt, la tâche planifiée est dans `.github/workflows/agent.yml`. Il reste :
-
-1. **Ajouter les 3 clés** dans *Settings → Secrets and variables → Actions → New repository secret* :
-
-   | Nom du secret | Où l'obtenir (gratuit, sans carte) | Rôle |
-   |---|---|---|
-   | `NVIDIA_API_KEY` | build.nvidia.com → *Get API Key* | écrit les scénarios (premier choix) |
-   | `GROQ_API_KEY` | console.groq.com → *API Keys* | écrit les scénarios (secours) |
-   | `BUFFER_API_KEY` | publish.buffer.com/settings/api | publie et lit les mesures |
-
-   Aucune clé n'est écrite dans le code : il ne lit que ces variables.
-2. **Préparer Buffer.** Compte gratuit sur buffer.com → connecte tes 3 canaux : TikTok, Instagram
-   (compte professionnel ou créateur) et ta Page Facebook → crée la clé d'API.
-3. **Regarder un essai.** Onglet *Actions* → « Agent vidéo » → ouvre la dernière exécution. Le
-   résumé montre le journal (public, sujet, preuve, durée, contrôle qualité, ce qui bloquerait la
-   publication). En bas de page, *Artifacts* contient la vidéo **et sa fiche de production**
-   (`.md`). Pour lancer un essai tout de suite : *Run workflow* → commande `tick`, case « forcer ».
-   Les essais alternent les deux séries.
-4. **Remplir ce qui manque** (section précédente), puis passer `publish.dry_run` à `false`.
-5. **Valider chaque vidéo.** Quand une vidéo est prête, le journal donne son adresse pour la
-   regarder et son identifiant. Pour la publier : *Run workflow* → commande `valider`, champ
-   « vidéo » = l'identifiant (ou `tout`). Une vidéo non validée en 7 jours est abandonnée.
-
-GitHub Pages sert la branche `studio-media` : c'est là que la vidéo attend ta validation et que
-Buffer vient la chercher. Le réglage est déjà fait sur ce dépôt.
-
-### Mode essai et publication réelle
-
-| | `dry_run: true` (essai) | `dry_run: false` (réel) |
-|---|---|---|
-| Vidéo fabriquée et contrôlée, fiche de production écrite | oui | oui, si rien ne bloque |
-| Sujets | tournent en boucle, rien n'est consommé | chaque sujet × accroche ne sert qu'une fois en 21 jours |
-| Exemple fictif | montré (étiqueté) | **jamais publié**, sauf `publish.exemples_fictifs: true` |
-| Si une condition manque (preuve non signée, promo non confirmée, pas de suite…) | le journal dit ce qui bloquerait | **aucune vidéo n'est fabriquée**, le journal dit quoi corriger |
-| Envoi sur les réseaux | non | après ta validation (ou directement si `validation: preuve_signee`) |
-| S'il n'y a plus rien d'honnête à produire | — | l'agent s'arrête et te dit quelle preuve ajouter |
-
----
-
-## Les dossiers de preuve
-
-```
-preuves/
-  createur-intro-serie/      preuve.yaml · demande.md · correction.md · media/ (rendu, premier rendu raté, version sans charte)
-  commerce-karite-exemple/   EXEMPLE FICTIF — preuve.yaml · demande.md · correction.md · media/ (photo, rendus)
-  projet-remotion/           le projet qui a produit ces rendus (npm install, puis npx remotion studio src/index.ts)
-```
-
-`preuve.yaml` dit ce que la vidéo a le droit d'affirmer (`faits`), ce qu'il faut savoir (`limites`),
-les sujets couverts (`sujets`) et, pour un commerce, l'offre exacte (`offre`). Le code contrôle :
-
-- un extrait de demande affiché doit se retrouver **mot pour mot** dans `demande.md` ou `correction.md` ;
-- une ligne de code affichée doit se retrouver **telle quelle** dans un fichier du projet ;
-- un nombre dit ou affiché doit figurer dans le dossier ou dans un fait vérifié par la veille ;
-- un média cité doit exister.
-
-Ajouter un vrai cas : [`preuves/LISEZMOI.md`](preuves/LISEZMOI.md). Vérifier : `python3 run.py preuves`.
-
-## La banque de sujets et la note
-
-`data/sujets.yaml` contient les 16 sujets de l'étude, dans l'ordre de lancement : motion design,
-puis visuels, sites, contenus. Chaque sujet reçoit une note de 0 à 5 :
-
-| Critère | Poids | D'où vient la valeur |
-|---|---:|---|
-| Intensité du problème pour ce public | 30 % | estimation de départ dans `sujets.yaml` (à corriger avec tes retours) |
-| Preuve visuelle réelle | 25 % | calculée : 0 sans dossier, 2 exemple fictif, 4 réel, 5 réel et signé |
-| Signal de demande vérifiable | 20 % | tes mesures, ou ce que tu saisis (`demande`) ; **0 tant que rien n'est mesuré**, et la fiche le dit |
-| Adéquation à la formation | 15 % | estimation de départ dans `sujets.yaml` |
-| Fraîcheur vérifiée | 10 % | calculée : faits reconfirmés par la veille, actualité récente des outils |
-
-C'est un outil de tri interne, pas une prévision. Aujourd'hui, 6 sujets sur 16 ont une preuve :
-`python3 run.py sujets` montre la liste et ce qu'il faut fournir pour les autres.
-
-**Comment il choisit.** Les deux séries alternent (une vidéo par public et par jour). Pour un
-public : d'abord les sujets jamais traités, dans l'ordre des thèmes puis par note ; ensuite un
-sujet déjà traité, avec **la même preuve et une autre accroche** (résultat d'abord, problème
-d'abord, contraste). On ne change qu'un facteur à la fois.
-
-## La veille quotidienne
-
-`data/faits.yaml` liste les seuls prix, licences et fonctionnalités d'outils qu'une vidéo peut
-citer, avec leur page officielle et la phrase qui doit s'y trouver. Chaque jour, l'agent rouvre ces
-pages. Si la phrase a disparu, le fait est suspendu, les vidéos qui le citent ne partent plus, et le
-journal écrit « CHANGEMENT ». Un fait non reconfirmé depuis 3 jours n'est plus utilisable.
-« Gratuit » et « open source » ne passent que dans une phrase qui porte leur précision
-(« gratuite jusqu'à 3 personnes »). Seules des pages publiques sont lues.
-
-## La fiche de production
-
-Pour chaque vidéo, `out/<id>.md` (dans *Artifacts*) contient, dans cet ordre : 1. fiche stratégie ·
-2. sources et veille · 3. références publiques observées · 4. trois accroches et celle retenue ·
-5. script minuté (durées mesurées) · 6. storyboard · 7. phrase de fin, état de la promotion et du
-lien en bio · 8. pack de publication pour TikTok, Instagram Reels, YouTube Shorts et Facebook Reels ·
-9. contrôle avant publication. C'est le document à relire avant de valider.
-
-## Les mesures
-
-À 24 h, 72 h et 7 jours, l'agent relève ce que les réseaux donnent. La note de qualité d'une vidéo
-compare la part regardée, les partages, les enregistrements et les commentaires à ceux des vidéos
-**du même public sur le même réseau** ; les vues servent de dénominateur, jamais de score. Il faut
-3 vidéos comparables avant toute note. L'agent ne voit ni les clics sur ton lien ni les ventes :
-saisis-les dans `data/mesures.yaml`. Sans eux, il ne dira jamais qu'une vidéo « vend ».
-
----
-
-## Régler l'agent (`config.yaml`)
+## 8. Régler l'agent (`config.yaml`)
 
 | Réglage | Effet |
 |---|---|
-| `segments.*` | Les deux publics : cible, ce qu'ils veulent, règles d'écriture, étiquette de série, couleurs, page de vente. |
-| `offer.cta` | La phrase de fin (doit contenir `MOT`). À ne changer que par décision de ta part, par exemple quand la promotion s'arrête. |
-| `offer.cta_mot_fixe` | Vide : un mot-clé par vidéo. Rempli : le même mot dans toutes les vidéos. |
-| `offer.promo`, `offer.lien_bio` | Ce qui rend la phrase de fin vraie. Sans eux, rien n'est publié. |
-| `schedule.videos_per_day`, `schedule.jours`, `schedule.slots` | 2 vidéos par jour par défaut. L'étude conseille de commencer par 2 par public et par semaine : `videos_per_day: 1` et `jours: [1, 2, 4, 5]`. Si tu changes les créneaux, change aussi les lignes `cron` de `.github/workflows/agent.yml`. |
-| `video.seconds` | Format visé (35–45 s). Si la vidéo sort hors format, la voix est rejouée une fois à un autre débit. |
-| `voice.*`, `audio.*` | Voix, débit, prononciations, niveau de la musique, marge de la voix sur le fond. |
-| `publish.validation` | `chaque_video` (chaque vidéo attend ton accord) ou `preuve_signee` (un dossier signé suffit). |
-| `publish.exemples_fictifs` | `false` : un exemple fictif n'est jamais publié. |
-| `publish.dry_run` | `true` : mode essai. |
-| `strategy.repeat_days`, `strategy.explore` | Délai avant de refaire un sujet à l'identique ; part d'essais dans le choix de l'accroche et des créneaux. |
+| `brand.*` | Nom du compte, identifiant, promesse, public, couleurs, mention de fin. |
+| `offer.cta` | La phrase de fin (`MOT` = le mot à commenter, `PROMESSE` = la suite annoncée). |
+| `offer.lien_bio`, `offer.promo` | Remplis : la formation est annoncée à la fin de chaque vidéo. Vides : l'agent n'en parle pas. |
+| `schedule.*` | Vidéos par jour (2), jours, créneaux candidats. L'agent apprend lesquels marchent. Si tu changes les créneaux, change aussi les lignes `cron` du fichier `.github/workflows/agent.yml`. |
+| `video.seconds` | Durée visée (38 à 70 s). Hors format, la voix est rejouée une fois à un autre débit. |
+| `voice.*`, `audio.*` | Voix, débit, prononciations, musique, marge de la voix sur le fond. |
+| `rushs.*` | Contrôle par l'image, seuils d'acceptation, nombre de candidates regardées, repos d'une séquence déjà utilisée. |
+| `publish.dry_run` | `auto` (essai tant qu'aucune clé de publication n'existe), `true` (toujours essai), `false` (publication réelle). |
+| `publish.networks`, `publish.via` | Réseaux visés ; Buffer ou API officielles. |
+| `bilan.*`, `strategy.*` | Rythme du bilan, minimum de vidéos, ampleur des corrections, part d'essais, délai avant de refaire un sujet. |
 
-## Commandes
+Les sujets sont dans `data/sujets.yaml` (7 familles, 24 idées de départ), les faits dans `data/faits.yaml`,
+la bibliothèque de séquences dans `data/rushs.yaml`, les vidéos de réserve dans `examples/reserve/`.
 
-```bash
-python3 run.py tick --force                          # fabrique une vidéo tout de suite
-python3 run.py make --segment commercant --no-publish  # une vidéo pour un public précis, sans rien publier
-python3 run.py demo                                  # une vidéo d'exemple par public
-python3 run.py plan                                  # plan du jour, prochaine vidéo de chaque série, ce qui bloque
-python3 run.py sujets                                # les 16 sujets notés
-python3 run.py preuves                               # état des dossiers de preuve
-python3 run.py veille                                # rouvre les pages officielles maintenant
-python3 run.py attente                               # vidéos qui attendent ta validation
-python3 run.py valider 20261112-0730-photo           # publie une vidéo que tu as regardée
-python3 run.py doctor --live                         # outils, clés, preuves, faits, porte de publication, hébergement
-```
+## 9. Commandes
 
-## Ce qu'il faut savoir avant de publier
+Dans l'onglet **Actions → Agent vidéo → Run workflow**, ou sur un ordinateur (`bash setup.sh` puis `python3 run.py …`) :
 
-- **L'agent n'invente pas tes preuves.** Avec les 2 dossiers fournis, chaque série couvre 3 sujets :
-  3 vidéos par série sans clé de modèle (les scénarios de réserve), 9 au plus avec un modèle
-  (3 sujets × 3 accroches). Ensuite il s'arrête, jusqu'à ce que tu ajoutes un dossier ou que
-  21 jours soient passés. À 2 vidéos par jour, cela fait 3 à 9 jours : chaque nouveau dossier
-  ouvre de nouveaux sujets.
-- **Licence de Remotion** (vérifiée le 11/11/2026 sur remotion.dev) : gratuite pour les particuliers
-  et les organisations jusqu'à 3 personnes, payante au-delà ; ce n'est pas un logiciel open source.
-  L'agent ne se sert pas de Remotion pour fabriquer ses vidéos (il a son propre moteur) : Remotion
-  n'a servi qu'à produire les démonstrations des dossiers de preuve.
-- **« Écrit par Claude Code » ?** Le code des démonstrations fournies a été écrit par un agent de
-  code pendant la préparation, pas dans ta session Claude Code. Les vidéos disent « un agent de
-  code, comme Claude Code ». Pour dire « c'est Claude Code qui l'a écrit », refais la démonstration
-  chez toi avec `demande.md`, remplace les fichiers, et signe.
-- **TikTok.** Sans Buffer, une application TikTok non auditée ne publie qu'en privé. Avec Buffer,
-  c'est public, mais sans son tendance.
-- **Étiquette « généré par IA ».** Activée par défaut (`publish.ai_label`) : la voix est synthétique.
-- **Conditions des services gratuits.** NVIDIA réserve son offre gratuite au test ; edge-tts est
-  un service non officiel ; la voix Piper demande de créditer « SIWIS ». Détails dans `docs/STACK.md`.
-- **Conditions de GitHub.** Elles réservent Actions au développement du logiciel du dépôt et
-  n'autorisent pas Pages comme hébergement gratuit d'une activité commerciale. Un robot qui publie
-  des vidéos pour vendre une formation sort de ce cadre : GitHub peut arrêter la tâche ou fermer
-  le dépôt. La variante « serveur à toi » ci-dessous n'a pas ce risque.
-
-## Dépannage
-
-| Symptôme | Cause probable |
+| Commande | Ce qu'elle fait |
 |---|---|
-| « PUBLICATION SUSPENDUE » | Une condition manque : la liste numérotée qui suit dit laquelle (preuve non signée, promotion, lien en bio, suite, exemple fictif). |
-| « rien à produire pour la série… » | Tous les sujets couverts par une preuve ont été traités récemment : ajoute un dossier de preuve. |
-| « écriture par le modèle impossible » | Clé absente ou quota du jour atteint : l'agent prend un scénario de réserve (3 par série). |
-| « … refusée : extrait introuvable mot pour mot » | Le modèle a reformulé la demande : le refus lui est renvoyé, il corrige. Rien à faire. |
-| « CHANGEMENT sur … » | Une page officielle ne contient plus la phrase attendue : relis-la et corrige `data/faits.yaml`. |
-| « aucun réseau n'a reçu la vidéo » | Clé Buffer absente, canal déconnecté, ou vidéo refusée : le détail est dans le journal. |
-| Les réveils GitHub s'arrêtent | GitHub suspend les tâches planifiées d'un dépôt public resté 60 jours sans activité : onglet *Actions* → « Agent vidéo » → *Enable workflow*. |
+| `tick` | Le réveil normal. Coche « forcer » pour fabriquer une vidéo tout de suite. |
+| `demo` | Rend les 6 vidéos de réserve, sans rien publier. |
+| `bilan` | Fait le bilan maintenant. |
+| `doctor` | Vérifie l'installation, les clés (appel d'essai), les faits, les réserves. |
+| `plan` | Le plan du jour et la prochaine vidéo. |
+| `sujets` | La banque d'idées, les poids, les suites promises. |
+| `rushs` | Essaie une recherche de séquence comme le ferait l'agent (champ « mots », en anglais). |
+| `veille` | Rouvre les pages officielles et liste les faits confirmés. |
 
-## Variante : sur un serveur à toi
+Les vidéos d'une exécution se téléchargent dans **Actions → l'exécution → Artifacts** pendant 14 jours.
 
-```bash
-git clone <adresse du dépôt> agent && cd agent
-bash setup.sh                         # ffmpeg, Python, Chromium
-cp .env.example .env && nano .env     # tes clés (dont CLOUDINARY_URL)
-python3 run.py doctor
-sudo cp deploy/agent-video.* /etc/systemd/system/     # adapte User= et WorkingDirectory= dans le .service
-sudo systemctl daemon-reload && sudo systemctl enable --now agent-video.timer
+## 10. Arrêter l'agent, dépannage
+
+- **Tout arrêter** : `publish.dry_run: true` dans `config.yaml` (plus rien n'est publié), ou onglet Actions → Agent vidéo → « … » → *Disable workflow*.
+
+| Message | Cause probable |
+|---|---|
+| « MODE ESSAI » | Aucune clé de publication, ou `dry_run: true`. |
+| « rien à produire » | Sans `GEMINI_API_KEY`, les 6 réserves ont toutes été publiées depuis moins de 21 jours. |
+| « écriture par le modèle impossible » | Clé absente, quota du jour atteint, ou trois réponses refusées par les contrôles : l'agent prend une réserve. |
+| « rushs : rien d'acceptable pour … » | Aucune séquence ne passe les contrôles : l'agent change de sujet. |
+| « formulation interdite », « outil nommé sans fait vérifié » | Le modèle a écrit quelque chose que les garde-fous refusent : le refus lui est renvoyé. Rien à faire. |
+| « CHANGEMENT sur … » | Une page officielle ne contient plus la phrase attendue : le fait est suspendu. |
+| « PUBLICATION RETENUE » | Contrôle qualité en échec ou fait suspendu : la raison suit. |
+| « aucun réseau n'a reçu la vidéo » | Clé Buffer invalide, canal déconnecté, ou vidéo refusée : le détail est dans le journal. |
+| Les réveils s'arrêtent | GitHub suspend les tâches planifiées d'un dépôt resté 60 jours sans activité : onglet Actions → « Enable workflow ». |
+
+## 11. Variante : sur un serveur à toi
+
+`bash setup.sh`, copie `.env.example` en `.env`, remplis les clés, puis installe `deploy/agent-video.service` et `deploy/agent-video.timer`
+(systemd) : le minuteur lance `python3 run.py tick` aux mêmes heures.
+
+## 12. Arborescence
+
+```
+run.py                     point d'entrée (tick, demo, bilan, doctor…)
+config.yaml                tous les réglages
+data/sujets.yaml           familles et idées de vidéos
+data/faits.yaml            faits vérifiés (pages officielles)
+data/rushs.yaml            bibliothèque de départ : 14 séquences libres de droits
+examples/reserve/          6 storyboards prêts, pour tourner sans clé
+engine/                    moteur de rendu (page HTML), polices, personnage (11 poses)
+studio/strategist.py       choix du sujet, calendrier, notes
+studio/writer.py           consigne du modèle, écran de fin, réserves
+studio/schema.py           forme d'un storyboard
+studio/garde.py            ce que l'agent n'a pas le droit de dire
+studio/rushs.py            recherche, téléchargement et contrôle des séquences filmées
+studio/llm.py              API Gemini (choix du modèle, quotas, corrections)
+studio/timeline.py         synchronisation de l'image sur la voix
+studio/produce.py          chaîne de fabrication
+studio/voice.py, mix.py, music.py, render.py, qa.py    voix, son, rendu, contrôle qualité
+studio/bilan.py            bilan automatique tous les 3 jours
+studio/stats.py, publish/  statistiques et publication (Buffer, Meta, TikTok)
+studio/scout.py            veille : faits reconfirmés, nouveaux faits vérifiés
+state/                     mémoire de l'agent (vidéos, mesures, bilan, suites promises)
+tests/                     51 tests
 ```
 
-Dans `config.yaml` : `publish.media_host: cloudinary`. Le rendu a été testé sur une machine de
-2 cœurs et 2 Go de mémoire ; pas en dessous. Cette variante n'a jamais été exécutée de bout en bout.
-
-## Arborescence
-
-```
-run.py                     point d'entrée (toutes les commandes)
-config.yaml                les réglages : publics, phrase de fin, promotion, calendrier, publication
-data/                      sujets.yaml (16 sujets) · faits.yaml (faits vérifiés) · references.yaml · mesures.yaml (clics et ventes, à la main)
-preuves/                   les dossiers de preuve + le projet Remotion qui a produit les rendus
-examples/reserve/          6 scénarios écrits à l'avance (3 par série), soumis aux mêmes contrôles
-studio/                    strategist (choix) · writer (scénario + phrase de fin) · garde (fond) · schema (forme) · preuves · porte (publication)
-                           fiche (fiche de production) · scout (veille) · llm · voice · align · music · mix · timeline · render · qa · produce
-                           publish/ (packs par plateforme, buffer, meta, tiktok) · stats · mediahost · state
-engine/                    moteur de rendu : player.html / .css / .js + polices
-tests/                     60 tests automatiques
-.github/workflows/         la tâche planifiée GitHub
-deploy/                    variante serveur (systemd)
-docs/                      STACK.md
-state/                     mémoire de l'agent (remplie au fil des réveils)
-```
+Polices : Montserrat (licence SIL Open Font). Personnage : créé pour ce compte. Musique et bruitages : générés par l'agent.
+Séquences filmées : Pexels et Pixabay, sous leurs licences (usage gratuit, attribution non exigée, revente telle quelle interdite).

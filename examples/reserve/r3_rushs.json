@@ -1,0 +1,126 @@
+{
+ "famille": "outil",
+ "hook_type": "question",
+ "title": "Pas de caméra ? Où trouver des vidéos libres de droits",
+ "couverture": [
+  "PAS DE",
+  "CAMÉRA ?",
+  "*VIDÉOS LIBRES*"
+ ],
+ "keyword": "RUSH",
+ "promesse": "la suite : les plans à filmer",
+ "suite": {
+  "reserve": "r5_plans"
+ },
+ "legende": {
+  "accroche": "Tu veux faire des vidéos mais tu n'as pas de caméra ? Deux banques d'images gratuites, et leurs règles 👇",
+  "points": [
+   "Pexels : usage gratuit, citer l'auteur n'est pas obligatoire",
+   "Pixabay : usage gratuit, modification permise",
+   "Les règles : pas de revente telle quelle, respect des personnes filmées"
+  ],
+  "limite": "Gratuit ne veut pas dire sans règle : pas de revente de la vidéo telle quelle, et aucune personne reconnaissable montrée sous un mauvais jour."
+ },
+ "hashtags": [
+  "#astucevideo",
+  "#creationdecontenu",
+  "#videogratuite",
+  "#montagevideo",
+  "#banquedimages",
+  "#entrepreneuriat"
+ ],
+ "faits": [
+  "pexels-licence",
+  "pixabay-licence"
+ ],
+ "outils": [
+  "Pexels",
+  "Pixabay"
+ ],
+ "scenes": [
+  {
+   "title": "Pas de caméra ? *Pas grave*",
+   "pose": "surpris",
+   "say": "Tu veux faire des vidéos, mais tu n'as pas de caméra ? [a]Des banques d'images offrent leurs vidéos. Voici deux adresses, et les règles à respecter.",
+   "blocks": [
+    {
+     "kind": "rush",
+     "q": "phone tripod filming light",
+     "voir": "un téléphone sur un trépied qui filme une personne",
+     "cadre": "portrait",
+     "label": "Exemple de rush"
+    }
+   ]
+  },
+  {
+   "title": "*Pexels*",
+   "tuile": {
+    "label": "NUMÉRO",
+    "n": 1
+   },
+   "pose": "pointe",
+   "say": "Numéro un : Pexels. [a1]Les vidéos se téléchargent et s'utilisent gratuitement, [a2]et citer l'auteur n'est pas obligatoire.",
+   "blocks": [
+    {
+     "kind": "check",
+     "items": [
+      "Usage gratuit",
+      "Auteur : non obligatoire"
+     ]
+    }
+   ]
+  },
+  {
+   "title": "*Pixabay*",
+   "tuile": {
+    "label": "NUMÉRO",
+    "n": 2
+   },
+   "pose": "presente",
+   "say": "Numéro deux : Pixabay. Même principe : [a1]un usage gratuit, [a2]sans obligation de citer l'auteur, [a3]et tu peux modifier la vidéo.",
+   "blocks": [
+    {
+     "kind": "check",
+     "items": [
+      "Usage gratuit",
+      "Sans citer l'auteur",
+      "Modification permise"
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Les *règles* à respecter",
+   "pose": "stop",
+   "say": "Mais attention, il y a des règles. [a1]Tu ne revends pas la vidéo telle quelle. [a2]Et une personne reconnaissable ne doit jamais être montrée sous un mauvais jour.",
+   "blocks": [
+    {
+     "kind": "liste",
+     "items": [
+      "Pas de revente telle quelle",
+      "Respect des personnes"
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Et *après* ?",
+   "pose": "mains_hanches",
+   "say": "Ensuite, un rush brut ne suffit pas. [a]Regarde celui-ci. [a1]Et maintenant : [a2]des couleurs, [a3]un zoom, [a4]un titre. Il devient ta vidéo.",
+   "blocks": [
+    {
+     "kind": "avant_apres",
+     "q": "cosmetic bottles table sunlight",
+     "voir": "des flacons de cosmétiques sur une table, avec des fleurs et la lumière du soleil",
+     "cadre": "portrait",
+     "effets": [
+      "couleurs",
+      "zoom",
+      "titre"
+     ],
+     "titre": "Ta *marque* ici"
+    }
+   ]
+  }
+ ]
+}

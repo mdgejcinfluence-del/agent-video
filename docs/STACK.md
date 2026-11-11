@@ -1,123 +1,59 @@
-# La pile 100 % gratuite — quotas, sources, et ce que chaque gratuité coûte vraiment
+# La pile gratuite — services, quotas, et ce que chaque gratuité coûte vraiment
 
-Vérifié le 11 novembre 2026. « Vérifié ici » = je l'ai fait tourner dans mon bac à sable.
-« D'après la doc » = lu, pas exécuté (il faut tes clés).
+Relevé du 11 novembre 2026. « Essayé ici » = exécuté pendant la mise au point. « D'après la documentation » = lu, pas exécuté
+(il faut tes clés). Les paliers gratuits changent souvent : l'agent ne suppose rien, il lit les réponses des services.
 
-Besoin réel de l'agent : **2 vidéos par jour**, soit environ 20 à 30 appels de modèle, 10 à 14
-synthèses vocales, 2 rendus de 2 à 4 minutes et 6 publications par jour. Tous les paliers
-gratuits ci-dessous couvrent ce volume avec une large marge ; l'agent tient en plus ses propres
-compteurs (`state/quota.json`) et s'arrête avant chaque limite.
+Besoin réel : **2 vidéos par jour**, soit environ 6 à 10 appels de modèle, 14 synthèses vocales, 4 à 6 téléchargements de séquences,
+2 rendus de 1 à 3 minutes et 6 publications.
 
-## 1. Le cerveau (écrire le scénario, choisir le sujet)
+## 1. Le cerveau : l'API Gemini de Google
 
-L'agent appelle les modèles **directement** (API compatible OpenAI). Il n'utilise pas le montage
-« Claude Code + proxy » de la vidéo YouTube : pour une chaîne fixe (sujet → scénario → contrôle),
-un appel direct consomme 1 requête là où un agent Claude Code en consommerait des dizaines, et il
-ne casse pas à chaque mise à jour de Claude Code. Même cerveau NVIDIA, sans l'intermédiaire.
-
-| Fournisseur (ordre d'essai) | Palier gratuit | Carte bancaire | Statut | Source |
-|---|---|---|---|---|
-| **NVIDIA NIM** — `nvidia/nemotron-3-ultra-550b-a55b` | ~40 requêtes/min | non | Catalogue lu ici (84 modèles, celui-ci présent). Appel non testé (pas de clé). | agentdeals.dev/llm-api-pricing · `integrate.api.nvidia.com/v1/models` |
-| Groq — `openai/gpt-oss-120b` | 30 req/min, 1 000 req/jour, 200 000 jetons/jour | non | D'après la doc | dev.to/aifree (10/10/2026) · agentdeals.dev |
-| Google Gemini (AI Studio) | modèles Flash gratuits, débit limité | non | D'après la doc | dev.to/aifree · agentdeals.dev |
-| OpenRouter (modèles `:free`) | 20 req/min, **50 req/jour** | non | D'après la doc | openrouter.ai/docs/api_reference/limits |
-
-- Bascule automatique : si un fournisseur répond « quota » ou tombe, l'agent passe au suivant ;
-  si un modèle est retiré du catalogue (c'est arrivé à Kimi K3 chez NVIDIA le 15/10/2026), il en
-  choisit un autre dans la liste `prefer`.
-- Si **aucun** modèle ne répond, l'agent prend un scénario « de réserve » (6 scénarios, 3 par série,
-  écrits à l'avance dans `examples/reserve/` et soumis aux mêmes contrôles). Il ne bascule jamais vers du payant.
-- **Le prix caché de NVIDIA** : ses conditions d'essai n'autorisent que le test et l'évaluation,
-  pas la production, et l'accès peut être coupé sans préavis (agentdeals.dev, vérifié le
-  02/11/2026). Un agent qui publie tous les jours, c'est de la production. À toi de décider ;
-  ajouter une clé Groq ou Gemini te protège d'une coupure.
-- Services sans clé (Pollinations, LLM7) : testés ici. Ils répondent à une petite question, mais
-  échouent sur le long message du scénario (limite de sortie, 1 réponse toutes les 45 s). Ils
-  sont donc désactivés par défaut (`llm.keyless_fallback`).
-
-## 2. La voix
-
-| Moteur | Gratuit ? | Qualité | Statut | À savoir |
-|---|---|---|---|---|
-| **edge-tts** (voix neuronales de Microsoft Edge) — par défaut | oui, sans clé | naturelle ; donne l'instant exact de chaque mot | **Vérifié ici** (13 voix françaises ; `fr-FR-RemyMultilingualNeural`) | Service **non officiel** : c'est la « lecture à voix haute » d'Edge utilisée hors d'Edge. Microsoft peut la bloquer, et cet usage n'est pas couvert par une licence commerciale (freeapihub.com, 18/09/2026). |
-| Gemini TTS (clé AI Studio) | palier gratuit limité en débit | naturelle | D'après la doc, **non testé** | API officielle. Pas d'horodatage par mot : sous-titres calés par estimation. |
-| **Piper** `fr_FR-siwis-medium` — secours | oui, 100 % local, illimité | correcte mais plus « robot » | **Vérifié ici** (4 s pour une phrase) | Logiciel GPL-3.0 ; voix entraînée sur un jeu de données CC-BY 4.0 : il faut créditer « SIWIS » quelque part (par exemple dans ta bio). |
-
-Je recommande de démarrer avec edge, en sachant ce que c'est ; si tu veux une pile sans zone
-grise, mets `voice.order: ["gemini", "piper"]`.
-
-## 3. L'image : motion design par le code
-
-| Brique | Rôle | Statut |
+| Tâche | Modèle choisi par l'agent | Appels par vidéo |
 |---|---|---|
-| Moteur maison `engine/` (HTML + CSS + JavaScript) | scènes, cadres de preuve (rendus lus image par image, avant/après, défaut entouré), demande écrite, extraits de code, sous-titres ; chaque image est calculée à partir du temps, sans hasard | **Vérifié ici** |
-| Remotion 4.0.542 (dossier `preuves/projet-remotion/`) | a produit les démonstrations des dossiers de preuve (intro de série, publicité d'exemple). **L'agent ne s'en sert pas pour ses propres vidéos.** | **Vérifié ici** : 4 compositions rendues ; licence relue le 11/11/2026 sur remotion.dev/docs/license/pricing — gratuite pour les particuliers et les organisations jusqu'à 3 personnes, 25 $ par poste et par mois ou 0,01 $ par rendu (minimum 100 $ par mois) au-delà ; logiciel propriétaire, pas open source |
-| Chromium sans écran (Playwright, Apache-2.0) | photographie chaque image | **Vérifié ici** : 14 images/s sur 2 cœurs, 80 s pour une vidéo de 39 s |
-| ffmpeg (LGPL/GPL) | assemble en MP4 H.264 1080×1920, 30 img/s | **Vérifié ici** |
-| Polices Inter Tight, Instrument Serif, JetBrains Mono, Caveat | licence OFL (fournies dans `engine/fonts/` avec leurs licences) | — |
+| Écrire le storyboard (et le corriger si un contrôle le refuse) | le Gemini **Flash** le plus récent du catalogue | 1 à 3 |
+| Regarder les rushs (3 images par séquence candidate) | le Gemini **Flash-Lite** le plus récent | 1 |
+| Proposer de nouveaux faits à vérifier | Flash-Lite | 2 par semaine |
+| Rédiger le bilan | Flash | 1 tous les 3 jours |
 
-Le rendu quotidien se fait sans Remotion, sans After Effects et sans générateur vidéo payant.
-Remotion n'intervient que dans les démonstrations : c'est justement ce que les vidéos de la série
-« créateur » montrent. Les deux séries ont leur identité propre (nuit, violet et citron ; ivoire,
-vert et jaune) : aucune mascotte, aucune couleur empruntée à une autre marque.
+- Clé : https://aistudio.google.com/apikey — un compte Google suffit, sans carte bancaire. **Crée la clé dans un projet sans facturation** :
+  c'est ce qui garantit qu'aucun appel ne peut être facturé.
+- Appel direct en REST (`generativelanguage.googleapis.com/v1beta`), essayé ici contre un faux serveur qui en reproduit la forme ;
+  **jamais essayé avec une vraie clé** (aucune n'était en place).
+- Les quotas gratuits ont baissé en 2026 et ne sont plus tous publiés. Des relevés indépendants (septembre 2026) donnent environ
+  20 requêtes par jour sur les modèles Flash et 500 sur Flash-Lite. C'est pourquoi l'agent : lit le catalogue à chaque exécution,
+  réserve Flash à l'écriture, passe au modèle suivant dès qu'un quota est atteint et s'en souvient jusqu'au lendemain,
+  plafonne ses appels (`llm.max_par_jour`).
+- La recherche Google intégrée (« grounding ») n'est plus gratuite sur les modèles récents : l'agent ne s'en sert pas.
+  Il vérifie lui-même ses faits en rouvrant les pages officielles.
+- Secours facultatif pour le texte : Groq (`GROQ_API_KEY`).
 
-**Avatar** : l'agent peut afficher une photo (la tienne, par exemple) dans une
-bulle sur l'écran final (`brand.avatar`). Un avatar qui
-parle avec les lèvres synchronisées demande une carte graphique : je n'ai pas trouvé de moyen
-gratuit, fiable et sans intervention de le faire tourner 2 fois par jour. Non inclus.
+## 2. Les séquences filmées
 
-## 4. Le son
-
-Musique et bruitages sont **synthétisés par l'agent** (numpy) : aucune licence, aucune
-réclamation de droits d'auteur possible, une boucle différente par vidéo. Niveau final normalisé
-à −14 LUFS (mesuré : −14,1). Musique et bruitages s'effacent quand la voix parle, et le « ding »
-du mot-clé attend que le mot soit prononcé.
-
-À chaque vidéo, l'agent mesure de combien la voix dépasse le fond entre 1 et 4 kHz, la zone qui
-porte l'intelligibilité de la parole (23,8 dB sur l'exemple). Sous 14 dB, il baisse le fond ;
-sous 6 dB, la vidéo n'est pas publiée. Ces seuils viennent d'un seul essai, sur la vidéo
-d'exemple : la reconnaissance vocale restait stable entre 24 et 12 dB de marge et se dégradait
-nettement à 0 dB.
-
-Limite honnête : je ne peux pas écouter le résultat, je l'ai contrôlé par ces mesures et par une
-reconnaissance vocale. Si la musique ne te plaît pas, dépose tes propres fichiers dans
-`assets/music/` ou mets `audio.music: false`.
-
-## 5. Le serveur et la mémoire
-
-| Option | Coût | Carte | Statut | À savoir |
-|---|---|---|---|---|
-| **GitHub Actions** (dépôt public) — par défaut | 0 €, minutes illimitées | non | **A tourné** le 11/11/2026 : essai complet en 3 minutes | Réveils à heure fixe (retard possible de 5 à 30 min). **Les conditions de GitHub réservent Actions à la construction, au test et au déploiement du logiciel du dépôt** ; un robot de publication sort de ce cadre. C'est très répandu et la charge est minime (2 × 4 min par jour), mais ce n'est pas un usage autorisé : GitHub peut arrêter la tâche, désactiver le dépôt, voire suspendre le compte. |
-| GitHub Pages (branche `studio-media`) | 0 € | non | **A tourné** le 11/11/2026 : vidéo de 8 Mo servie à son adresse publique 24 s après l'envoi | Héberge les vidéos que Buffer vient chercher. Dépôt public obligatoire en gratuit ; 1 Go par site, 100 Go de trafic par mois. **Les conditions de GitHub disent que Pages n'est pas autorisé comme hébergement gratuit pour faire tourner une activité commerciale** ; des vidéos servies à Buffer pour vendre une formation entrent dans ce cas. |
-| Serveur personnel (Oracle Cloud Always Free, vieux PC sous Linux, etc.) + Cloudinary pour les vidéos | 0 € | Oracle demande une carte pour vérifier l'identité (sans débit) | Fichiers `deploy/` écrits, **non exécutés** | La voie conforme aux conditions de chacun. Même code, réveil par `systemd`. |
-
-Sources : docs.github.com/en/site-policy/github-terms/github-terms-for-additional-products-and-features (rubriques Actions et Pages) et docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits, lues le 11/11/2026.
-
-La mémoire de l'agent (`state/*.json`) est enregistrée dans le dépôt après chaque réveil.
-
-## 6. Publier et lire les statistiques
-
-| Voie | Coût | Ce que ça permet | Statut |
+| Banque | Accès | Limites annoncées | Licence |
 |---|---|---|---|
-| **Buffer** (offre gratuite) — par défaut | 0 €, sans carte | 3 canaux (TikTok + Instagram + Page Facebook), 1 clé d'API : publication **publique** et statistiques par vidéo. Limites : 150 requêtes / 15 min, 600 / jour, 1 000 par canal sur 30 jours (3 000 max), 10 publications en attente par canal. L'agent en consomme environ 25 par jour. | Requêtes écrites d'après developers.buffer.com et testées contre un faux serveur. **Jamais envoyées au vrai Buffer.** |
-| API TikTok native | 0 € | Tant que ton application n'a pas passé l'audit de TikTok : publication **privée uniquement**, sur un compte lui-même privé. Sans audit, seul le mode « brouillon dans ta boîte TikTok » sert à quelque chose (tu touches « publier »). | D'après la doc, non testé |
-| API Meta native (Facebook Reels, Instagram Reels) | 0 € | Publication sur ta Page et ton compte professionnel. L'application doit être en mode « Live », sinon les publications ne sont visibles que de ses administrateurs. | D'après la doc (v26.0), non testé |
+| Pexels | API officielle `api.pexels.com/v1/videos/search`, clé gratuite immédiate | 200 requêtes/heure, 20 000/mois | usage gratuit, attribution non exigée (lue le 11/11/2026) |
+| Pixabay | API officielle `pixabay.com/api/videos/`, clé gratuite | 100 requêtes/minute ; résultats à garder en mémoire 24 h | usage gratuit, attribution non exigée (lue le 11/11/2026) |
 
-Pourquoi Buffer en premier : c'est la seule voie gratuite que j'ai trouvée pour publier sur
-TikTok **en public et sans intervention** dès aujourd'hui. L'audit TikTok prend plusieurs
-semaines et est souvent refusé (sources : schedulenchill.com, postzen.dev, usecarly.com, 2026).
+- L'agent fait 1 à 3 recherches par vidéo et garde chaque résultat 24 h, comme Pixabay le demande.
+- La forme des réponses des deux API est essayée ici contre des réponses conformes à leur documentation ; **aucune recherche réelle
+  n'a été faite** (pas de clé). Les téléchargements, eux, ont été essayés pour de vrai sur les 14 séquences de la bibliothèque de départ.
+- Wikimedia Commons a été essayé puis écarté : résultats hors sujet, licences à partage obligatoire, contenus pour adultes.
+- Les pages de licence de Pexels et de Pixabay refusent les robots : les deux faits « licence » sont lus à la main et valables 90 jours.
 
-Ce qui reste hors de portée gratuitement : l'envoi automatique d'un message privé à chaque
-personne qui commente. L'agent ne promet donc jamais un envoi. Chaque vidéo se termine par
-« Commente MOT si tu veux la suite. La formation complète est en promo, lien en bio. » : le
-commentaire sert à la portée de la vidéo, et le lien en bio mène à la formation.
+## 3. La voix, le son, le rendu
 
-## 7. Ce que je n'ai pas retenu
+| Brique | Outil | Coût | Statut |
+|---|---|---|---|
+| Voix | edge-tts (voix neuronales de Microsoft, service en ligne non officiel, sans clé) ; secours local Piper | 0 | essayé ici et sur GitHub |
+| Musique et bruitages | générés par l'agent (aucun morceau du commerce) | 0 | essayé ici |
+| Rendu | page HTML rendue image par image par Chromium (Playwright), assemblée par ffmpeg | 0 | essayé ici : 16 images/s sur 2 cœurs |
+| Polices | Montserrat (licence SIL Open Font) | 0 | dans le dépôt |
 
-- **Multiplier les comptes gratuits** pour dépasser un quota : inutile à 2 vidéos par jour, et
-  c'est le moyen le plus sûr de faire fermer les comptes.
-- **ElevenLabs gratuit** : usage commercial interdit sur l'offre gratuite.
-- **OpenRouter à 1 000 requêtes/jour** : demande d'acheter 10 crédits.
-- **DeepSeek, Magpie** : payants.
-- **Lecture de tes statistiques TikTok par la page publique** (`stats.source_tiktok: public`,
-  avec yt-dlp) : possible et codé, mais non officiel et fragile ; désactivé par défaut.
+## 4. Le serveur et la publication
+
+| Brique | Outil | Limite |
+|---|---|---|
+| Réveils | GitHub Actions (dépôt public : minutes gratuites) | un réveil peut être retardé ou sauté ; le suivant rattrape dans les 4 heures |
+| Mémoire | fichiers `state/` enregistrés dans le dépôt | — |
+| Hébergement des vidéos | GitHub Pages (branche `studio-media`) | 30 vidéos conservées |
+| Publication et statistiques | Buffer (offre gratuite : 3 canaux) ou API officielles de Meta et de TikTok | TikTok en direct demande l'audit de ton application |

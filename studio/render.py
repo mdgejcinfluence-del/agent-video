@@ -65,10 +65,29 @@ def _segment(args):
         browser, page, _ = _open(p, timeline)
         try:
             for i in range(f0, f1):
-                page.evaluate("t => window.renderAt(t)", i / fps)
-                ff.stdin.write(page.screenshot(type="jpeg", quality=94))
+                shot = None
+                for essai in range(4):
+                    # une capture peut échouer quand la machine manque de mémoire : on réessaie, puis on rouvre le navigateur
+                    try:
+                        page.evaluate("t => window.renderAt(t)", i / fps)
+                        shot = page.screenshot(type="jpeg", quality=94)
+                        break
+                    except Exception:  # noqa: BLE001
+                        if essai == 3:
+                            raise
+                        time.sleep(0.6 * (essai + 1))
+                        if essai >= 1:
+                            try:
+                                browser.close()
+                            except Exception:  # noqa: BLE001
+                                pass
+                            browser, page, _ = _open(p, timeline)
+                ff.stdin.write(shot)
         finally:
-            browser.close()
+            try:
+                browser.close()
+            except Exception:  # noqa: BLE001
+                pass
     ff.stdin.close()
     if ff.wait() != 0:
         raise RuntimeError(f"ffmpeg a échoué sur le segment {f0}-{f1}")

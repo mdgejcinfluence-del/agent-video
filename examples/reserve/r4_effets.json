@@ -1,0 +1,168 @@
+{
+ "famille": "avant_apres",
+ "hook_type": "resultat",
+ "title": "1 rush, 5 effets : avant et après le montage",
+ "couverture": [
+  "1 RUSH",
+  "5 EFFETS",
+  "*AVANT, APRÈS*"
+ ],
+ "keyword": "EFFETS",
+ "promesse": "la suite : les erreurs à éviter",
+ "suite": {
+  "reserve": "r2_zapper"
+ },
+ "legende": {
+  "accroche": "Un seul rush, cinq effets : regarde l'image avant et après le montage 👇",
+  "points": [
+   "Les couleurs : un peu de contraste réveille l'image",
+   "Le zoom : il guide l'œil vers le produit",
+   "Le titre et les sous-titres : on comprend sans le son",
+   "La barre : elle montre que la fin approche"
+  ],
+  "limite": "Ces effets rendent une image plus lisible ; ils ne sauvent pas un rush flou, sombre ou hors sujet."
+ },
+ "hashtags": [
+  "#montagevideo",
+  "#avantapres",
+  "#astucevideo",
+  "#creationdecontenu",
+  "#motiondesign",
+  "#videoverticale"
+ ],
+ "faits": [],
+ "outils": [],
+ "scenes": [
+  {
+   "title": "1 rush, *5 effets*",
+   "pose": "presente",
+   "say": "Un seul rush. Cinq effets. [a]Regarde bien l'image avant… [a1]et après.",
+   "blocks": [
+    {
+     "kind": "avant_apres",
+     "q": "sewing machine hands fabric",
+     "voir": "des mains qui cousent un tissu sur une machine à coudre",
+     "cadre": "portrait",
+     "effets": [
+      "couleurs",
+      "zoom",
+      "titre",
+      "sous_titres",
+      "barre"
+     ],
+     "titre": "Atelier *couture*",
+     "sous_titre": "cousu main ici"
+    }
+   ]
+  },
+  {
+   "title": "Les *couleurs*",
+   "tuile": {
+    "label": "EFFET",
+    "n": 1
+   },
+   "pose": "pointe",
+   "say": "Effet un : les couleurs. [a1]Un rush brut est souvent terne. [a2]Un peu de contraste et de saturation, et l'image se réveille.",
+   "blocks": [
+    {
+     "kind": "cartes",
+     "cards": [
+      {
+       "tag": "Rush brut",
+       "text": "Terne",
+       "ton": "non"
+      },
+      {
+       "tag": "Couleurs réglées",
+       "text": "Vivant",
+       "ton": "oui"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Le *zoom*",
+   "tuile": {
+    "label": "EFFET",
+    "n": 2
+   },
+   "pose": "telephone",
+   "say": "Effet deux : le zoom. [a]Un lent zoom avant guide l'œil vers ce qui compte : [b]ton produit, pas le décor.",
+   "blocks": [
+    {
+     "kind": "mot",
+     "text": "Zoom lent"
+    },
+    {
+     "kind": "etiquette",
+     "text": "Vers le produit"
+    }
+   ]
+  },
+  {
+   "title": "Titre et *sous-titres*",
+   "tuile": {
+    "label": "EFFET",
+    "n": 3
+   },
+   "pose": "ordi",
+   "say": "Effets trois et quatre. [a]Sur ce rush brut, [a1]j'ajoute [a2]un titre qui dit le sujet, [a3]et des sous-titres qui suivent la voix.",
+   "blocks": [
+    {
+     "kind": "avant_apres",
+     "q": "product jar hand placing",
+     "voir": "une main qui pose un pot de crème au centre du cadre",
+     "cadre": "portrait",
+     "effets": [
+      "titre",
+      "sous_titres"
+     ],
+     "titre": "Nouveau *soin*",
+     "sous_titre": "pot de crème"
+    }
+   ]
+  },
+  {
+   "title": "La *barre*",
+   "tuile": {
+    "label": "EFFET",
+    "n": 5
+   },
+   "pose": "mains_hanches",
+   "say": "Effet cinq : la barre de progression. [a1]Elle montre que la fin approche, [a2]et donne une raison de rester.",
+   "blocks": [
+    {
+     "kind": "icones",
+     "items": [
+      {
+       "icon": "horloge",
+       "label": "Fin proche"
+      },
+      {
+       "icon": "oeil",
+       "label": "On reste"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Les *5 effets*",
+   "pose": "victoire",
+   "say": "Couleurs, zoom, titre, sous-titres, barre. [a]Cinq réglages simples, à refaire sur chaque vidéo.",
+   "blocks": [
+    {
+     "kind": "liste",
+     "items": [
+      "Couleurs",
+      "Zoom",
+      "Titre",
+      "Sous-titres",
+      "Barre"
+     ]
+    }
+   ]
+  }
+ ]
+}

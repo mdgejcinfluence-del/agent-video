@@ -9,34 +9,22 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Deux séries, deux identités visuelles : on reconnaît le public visé avant d'avoir lu un mot.
+# Identité visuelle : papier quadrillé, encre bleu nuit, surligneur jaune d'or (les couleurs du personnage).
 # Chaque clé devient une variable CSS du moteur de rendu (engine/player.css).
-THEMES = {
-    # série Créateur / freelance : studio de nuit, violet et citron
-    "nuit": {"bg": "#0E1014", "card": "#181B22", "ink": "#F4F5F7", "muted": "#8D95A3",
-             "accent": "#8B5CF6", "on-accent": "#FFFFFF", "accent2": "#C6F432", "on-accent2": "#0E1014", "em": "#C6F432",
-             "soft": "rgba(139,92,246,.30)", "good": "#3DDC97", "bad": "#FF5C5C", "warn": "#FFB020", "warn-ink": "#FFB020",
-             "dot": "rgba(255,255,255,.07)", "line": "rgba(255,255,255,.10)", "shadow": "rgba(0,0,0,.45)",
-             "code-bg": "#0A0C10", "code-ink": "#D7DCE5", "bezel": "#2A2E38", "rail": "#C6F432", "mark-bg": "#C6F432", "mark-ink": "#0E1014"},
-    # série Commerçant : papier ivoire, vert profond et jaune d'étiquette
-    "ivoire": {"bg": "#FFF8EC", "card": "#FFFFFF", "ink": "#14231B", "muted": "#6E7A72",
-               "accent": "#0B4F3A", "on-accent": "#FFFFFF", "accent2": "#FFC83D", "on-accent2": "#14231B", "em": "#0B4F3A",
-               "soft": "rgba(255,200,61,.34)", "good": "#1E9E61", "bad": "#D9483F", "warn": "#FFB020", "warn-ink": "#8A5200",
-               "dot": "rgba(20,35,27,.09)", "line": "rgba(20,35,27,.11)", "shadow": "rgba(60,40,10,.16)",
-               "code-bg": "#12201A", "code-ink": "#E6EFE9", "bezel": "#14231B", "rail": "#0B4F3A", "mark-bg": "#FFC83D", "mark-ink": "#14231B"},
-}
-SEGMENTS = ("commercant", "createur_freelance")
-DEFAULT_THEME = {"commercant": "ivoire", "createur_freelance": "nuit"}
+THEME = {"paper": "#F5F1E8", "ink": "#0E1A38", "mark": "#FFC531", "card": "#FFFFFF",
+         "line": "rgba(14,26,56,.055)", "line2": "rgba(14,26,56,.09)", "bad": "#E5533D", "good": "#18A66B", "mute": "#6B7388"}
+# clés d'environnement qui suffisent à publier pour de vrai
+PUBLISH_KEYS = ("BUFFER_API_KEY", "FB_PAGE_TOKEN", "IG_TOKEN", "TIKTOK_REFRESH_TOKEN")
 
 
-def segment_cfg(cfg: dict, segment: str) -> dict:
-    return ((cfg.get("segments") or {}).get(segment) or {})
-
-
-def theme_vars(cfg: dict, segment: str = "createur_freelance") -> dict:
-    """Variables CSS de la série du segment."""
-    name = segment_cfg(cfg, segment).get("theme") or DEFAULT_THEME.get(segment, "nuit")
-    return dict(THEMES.get(name) or THEMES[DEFAULT_THEME.get(segment, "nuit")])
+def theme_vars(cfg: dict) -> dict:
+    """Variables CSS : le thème par défaut, modifié par brand.couleurs (papier, encre, surligneur)."""
+    t = dict(THEME)
+    c = ((cfg.get("brand") or {}).get("couleurs") or {})
+    for src, dst in (("papier", "paper"), ("encre", "ink"), ("surligneur", "mark"), ("carte", "card")):
+        if c.get(src):
+            t[dst] = str(c[src])
+    return t
 
 
 def load_dotenv(path: Path | None = None) -> None:
@@ -75,3 +63,23 @@ def load(path: str | Path | None = None) -> dict:
 def secret(name: str) -> str | None:
     v = os.environ.get(name)
     return v.strip() if v and v.strip() else None
+
+
+def peut_publier() -> bool:
+    """Vrai dès qu'une clé de publication est en place."""
+    return any(secret(k) for k in PUBLISH_KEYS)
+
+
+def essai(cfg: dict) -> bool:
+    """Mode essai ? dry_run: true -> toujours ; false -> jamais ; auto (défaut) -> tant qu'aucune clé de publication n'existe.
+
+    C'est ce qui permet à l'agent de démarrer tout seul : le jour où tu ajoutes la clé de publication, il publie.
+    """
+    v = (cfg.get("publish") or {}).get("dry_run", "auto")
+    if isinstance(v, bool):
+        return v
+    if str(v).lower() in ("true", "1", "oui", "yes"):
+        return True
+    if str(v).lower() in ("false", "0", "non", "no"):
+        return False
+    return not peut_publier()

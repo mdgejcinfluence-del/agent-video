@@ -1,14 +1,19 @@
-"""Chaîne de fabrication : storyboard -> contrôles -> voix -> timeline -> son -> rendu -> contrôle qualité."""
+"""Chaîne de fabrication : storyboard -> contrôles -> rushs -> voix -> timeline -> son -> rendu -> contrôle qualité."""
 from __future__ import annotations
 
 import copy
 import json
 import re
+import shutil
 import time
 import zlib
 from pathlib import Path
 
-from . import align, mix, preuves, qa, render, schema, timeline, voice, writer
+from . import align, mix, qa, render, rushs, timeline, voice, writer
+
+
+class RushIntrouvable(RuntimeError):
+    """Aucune séquence filmée acceptable pour un passage : la vidéo n'est pas fabriquée (on ne maquille pas un manque)."""
 
 
 def _rate(cfg: dict) -> float:
@@ -17,37 +22,56 @@ def _rate(cfg: dict) -> float:
 
 
 def _speak_all(story: dict, cfg: dict, log) -> list[dict]:
-    out = []
-    for sc in story["scenes"]:
+    """Toute la vidéo est dite par UNE seule voix : si un écran a dû passer au moteur de secours, on réessaie le moteur
+    principal pour cet écran ; s'il reste en panne, tous les écrans sont redits avec le moteur de secours."""
+    def dire(sc, c):
         clean, _toks, _cues = align.parse_say(sc["say"])
-        out.append(voice.speak(clean, cfg, log, stress_word=story.get("keyword") if sc.get("type") == "cta" else None))
+        return voice.speak(clean, c, log, stress_word=story.get("keyword") if sc.get("type") == "fin" else None)
+    out = [dire(sc, cfg) for sc in story["scenes"]]
+    ordre = list((cfg.get("voice") or {}).get("order") or ["edge", "piper"])
+    for _essai in range(2):
+        autres = [i for i, v in enumerate(out) if v["provider"] != ordre[0]]
+        if not autres:
+            return out
+        time.sleep(4)
+        for i in autres:
+            out[i] = dire(story["scenes"][i], cfg)
+    autres = sorted({v["provider"] for v in out if v["provider"] != ordre[0]})
+    if autres:
+        secours = copy.deepcopy(cfg)
+        secours.setdefault("voice", {})["order"] = [autres[0]]
+        log(f"voix : le moteur « {ordre[0]} » ne répond pas pour tous les écrans — toute la vidéo est dite par « {autres[0]} » (une seule voix par vidéo)")
+        out = [dire(sc, secours) for sc in story["scenes"]]
     return out
 
 
 def _length(voices: list[dict], cfg: dict) -> float:
     v = cfg.get("video", {})
-    return 0.05 + sum(x["dur"] for x in voices) + float(v.get("scene_gap", 0.2)) * (len(voices) - 1) + float(v.get("hold_end", 2.2))
+    return 0.04 + sum(x["dur"] for x in voices) + float(v.get("scene_gap", 0.16)) * (len(voices) - 1) + float(v.get("hold_end", 2.0))
 
 
 def make_video(story: dict, cfg: dict, out_dir: str | Path, slug: str, log=print, workers: int | None = None,
-               pack: dict | None = None, faits: dict | None = None) -> dict:
+               faits: dict | None = None, state=None, brain=None) -> dict:
     """Fabrique out_dir/slug.mp4 (+ .jpg couverture, + .json traçabilité). Renvoie un compte rendu.
 
-    Le storyboard repasse ici par TOUS les contrôles (forme, phrase de fin, preuve, nombres, formulations) :
-    une vidéo qui les enfreint n'est pas rendue, d'où qu'elle vienne.
+    Le storyboard repasse ici par TOUS les contrôles (forme, garde-fous, écran de fin) : une vidéo qui les
+    enfreint n'est pas rendue, d'où qu'elle vienne.
     """
     t_start = time.time()
     root = Path(cfg.get("_root", "."))
     out_dir = Path(out_dir); out_dir.mkdir(parents=True, exist_ok=True)
-    secs = tuple(cfg.get("video", {}).get("seconds", [35, 45]))
-    pack = pack or preuves.charger(root, story.get("preuve"))
-    story, notes = writer.controler(story, cfg, pack, faits or {}, None)
-    for n_ in notes:
-        log(f"storyboard : {n_}")
+    secs = tuple(cfg.get("video", {}).get("seconds", [38, 70]))
+    story, _ = writer.controler(story, cfg, faits or {}, strict=True)
     seed = zlib.crc32(slug.encode()) % (2 ** 31)
-    media = preuves.medias(pack, root / ".cache" / "preuves", schema.refs_in(story))
 
-    # voix, puis ajustement du débit à la durée réellement mesurée (une seule reprise)
+    # 1. les séquences filmées : cherchées, téléchargées, contrôlées (format, netteté, cohérence avec la phrase)
+    besoins = rushs.besoins_de(story)
+    choix = rushs.choisir(besoins, cfg, state, brain, root, log)
+    manque = [b for b in besoins if b["ref"] not in choix]
+    if manque:
+        raise RushIntrouvable("aucune séquence acceptable pour : " + " ; ".join(f"« {b['q']} » ({b['voir'][:50]})" for b in manque))
+
+    # 2. la voix, puis ajustement du débit à la durée réellement mesurée (une seule reprise)
     vcfg = copy.deepcopy(cfg)
     voices = _speak_all(story, vcfg, log)
     total = _length(voices, cfg)
@@ -56,17 +80,22 @@ def make_video(story: dict, cfg: dict, out_dir: str | Path, slug: str, log=print
         cible = secs[1] - 0.6 if total > secs[1] else secs[0] + 0.6
         spoken = sum(x["dur"] for x in voices)
         k = spoken / max(1.0, spoken - (total - cible))                      # vitesse à appliquer à la parole seule
-        rate1 = min(0.30, max(-0.08, (1 + rate0) * k - 1))
+        rate1 = min(0.32, max(-0.05, (1 + rate0) * k - 1))
         if abs(rate1 - rate0) >= 0.02:
             vcfg.setdefault("voice", {})["rate"] = f"{rate1 * 100:+.0f}%"
             log(f"voix : {total:.1f} s au débit {rate0 * 100:+.0f} % — reprise au débit {rate1 * 100:+.0f} % pour viser {secs[0]}–{secs[1]} s")
             voices = _speak_all(story, vcfg, log)
             total = _length(voices, cfg)
     providers = sorted({v["provider"] for v in voices})
-    log(f"voix : {len(voices)} scènes, {sum(v['dur'] for v in voices):.1f} s de parole, moteur {'+'.join(providers)}")
+    log(f"voix : {len(voices)} écrans, {sum(v['dur'] for v in voices):.1f} s de parole, moteur {'+'.join(providers)}")
 
-    built = timeline.build(story, voices, cfg, media, fictif=bool(pack.get("fictif")))
+    # 3. la timeline, puis les séquences découpées à la durée exacte où elles restent à l'écran
+    built = timeline.build(story, voices, cfg)
     tl = built["timeline"]
+    seq_dir = out_dir / f".{slug}_rushs"
+    for ref, need in built["rushs"].items():
+        c = choix[ref]
+        tl["media"][ref] = rushs.preparer(c["fichier"], need["cadre"], need["duree"], seq_dir / ref, fps=tl["fps"])
     layout = render.layout_report(tl)
     for w in layout.get("warnings", []):
         log(f"mise en page : {w}")
@@ -80,21 +109,23 @@ def make_video(story: dict, cfg: dict, out_dir: str | Path, slug: str, log=print
     mp4 = out_dir / f"{slug}.mp4"
     stats = render.render_video(tl, wav, mp4, workers=workers, log=log)
     thumb = out_dir / f"{slug}.jpg"
-    render.still(tl, built["thumb_t"], thumb)
+    render.still(tl, -1, thumb)                                             # la couverture dessinée (miniature)
     wav.unlink(missing_ok=True)
 
     report = qa.check(mp4, tl, layout, audio, float(cfg.get("audio", {}).get("loudness", -14)), seconds=secs)
-    # traçabilité : le storyboard et la timeline, sans la liste des images de chaque rendu
+    shutil.rmtree(seq_dir, ignore_errors=True)
     light = copy.deepcopy(tl)
     for m in light.get("media", {}).values():
-        m["images"] = len(m.pop("srcs", []))
-    (out_dir / f"{slug}.json").write_text(json.dumps({"storyboard": story, "timeline": light}, ensure_ascii=False, indent=1), encoding="utf-8")
+        m.pop("dir", None)
+    light.get("avatar", {}).pop("base", None)
+    sources = {ref: {k: c.get(k) for k in ("id", "source", "page", "auteur", "licence", "controle", "mesures")} for ref, c in choix.items()}
+    (out_dir / f"{slug}.json").write_text(json.dumps({"storyboard": story, "rushs": sources, "timeline": light}, ensure_ascii=False, indent=1), encoding="utf-8")
     scenes = [{"type": s["type"], "t0": s["t0"], "t1": s["t1"], "mots": len(align.parse_say(sc["say"])[1])}
               for s, sc in zip(tl["scenes"], story["scenes"])]
     out = {"video": str(mp4), "thumb": str(thumb), "thumb_ms": int(built["thumb_t"] * 1000), "duration": built["duration"],
            "words": built["words"], "voice": providers, "voice_rate": vcfg.get("voice", {}).get("rate"), "audio": audio, "render": stats,
-           "qa": report, "notes": notes, "story": story, "scenes": scenes, "layout": layout,
+           "qa": report, "story": story, "scenes": scenes, "layout": layout, "rushs": choix,
            "seconds_total": round(time.time() - t_start, 1)}
-    log(f"vidéo : {mp4.name} — {built['duration']:.1f} s, {built['words']} mots, {report['facts']['size'] / 1e6:.1f} Mo, "
+    log(f"vidéo : {mp4.name} — {built['duration']:.1f} s, {built['words']} mots, {len(choix)} séquence(s) filmée(s), {report['facts']['size'] / 1e6:.1f} Mo, "
         f"contrôle qualité {'OK' if report['ok'] else 'ÉCHEC : ' + '; '.join(report['problems'])}")
     return out

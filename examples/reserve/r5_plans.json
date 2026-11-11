@@ -1,0 +1,114 @@
+{
+ "famille": "liste",
+ "hook_type": "question",
+ "title": "5 plans à filmer pour vendre ton produit",
+ "couverture": [
+  "5 PLANS",
+  "POUR VENDRE",
+  "*TON PRODUIT*"
+ ],
+ "keyword": "PLANS",
+ "promesse": "la suite : où trouver des rushs",
+ "suite": {
+  "reserve": "r3_rushs"
+ },
+ "legende": {
+  "accroche": "Tu filmes ton produit toujours de la même façon ? Voici 5 plans simples, avec ton téléphone 👇",
+  "points": [
+   "Le gros plan : le produit seul, sur un fond simple",
+   "Le produit en main : pour donner l'échelle",
+   "Le produit utilisé, le détail, puis l'emballage"
+  ],
+  "limite": "Ces plans montrent bien un produit ; ils ne remplacent ni un bon prix ni une offre claire."
+ },
+ "hashtags": [
+  "#astucevideo",
+  "#photoproduit",
+  "#commerceenligne",
+  "#entrepreneuriat",
+  "#creationdecontenu",
+  "#vendreenligne"
+ ],
+ "faits": [],
+ "outils": [],
+ "scenes": [
+  {
+   "title": "5 plans pour *ton produit*",
+   "pose": "telephone",
+   "say": "Tu filmes ton produit toujours de la même façon ? [a]Voici cinq plans simples, avec ton téléphone. Garde le dernier pour la fin.",
+   "blocks": [
+    {
+     "kind": "rush",
+     "q": "phone tripod filming",
+     "voir": "un téléphone fixé sur un trépied, prêt à filmer",
+     "cadre": "portrait",
+     "label": "Ton téléphone suffit"
+    }
+   ]
+  },
+  {
+   "title": "Le *gros plan*",
+   "tuile": {
+    "label": "PLAN",
+    "n": 1
+   },
+   "pose": "pointe",
+   "say": "Plan un : le gros plan. [a]Le produit seul, au centre, sur un fond simple. On doit le reconnaître au premier coup d'œil.",
+   "blocks": [
+    {
+     "kind": "rush",
+     "q": "product jar close up",
+     "voir": "un pot de crème posé au centre du cadre sur un fond uni",
+     "cadre": "portrait",
+     "label": "Gros plan"
+    }
+   ]
+  },
+  {
+   "title": "Le produit *en main*",
+   "tuile": {
+    "label": "PLAN",
+    "n": 2
+   },
+   "pose": "presente",
+   "say": "Plan deux : le produit en main. [a]Une main donne l'échelle : on comprend tout de suite la taille.",
+   "blocks": [
+    {
+     "kind": "rush",
+     "q": "hands holding product jar cream",
+     "voir": "deux mains qui tiennent un petit pot de crème",
+     "cadre": "portrait",
+     "label": "En main"
+    }
+   ]
+  },
+  {
+   "title": "Et les *3 autres*",
+   "pose": "mains_hanches",
+   "say": "Et les trois autres. [a1]Le produit utilisé, pour montrer le geste. [a2]Le détail, pour montrer la qualité. [a3]Et l'emballage, pour donner envie de recevoir le colis.",
+   "blocks": [
+    {
+     "kind": "liste",
+     "debut": 3,
+     "items": [
+      "Le produit utilisé",
+      "Le détail",
+      "L'emballage"
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Tes *5 plans*",
+   "pose": "pouce",
+   "say": "Gros plan, en main, utilisé, détail, emballage. [a]Cinq plans très courts : assemblés, ils font une vraie pub pour ton produit.",
+   "blocks": [
+    {
+     "kind": "mot",
+     "text": "5 plans",
+     "sous": "Très courts, puis assemblés"
+    }
+   ]
+  }
+ ]
+}

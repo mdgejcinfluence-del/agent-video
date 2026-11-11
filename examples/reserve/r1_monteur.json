@@ -1,0 +1,134 @@
+{
+ "famille": "coulisses",
+ "hook_type": "contraste",
+ "title": "Cette vidéo n'a pas de monteur : voici comment elle est fabriquée",
+ "couverture": [
+  "CETTE VIDÉO",
+  "N'A PAS DE",
+  "*MONTEUR*"
+ ],
+ "keyword": "MONTAGE",
+ "promesse": "la partie 2 : les effets du montage",
+ "suite": {
+  "reserve": "r4_effets"
+ },
+ "legende": {
+  "accroche": "Cette vidéo n'a pas de monteur : un programme a tout assemblé. Voici ses 3 étapes 👇",
+  "points": [
+   "Le script : écrit par une IA, sans chiffre inventé",
+   "Les images : des vidéos libres de droits, vérifiées une par une",
+   "Le montage : titres et sous-titres posés au mot près"
+  ],
+  "limite": "Le programme exécute, il ne devine pas : sans idée claire, la vidéo est propre mais vide."
+ },
+ "hashtags": [
+  "#montagevideo",
+  "#ia",
+  "#motiondesign",
+  "#creationdecontenu",
+  "#astucevideo",
+  "#videoverticale"
+ ],
+ "faits": [],
+ "outils": [],
+ "scenes": [
+  {
+   "title": "Cette vidéo n'a *pas de monteur*",
+   "pose": "presente",
+   "say": "Cette vidéo n'a pas de monteur. [a]Un programme a tout assemblé, tout seul. Je te montre comment, en trois étapes.",
+   "blocks": [
+    {
+     "kind": "tuiles_video",
+     "n": 4
+    }
+   ]
+  },
+  {
+   "title": "Le *script*",
+   "tuile": {
+    "label": "ÉTAPE",
+    "n": 1
+   },
+   "pose": "ordi",
+   "say": "Étape un : le script. [a]Une intelligence artificielle écrit le texte. Mais elle n'a pas le droit d'inventer : [b]chaque chiffre doit venir d'une page officielle.",
+   "blocks": [
+    {
+     "kind": "rush",
+     "q": "hands typing laptop keyboard",
+     "voir": "des mains qui tapent sur le clavier d'un ordinateur portable",
+     "cadre": "portrait",
+     "label": "Écriture du script"
+    },
+    {
+     "kind": "etiquette",
+     "text": "Zéro chiffre inventé"
+    }
+   ]
+  },
+  {
+   "title": "Les *images*",
+   "tuile": {
+    "label": "ÉTAPE",
+    "n": 2
+   },
+   "pose": "reflechit",
+   "say": "Étape deux : les images. Le programme cherche des vidéos libres de droits, [a]puis il contrôle trois choses : [a1]le format, [a2]la netteté, [a3]et que l'image montre bien ce que je dis.",
+   "blocks": [
+    {
+     "kind": "check",
+     "items": [
+      "Le bon format",
+      "Une image nette",
+      "Le bon sujet"
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Le *montage*",
+   "tuile": {
+    "label": "ÉTAPE",
+    "n": 3
+   },
+   "pose": "mains_hanches",
+   "say": "Étape trois : le montage. [a]Voici une séquence brute. [a1]Et la même, montée : [a2]les couleurs, [a3]le titre, [a4]et les sous-titres, posés au mot près.",
+   "blocks": [
+    {
+     "kind": "avant_apres",
+     "q": "sewing machine hands fabric",
+     "voir": "des mains qui cousent un tissu sur une machine à coudre",
+     "cadre": "portrait",
+     "effets": [
+      "couleurs",
+      "titre",
+      "sous_titres"
+     ],
+     "titre": "Fait *main*",
+     "sous_titre": "cousu sur mesure"
+    }
+   ]
+  },
+  {
+   "title": "Ce qu'il *ne fait pas*",
+   "pose": "stop",
+   "say": "Mais attention : le programme exécute, il ne devine pas. [a1]Sans idée claire, il fabrique une vidéo propre… et vide. [a2]Avec un vrai message, elle devient utile.",
+   "blocks": [
+    {
+     "kind": "cartes",
+     "cards": [
+      {
+       "tag": "Sans idée claire",
+       "text": "Vidéo vide",
+       "ton": "non"
+      },
+      {
+       "tag": "Avec un message",
+       "text": "Vidéo utile",
+       "ton": "oui"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

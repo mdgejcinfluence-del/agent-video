@@ -1,0 +1,52 @@
+# Bibliothèque de départ : des séquences libres de droits choisies et regardées une par une (11/11/2026).
+# Elle sert quand aucune clé PEXELS_API_KEY / PIXABAY_API_KEY n'est en place, et complète la recherche ensuite.
+# Les fichiers ne sont PAS dans le dépôt : l'agent les télécharge chez Pexels au moment du rendu.
+# Licence Pexels : usage gratuit, attribution non exigée ; interdit de revendre la séquence telle quelle,
+# de montrer une personne reconnaissable sous un mauvais jour, ou de laisser croire qu'elle recommande un produit.
+#   montre      ce qu'on voit réellement (vérifié à l'œil)
+#   tags        mots anglais pour la recherche
+#   personnes   true si un visage est reconnaissable -> jamais utilisé dans un passage négatif (erreur, arnaque…)
+licence: "Licence Pexels (https://www.pexels.com/license/)"
+rushs:
+  - {id: px-10374892, source: pexels, page: "https://www.pexels.com/video/close-up-on-man-hands-typing-on-laptop-10374892/",
+     url: "https://videos.pexels.com/video-files/10374892/10374892-hd_1080_1920_24fps.mp4", w: 1080, h: 1920, dur: 8.5,
+     montre: "deux mains qui tapent sur le clavier d'un ordinateur portable, vues de dessus", tags: [typing, laptop, keyboard, hands, writing, computer, work, script], personnes: false}
+  - {id: px-39425773, source: pexels, page: "https://www.pexels.com/video/man-editing-video-on-laptop-touchpad-39425773/",
+     url: "https://videos.pexels.com/video-files/39425773/16788570_1080_1920_30fps.mp4", w: 1080, h: 1920, dur: 20.5,
+     montre: "une main sur le pavé tactile d'un portable, un logiciel de montage vidéo à l'écran", tags: [video, editing, laptop, timeline, montage, software, editor, computer], personnes: false}
+  - {id: px-13929657, source: pexels, page: "https://www.pexels.com/video/a-smartphone-on-a-tripod-filming-a-woman-putting-earrings-on-13929657/",
+     url: "https://videos.pexels.com/video-files/13929657/13929657-hd_1080_1920_24fps.mp4", w: 1080, h: 1920, dur: 10.0,
+     montre: "un téléphone sur trépied, avec une petite lampe, qui filme une personne", tags: [smartphone, phone, tripod, filming, recording, light, creator, video, camera], personnes: true}
+  - {id: px-13929685, source: pexels, page: "https://www.pexels.com/video/a-smartphone-on-a-tripod-recording-two-fashion-vloggers-13929685/",
+     url: "https://videos.pexels.com/video-files/13929685/13929685-hd_1080_1920_24fps.mp4", w: 1080, h: 1920, dur: 10.0,
+     montre: "un téléphone tenu par un support, qui enregistre deux personnes en pied", tags: [smartphone, phone, tripod, recording, filming, vertical, creator, video], personnes: true}
+  - {id: px-28311225, source: pexels, page: "https://www.pexels.com/video/a-cell-phone-holder-on-a-tripod-with-a-green-background-28311225/",
+     url: "https://videos.pexels.com/video-files/28311225/12357697_1080_1920_30fps.mp4", w: 1080, h: 1920, dur: 6.8,
+     montre: "un téléphone fixé dans une cage sur un trépied, fond vert sombre", tags: [smartphone, phone, tripod, holder, stable, filming, gear, camera], personnes: false}
+  - {id: px-6343712, source: pexels, page: "https://www.pexels.com/video/person-placing-a-skin-care-product-in-frame-6343712/",
+     url: "https://videos.pexels.com/video-files/6343712/6343712-hd_1080_2048_30fps.mp4", w: 1080, h: 2048, dur: 13.5,
+     montre: "une main pose un petit pot de crème au centre du cadre, sur un fond vert uni avec des feuilles", tags: [product, jar, cream, close, closeup, skincare, cosmetic, background, placing, hand], personnes: false}
+  - {id: px-7614398, source: pexels, page: "https://www.pexels.com/video/cosmetic-products-on-the-table-7614398/",
+     url: "https://videos.pexels.com/video-files/7614398/7614398-hd_1080_2048_25fps.mp4", w: 1080, h: 2048, dur: 6.8,
+     montre: "des flacons de cosmétiques posés sur une table avec des fleurs, la lumière du soleil bouge dessus", tags: [product, bottle, cosmetic, table, light, sunlight, staging, decor, flowers, skincare], personnes: false}
+  - {id: px-4351114, source: pexels, page: "https://www.pexels.com/video/a-person-putting-cream-on-the-hand-4351114/",
+     url: "https://videos.pexels.com/video-files/4351114/4351114-hd_1080_1920_30fps.mp4", w: 1080, h: 1920, dur: 10.0,
+     montre: "deux mains tiennent un petit pot et prennent de la crème", tags: [product, hands, cream, jar, using, use, skincare, cosmetic, demonstration, holding], personnes: false}
+  - {id: px-6446060, source: pexels, page: "https://www.pexels.com/video/a-person-in-a-white-coat-is-holding-up-a-bottle-6446060/",
+     url: "https://videos.pexels.com/video-files/6446060/6446060-hd_1080_1920_25fps.mp4", w: 1080, h: 1920, dur: 12.2,
+     montre: "deux mains présentent un flacon compte-gouttes sur un fond clair uni", tags: [product, hands, bottle, dropper, holding, detail, plain, background, serum], personnes: false}
+  - {id: px-39761233, source: pexels, page: "https://www.pexels.com/video/vintage-sewing-machine-in-use-indoors-39761233/",
+     url: "https://videos.pexels.com/video-files/39761233/16957031_1080_1920_30fps.mp4", w: 1080, h: 1920, dur: 10.7,
+     montre: "des mains cousent un tissu rose sur une ancienne machine à coudre", tags: [sewing, machine, tailor, hands, fabric, craft, artisan, work, workshop, couture], personnes: false}
+  - {id: px-6459961, source: pexels, page: "https://www.pexels.com/video/woman-fixing-thread-in-sewing-machine-6459961/",
+     url: "https://videos.pexels.com/video-files/6459961/6459961-hd_1080_1920_30fps.mp4", w: 720, h: 1280, dur: 11.2,
+     montre: "des mains règlent le fil d'une machine à coudre, en gros plan", tags: [sewing, machine, thread, hands, craft, tailor, detail, workshop], personnes: false}
+  - {id: px-7287302, source: pexels, page: "https://www.pexels.com/video/man-taking-photo-of-the-package-7287302/",
+     url: "https://videos.pexels.com/video-files/7287302/7287302-hd_1080_1920_25fps.mp4", w: 1080, h: 1920, dur: 15.0,
+     montre: "un homme photographie un colis avec son téléphone, dans un atelier", tags: [package, box, phone, photo, seller, shop, business, order, shipping, product], personnes: true}
+  - {id: px-7288137, source: pexels, page: "https://www.pexels.com/video/man-ready-to-ship-the-package-7288137/",
+     url: "https://videos.pexels.com/video-files/7288137/7288137-hd_1080_1920_25fps.mp4", w: 1080, h: 1920, dur: 14.4,
+     montre: "un vendeur souriant pose un colis prêt à partir sur une table", tags: [package, box, seller, shop, business, order, shipping, customer, smile, delivery], personnes: true}
+  - {id: px-38161391, source: pexels, page: "https://www.pexels.com/video/beauty-product-shoot-in-professional-studio-setup-38161391/",
+     url: "https://videos.pexels.com/video-files/38161391/16201893_1080_1920_60fps.mp4", w: 1080, h: 1920, dur: 10.6,
+     montre: "un tournage : une présentatrice, des produits sur une table, un cadreur avec sa caméra sur trépied", tags: [shoot, studio, product, camera, filming, presenter, tripod, video, behind, scenes], personnes: true}

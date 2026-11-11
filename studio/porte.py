@@ -1,56 +1,20 @@
-"""La porte de publication : ce qui doit être vrai avant qu'une vidéo parte sur les réseaux.
+"""La porte de publication : ce qui doit être vrai pour qu'une vidéo parte seule sur les réseaux.
 
-La machine peut écrire, rendre et contrôler un brouillon toute seule. Elle ne publie pas une affirmation commerciale,
-un prix ou une promotion sans qu'une personne l'ait vérifié. Chaque condition ci-dessous se lit dans un fichier que
-tu remplis toi-même (preuve.yaml, config.yaml) : l'agent ne peut pas la cocher à ta place.
+L'agent publie sans validation humaine. Il ne publie donc QUE ce que ses contrôles automatiques ont accepté :
+  1. le storyboard respecte la forme et les garde-fous (aucune promesse, aucun chiffre sans source, aucun outil sans fait vérifié) ;
+  2. chaque séquence filmée a passé ses contrôles (format, netteté, cohérence avec la phrase, droits) ;
+  3. le contrôle qualité de la vidéo est réussi (format, durée, son, mise en page, sous-titres) ;
+  4. si un fait vérifié cité a été suspendu par la veille entre l'écriture et la publication, la vidéo est retenue.
+Pour tout arrêter : publish.dry_run: true dans config.yaml, ou désactiver la tâche dans l'onglet Actions.
 """
 from __future__ import annotations
 
-import datetime as dt
 
-from . import preuves, writer
-
-
-def promo_etat(cfg: dict, today: dt.date | None = None) -> tuple[bool, str]:
-    """(la phrase de fin est-elle vraie aujourd'hui ?, explication)"""
-    offer = cfg.get("offer") or {}
-    if "promo" not in writer.cta_template(cfg).lower():
-        return True, "la phrase de fin ne parle pas de promotion"
-    promo = offer.get("promo") or {}
-    if not promo.get("confirmee"):
-        return False, "promotion non confirmée (offer.promo.confirmee) alors que la phrase de fin dit « en promo »"
-    end = str(promo.get("jusquau") or "").strip()
-    if not end:
-        return False, "date de fin de la promotion absente (offer.promo.jusquau)"
-    try:
-        last = dt.date.fromisoformat(end)
-    except ValueError:
-        return False, f"date de fin de promotion illisible : « {end} » (attendu AAAA-MM-JJ)"
-    today = today or dt.date.today()
-    if today > last:
-        return False, f"promotion terminée depuis le {end} : la phrase de fin ne serait plus vraie"
-    return True, f"promotion confirmée jusqu'au {end}"
-
-
-def bloquants(cfg: dict, pack: dict, qa: dict | None, suite: dict | None, today: dt.date | None = None) -> list[str]:
-    """Raisons pour lesquelles cette vidéo ne peut PAS être publiée (liste vide = seule la validation humaine peut rester)."""
+def bloquants(cfg: dict, story: dict, qa: dict | None, faits_ok: dict | None = None) -> list[str]:
     out = []
-    pcfg, offer = cfg.get("publish") or {}, cfg.get("offer") or {}
     if qa is not None and not qa.get("ok"):
-        out.append("contrôle qualité en échec : " + "; ".join(qa.get("problems") or []))
-    if pack.get("fictif") and not pcfg.get("exemples_fictifs", False):
-        out.append(f"le dossier « {pack['id']} » est un exemple fictif : fournis un vrai cas (ou autorise publish.exemples_fictifs)")
-    if not preuves.signee(pack):
-        out.append(f"le dossier de preuve « {pack['id']} » n'est pas signé (valide_par) : personne n'a encore vérifié le produit, le prix, les droits et les affirmations")
-    ok, why = promo_etat(cfg, today)
-    if not ok:
-        out.append(why)
-    if "lien en bio" in writer.cta_template(cfg).lower() and not str(offer.get("lien_bio") or "").strip():
-        out.append("page d'aiguillage non renseignée (offer.lien_bio) alors que la phrase de fin dit « lien en bio »")
-    if "la suite" in writer.cta_template(cfg).lower() and not suite:
-        out.append("aucune suite prévue pour cette série : ajoute un dossier de preuve avant de promettre « la suite »")
+        out.append("contrôle qualité en échec : " + " ; ".join(qa.get("problems") or ["raison inconnue"]))
+    for fid in story.get("faits") or []:
+        if faits_ok is not None and fid not in faits_ok:
+            out.append(f"le fait « {fid} » n'est plus confirmé par la veille")
     return out
-
-
-def validation_requise(cfg: dict) -> bool:
-    return str((cfg.get("publish") or {}).get("validation", "chaque_video")).strip().lower() != "preuve_signee"

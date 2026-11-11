@@ -1,15 +1,18 @@
 # =====================================================================
-#  FAITS VÉRIFIÉS — les seuls chiffres, prix, licences et fonctionnalités d'outils qu'une vidéo peut citer.
+#  FAITS VÉRIFIÉS — les seuls outils, chiffres, prix et licences qu'une vidéo peut citer.
 #
-#  Chaque jour, la veille rouvre « url » et vérifie que chaque phrase de « doit_contenir » y figure encore.
-#    - phrase retrouvée  -> le fait est confirmé pour le cycle du jour ;
-#    - phrase disparue   -> CHANGEMENT : le fait est suspendu, les vidéos qui le citent ne sont pas publiées,
-#                           et tu es prévenu. À toi de relire la page et de corriger ce fichier.
-#  « mots » : formulations sensibles que ce fait autorise, à condition que la même phrase contienne la précision.
-#             Exemple : « gratuit » n'est accepté que dans une phrase qui dit aussi « 3 personnes ».
+#  verification: automatique -> chaque jour, la veille rouvre « url » et vérifie que chaque phrase de
+#                               « doit_contenir » y figure encore. Phrase disparue = fait suspendu.
+#  verification: manuelle    -> la page refuse les robots : elle a été lue à la main le « verifie_le ».
+#                               Le fait reste utilisable « valable_jours » jours, puis il faut le relire.
+#  outils   : les outils dont ce fait permet de parler (un outil nommé sans fait est refusé).
+#  nombres  : les chiffres que ce fait permet de citer avec une unité.
+#  gratuit  : true si ce fait permet d'écrire « gratuit » (la limite doit alors être dite).
+#  Avec une clé Gemini, l'agent ajoute lui-même des faits (state/faits_auto.json) : il ne garde que ceux
+#  dont il retrouve la citation mot pour mot sur la page officielle.
 #  Première vérification : 11 novembre 2026, en lisant directement les pages officielles.
 # =====================================================================
-fraicheur_jours: 3          # un fait non reconfirmé depuis plus de N jours ne peut plus être publié
+fraicheur_jours: 3          # un fait automatique non reconfirmé depuis plus de N jours ne peut plus être cité
 
 faits:
   - id: remotion-principe
@@ -18,12 +21,15 @@ faits:
     titre: "The fundamentals"
     url: "https://www.remotion.dev/docs/the-fundamentals"
     doit_contenir: ["give you a frame number and a blank canvas"]
-    publie_le: ""                       # date de publication non indiquée sur la page
+    verification: automatique
+    publie_le: ""
     verifie_le: "2026-11-11"
     territoire: "international"
     limite: "Décrit le principe du rendu ; ne dit rien du temps de calcul ni du matériel nécessaire."
     affichage: "remotion.dev/docs/the-fundamentals"
-    mots: {}
+    outils: ["Remotion"]
+    gratuit: false
+    nombres: []
 
   - id: remotion-claude-code
     affirmation: "Remotion documente son usage avec des agents de code comme Claude Code ; il faut un agent de code et Node.js."
@@ -31,12 +37,15 @@ faits:
     titre: "Prompting videos with Claude Code"
     url: "https://www.remotion.dev/docs/ai/claude-code"
     doit_contenir: ["Claude Code", "Node.js"]
+    verification: automatique
     publie_le: ""
     verifie_le: "2026-11-11"
     territoire: "international"
     limite: "Les commandes d'installation changent d'une version à l'autre : les relire avant de les montrer."
     affichage: "remotion.dev/docs/ai/claude-code"
-    mots: {}
+    outils: ["Remotion", "Claude", "Claude Code"]
+    gratuit: false
+    nombres: []
 
   - id: remotion-licence-gratuite
     affirmation: "Remotion : licence gratuite pour les particuliers et les organisations jusqu'à 3 personnes."
@@ -44,12 +53,15 @@ faits:
     titre: "License & Pricing"
     url: "https://www.remotion.dev/docs/license/pricing"
     doit_contenir: ["For individuals and companies of up to 3 people"]
+    verification: automatique
     publie_le: ""
     verifie_le: "2026-11-11"
     territoire: "international"
     limite: "Ne couvre ni l'accès à Claude Code, ni le calcul, ni la voix, ni les images. Au-delà de 3 personnes, la licence est payante."
     affichage: "remotion.dev/docs/license"
-    mots: {gratuit: ["3 personnes"]}
+    outils: ["Remotion"]
+    gratuit: true
+    nombres: ["3"]
 
   - id: remotion-licence-createurs
     affirmation: "Remotion for Creators : 25 dollars par mois et par poste, pour les organisations qui n'ont pas droit à la licence gratuite."
@@ -57,12 +69,15 @@ faits:
     titre: "License & Pricing"
     url: "https://www.remotion.dev/docs/license/pricing"
     doit_contenir: ["$25/mo per seat"]
+    verification: automatique
     publie_le: ""
     verifie_le: "2026-11-11"
     territoire: "international ; prix en dollars américains"
     limite: "Un poste par personne ; conditions exactes à relire au moment de la souscription."
     affichage: "remotion.dev/docs/license"
-    mots: {}
+    outils: ["Remotion"]
+    gratuit: false
+    nombres: ["25", "4"]
 
   - id: remotion-licence-automatisation
     affirmation: "Remotion for Automators : 0,01 dollar par rendu, avec un minimum de 100 dollars par mois."
@@ -70,12 +85,15 @@ faits:
     titre: "License & Pricing"
     url: "https://www.remotion.dev/docs/license/pricing"
     doit_contenir: ["$0.01 per render, $100/mo minimum"]
+    verification: automatique
     publie_le: ""
     verifie_le: "2026-11-11"
     territoire: "international ; prix en dollars américains"
     limite: "Concerne la création automatisée pour une organisation non éligible à la licence gratuite."
     affichage: "remotion.dev/docs/license"
-    mots: {}
+    outils: ["Remotion"]
+    gratuit: false
+    nombres: ["0,01", "100"]
 
   - id: remotion-licence-seuil
     affirmation: "Selon les conditions de Remotion, une licence d'entreprise devient nécessaire à partir de 4 personnes ; Remotion n'est pas un logiciel open source."
@@ -83,9 +101,63 @@ faits:
     titre: "Terms and Conditions"
     url: "https://www.remotion.dev/docs/terms"
     doit_contenir: ["is 4 or more", "not open-source software"]
+    verification: automatique
     publie_le: ""
     verifie_le: "2026-11-11"
     territoire: "international"
     limite: "Texte juridique en anglais ; en cas de doute, c'est la page officielle qui fait foi."
     affichage: "remotion.dev/docs/terms"
-    mots: {"open source": ["pas open source", "pas un logiciel open source", "n'est pas open source"]}
+    outils: ["Remotion"]
+    gratuit: false
+    nombres: ["4"]
+
+  - id: pexels-licence
+    affirmation: "Sur Pexels, les photos et les vidéos peuvent être téléchargées et utilisées gratuitement ; citer l'auteur n'est pas obligatoire ; on peut les modifier."
+    organisme: "Pexels (page « License »)"
+    titre: "Legal Simplicity"
+    url: "https://www.pexels.com/license/"
+    doit_contenir: ["All photos and videos on Pexels can be downloaded and used for free", "Attribution is not required"]
+    verification: manuelle
+    valable_jours: 90
+    publie_le: ""
+    verifie_le: "2026-11-11"
+    territoire: "international"
+    limite: "Interdit : revendre la vidéo telle quelle, montrer une personne reconnaissable sous un mauvais jour, laisser croire qu'une personne ou une marque recommande ton produit."
+    affichage: "pexels.com/license"
+    outils: ["Pexels"]
+    gratuit: true
+    nombres: []
+
+  - id: pixabay-licence
+    affirmation: "Sur Pixabay, les contenus s'utilisent gratuitement, sans obligation de citer l'auteur, et peuvent être modifiés."
+    organisme: "Pixabay (résumé de la licence de contenu)"
+    titre: "Content License Summary"
+    url: "https://pixabay.com/service/license-summary/"
+    doit_contenir: ["Use Content for free", "Use Content without having to attribute the author", "Modify or adapt Content into new works"]
+    verification: manuelle
+    valable_jours: 90
+    publie_le: ""
+    verifie_le: "2026-11-11"
+    territoire: "international"
+    limite: "Interdit : vendre ou redistribuer le contenu tel quel, l'utiliser de façon trompeuse ; prudence avec les marques et les personnes reconnaissables."
+    affichage: "pixabay.com/service/license-summary"
+    outils: ["Pixabay"]
+    gratuit: true
+    nombres: []
+
+  - id: pixabay-libre-de-droits
+    affirmation: "Pixabay diffuse des images et des vidéos libres de droits, sous sa licence de contenu."
+    organisme: "Pixabay (documentation de l'API)"
+    titre: "Pixabay API"
+    url: "https://pixabay.com/api/docs/"
+    doit_contenir: ["royalty-free images and videos released by Pixabay under the"]
+    verification: automatique
+    publie_le: ""
+    verifie_le: "2026-11-11"
+    territoire: "international"
+    limite: "Dit que les contenus sont libres de droits ; les conditions d'usage sont dans la licence de contenu."
+    affichage: "pixabay.com/api/docs"
+    outils: ["Pixabay"]
+    gratuit: false
+    nombres: []
+

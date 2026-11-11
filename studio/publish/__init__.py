@@ -11,49 +11,58 @@ from ..state import now
 NETWORKS = {"tiktok": "TikTok", "instagram": "Instagram Reels", "youtube": "YouTube Shorts", "facebook": "Facebook Reels"}
 
 
-def packs(story: dict, cfg: dict) -> dict[str, dict]:
-    """Pack de publication par plateforme : titre, légende, mots-clés, hashtags, texte de couverture.
+def legende(story: dict, cfg: dict, credit: str = "") -> str:
+    """La légende, toujours bâtie de la même façon : accroche, étapes, limite honnête, consigne, suite, hashtags, crédit des images."""
+    from .. import schema, writer
+    leg = story.get("legende") or {}
+    chiffres = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
+    lignes = [str(leg.get("accroche") or story.get("title") or "").strip()]
+    lignes += [f"{chiffres[i]} {p}" for i, p in enumerate((leg.get("points") or [])[:5])]
+    if leg.get("limite"):
+        lignes.append(f"⚠️ {leg['limite']}")
+    kw = str(story.get("keyword") or "").upper()
+    prom = schema.visible(story.get("promesse") or "la suite")
+    lignes.append(f"💬 Commente {kw} si tu veux {prom}")
+    lignes.append("🔔 Abonne-toi pour ne rien rater")
+    if writer.promo_active(cfg):
+        lignes.append("🎓 La formation complète est en promo : lien en bio")
+    return "\n".join(l for l in lignes if l)
 
-    La phrase de fin est la même partout, mot pour mot. Les hashtags sont peu nombreux et liés au sujet :
-    aucun ne garantit une portée.
-    """
-    n = int((cfg.get("publish") or {}).get("hashtags", 5))
-    tags = [h for h in (story.get("hashtags") or [])][:n]
+
+def packs(story: dict, cfg: dict, credit: str = "") -> dict[str, dict]:
+    """Pack de publication par plateforme : titre, légende, hashtags, texte de couverture."""
+    pcfg = cfg.get("publish") or {}
+    n = int(pcfg.get("hashtags", 8))
+    tags = [h if h.startswith("#") else "#" + h for h in (story.get("hashtags") or [])][:n]
     title = (story.get("title") or "").strip()
-    body = (story.get("caption_corps") or "").strip()
-    full = (story.get("caption") or title).strip()
-    cta = full[len(body):].strip() if body and full.startswith(body) else ""
-    cover = (story.get("couverture") or title)[:30]
-    mots = ", ".join(dict.fromkeys(w for w in title.replace(":", " ").replace(",", " ").split() if len(w) > 3))
+    corps = legende(story, cfg)
+    cover = " ".join(str(x).replace("*", "") for x in (story.get("couverture") or [title]))[:60]
+    cr = credit if pcfg.get("credit_rushs", True) else ""
 
-    def text(*parts: str, k: int = n) -> str:
-        t = " ".join("#" + h for h in tags[:k])
-        return "\n\n".join(p for p in [*parts, t] if p).strip()
+    def text(k: int = n) -> str:
+        return "\n\n".join(p for p in [corps, " ".join(tags[:k]), cr] if p).strip()
     return {
-        # TikTok : le sujet est dit, écrit à l'écran et repris dans la légende (recherche)
-        "tiktok": {"titre": title, "legende": text(f"{title}. {body}".strip(), cta), "mots_cles": mots, "hashtags": tags, "couverture": cover},
-        # Instagram : la première ligne se comprend sans connaître le compte
-        "instagram": {"titre": title, "legende": text(title, body, cta), "mots_cles": mots, "hashtags": tags, "couverture": cover},
-        # YouTube : le titre porte les mots de la recherche ; la description reprend la légende
-        "youtube": {"titre": title[:100], "legende": text(body, cta, k=3), "mots_cles": mots, "hashtags": tags[:3], "couverture": cover},
-        # Facebook : texte court, peu de hashtags
-        "facebook": {"titre": title, "legende": text(body, cta, k=3), "mots_cles": mots, "hashtags": tags[:3], "couverture": cover},
+        "facebook": {"titre": title, "legende": text(), "hashtags": tags, "couverture": cover},
+        "instagram": {"titre": title, "legende": text(), "hashtags": tags, "couverture": cover},
+        "tiktok": {"titre": title, "legende": text(min(n, 6)), "hashtags": tags[:6], "couverture": cover},
+        "youtube": {"titre": title[:100], "legende": text(3), "hashtags": tags[:3], "couverture": cover},
     }
 
 
-def caption_for(story: dict, cfg: dict, network: str) -> str:
-    p = packs(story, cfg)
-    return (p.get(network) or p["tiktok"])["legende"][:2100]
+def caption_for(story: dict, cfg: dict, network: str, credit: str = "") -> str:
+    p = packs(story, cfg, credit)
+    return (p.get(network) or p["facebook"])["legende"][:2100]
 
 
-def publish_all(video: str | Path, story: dict, thumb_ms: int, public_url: str | None, cfg: dict, state, log=print) -> dict:
+def publish_all(video: str | Path, story: dict, thumb_ms: int, public_url: str | None, cfg: dict, state, log=print, credit: str = "") -> dict:
+    from ..config import essai
     pcfg = cfg.get("publish") or {}
     nets = list(pcfg.get("networks") or [])
     out: dict[str, dict] = {}
-    if pcfg.get("dry_run", True):
+    if essai(cfg):
         for n in nets:
             out[n] = {"status": "dry_run", "at": now().isoformat(timespec="seconds")}
-        log("publication : mode essai (dry_run) — rien n'a été envoyé. Légende prévue :\n" + caption_for(story, cfg, "tiktok"))
+        log("publication : mode essai — rien n'a été envoyé. Légende prévue :\n" + caption_for(story, cfg, "facebook", credit))
         return out
     ai = bool(pcfg.get("ai_label", True))
     buf = None
@@ -61,7 +70,7 @@ def publish_all(video: str | Path, story: dict, thumb_ms: int, public_url: str |
         from .buffer import Buffer
         buf = Buffer(secret("BUFFER_API_KEY"), state)
     for n in nets:
-        text = caption_for(story, cfg, n)
+        text = caption_for(story, cfg, n, credit)
         try:
             done = None
             if buf is not None and buf.channel_for(n):

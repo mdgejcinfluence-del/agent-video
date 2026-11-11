@@ -1,0 +1,68 @@
+{
+ "bras_croises": {
+  "w": 413,
+  "h": 1090,
+  "pieds": 47,
+  "corps": 1000
+ },
+ "mains_hanches": {
+  "w": 551,
+  "h": 1090,
+  "pieds": 47,
+  "corps": 1000
+ },
+ "ordi": {
+  "w": 618,
+  "h": 870,
+  "pieds": 47,
+  "corps": 780
+ },
+ "pointe": {
+  "w": 531,
+  "h": 1090,
+  "pieds": 47,
+  "corps": 1000
+ },
+ "pouce": {
+  "w": 482,
+  "h": 1090,
+  "pieds": 47,
+  "corps": 1000
+ },
+ "presente": {
+  "w": 538,
+  "h": 1090,
+  "pieds": 47,
+  "corps": 1000
+ },
+ "reflechit": {
+  "w": 527,
+  "h": 1090,
+  "pieds": 47,
+  "corps": 1000
+ },
+ "stop": {
+  "w": 489,
+  "h": 1090,
+  "pieds": 47,
+  "corps": 1000
+ },
+ "surpris": {
+  "w": 543,
+  "h": 1090,
+  "pieds": 47,
+  "corps": 1000
+ },
+ "telephone": {
+  "w": 454,
+  "h": 1090,
+  "pieds": 47,
+  "corps": 1000
+ },
+ "victoire": {
+  "w": 649,
+  "h": 1190,
+  "pieds": 47,
+  "corps": 1100
+ }
+}

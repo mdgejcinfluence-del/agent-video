@@ -54,12 +54,17 @@ def check(video: str | Path, timeline: dict, layout: dict | None = None, audio_i
             problems.append(f"durée {p['duration']:.1f} s trop éloignée du format visé ({lo:g}–{hi:g} s)")
         elif not lo <= p["duration"] <= hi:
             warnings.append(f"durée {p['duration']:.1f} s hors du format visé ({lo:g}–{hi:g} s)")
-    # le résultat doit être à l'image dès la première seconde, et la preuve doit être lisible
+    # la promesse doit être à l'image dès la première image, et la vidéo doit montrer au moins une vraie séquence filmée
     sc = timeline.get("scenes") or []
-    if sc and (sc[0].get("type") != "resultat" or not sc[0].get("visuel")):
-        problems.append("la première image ne montre pas le résultat produit")
+    if sc and (sc[0].get("type") != "ecran" or not sc[0].get("title")):
+        problems.append("la première image ne porte pas le titre de l'accroche")
+    if sc and sc[-1].get("type") != "fin":
+        problems.append("la vidéo ne se termine pas par l'écran de fin")
     if sc and not timeline.get("media"):
-        problems.append("aucun média de preuve dans la vidéo")
+        problems.append("aucune séquence filmée dans la vidéo")
+    for ref, m in (timeline.get("media") or {}).items():
+        if not m.get("n"):
+            problems.append(f"séquence « {ref} » vide")
     if p["size"] > 100 * 1024 * 1024:
         problems.append("fichier de plus de 100 Mo")
     # images : ni vides ni figées
@@ -81,9 +86,7 @@ def check(video: str | Path, timeline: dict, layout: dict | None = None, audio_i
         if nxt["t0"] < g["t1"] - 0.001:
             problems.append("sous-titres qui se chevauchent"); break
     for w in (layout or {}).get("warnings", []):
-        m = re.search(r"réduit(?:e)? à (\d+) %", w)
-        blocking = "déborde" in w or "descend sous" in w or (m and int(m.group(1)) < 78)      # sous 78 %, le texte n'est plus lisible sur téléphone
-        (problems if blocking else warnings).append("mise en page : " + w)
+        problems.append("mise en page : " + w)                      # débordement, contenu sous la zone lisible, personnage sans place, séquence absente
     if audio_info and audio_info.get("lufs") is not None:
         try:
             if abs(float(audio_info["lufs"]) - target_lufs) > 2.0:

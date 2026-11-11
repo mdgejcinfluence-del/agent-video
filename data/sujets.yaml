@@ -1,227 +1,51 @@
 # =====================================================================
-#  BANQUE DE SUJETS — étude de marché du 11 novembre 2026, section 4.
-#  L'ordre suit le lancement demandé : motion design, puis visuels, sites, contenus.
+#  BANQUE D'IDÉES — ce dont le compte parle.
 #
-#  Règle : un sujet n'est produit que s'il existe un dossier de preuve (preuves/<id>/) qui le cite
-#  dans sa liste « sujets ». Pas de preuve, pas de vidéo.
-#
-#  « hook » : hypothèse de rédaction à tester, pas une promesse de performance.
-#  « notes » : estimation éditoriale de départ, de 0 à 5 — à corriger avec TES données
-#     probleme   = à quel point ce problème pèse pour ce public
-#     formation  = à quel point le sujet mène naturellement à la formation
-#  « demande » : signal de demande VÉRIFIABLE, de 0 à 5. Laisse vide tant que tu n'as rien mesuré
-#     (recherches TikTok Creator Search Insights, questions reçues, commentaires, messages).
-#     Si tu le remplis, indique d'où vient le signal dans « demande_source ».
-#  Les deux autres critères sont calculés : la preuve (dossier réel, signé ?) et la fraîcheur (veille du jour).
+#  familles : les grands types de vidéo. « poids » = part de départ ; le bilan (tous les 3 jours) le corrige
+#             d'après les mesures, sans jamais descendre sous « plancher » (chaque famille garde une chance).
+#  idees    : sujets de départ. Quand ils sont tous traités, le modèle en propose de nouveaux dans les
+#             familles qui marchent (state/idees.json). « faits » = faits vérifiés indispensables au sujet.
+#  Une idée n'est jamais une promesse de résultat : c'est un geste, une méthode, une erreur à éviter.
 # =====================================================================
-poids: {probleme: 30, preuve: 25, demande: 20, formation: 15, fraicheur: 10}     # en %, total 100
-themes: [motion, visuels, sites, contenus]                                      # ordre de lancement
+plancher: 0.06
+familles:
+  - {id: methode,     nom: "La méthode en étapes",        poids: 0.22, titre: "N étapes / N réglages pour…",       tuile: "ÉTAPE"}
+  - {id: liste,       nom: "La liste utile",              poids: 0.18, titre: "N plans / N idées / N outils pour…", tuile: "NUMÉRO"}
+  - {id: erreurs,     nom: "Les erreurs à éviter",        poids: 0.18, titre: "N erreurs qui…",                    tuile: "ERREUR"}
+  - {id: avant_apres, nom: "L'avant / après",             poids: 0.16, titre: "De ça à ça : …",                    tuile: "EFFET"}
+  - {id: coulisses,   nom: "Les coulisses",               poids: 0.12, titre: "Comment cette vidéo est faite",     tuile: "ÉTAPE"}
+  - {id: outil,       nom: "L'outil expliqué",            poids: 0.08, titre: "À quoi sert … (et ses limites)",    tuile: "NUMÉRO"}
+  - {id: alerte,      nom: "L'alerte",                    poids: 0.06, titre: "Attention à …",                     tuile: "PIÈGE"}
 
-sujets:
-  - n: 1
-    segment: createur_freelance
-    theme: motion
-    sujet: "Expliquer le rôle de Claude Code et de Remotion."
-    hook: "Claude écrit le code ; Remotion rend la vidéo."
-    preuve: "Prompt, projet, aperçu et MP4 final."
-    formation: "Comprendre le workflow et ses limites."
-    notes: {probleme: 4, formation: 5}
-    demande:
-    demande_source: ""
-    faits: [remotion-principe, remotion-claude-code]
-    veille: [remotion, claude code]
-
-  - n: 2
-    segment: createur_freelance
-    theme: motion
-    sujet: "Passer d'une animation générique à une animation de marque."
-    hook: "Le prompt seul ne suffit pas : commence par ta charte."
-    preuve: "Avant/après : couleurs, typographies et mouvement cohérents."
-    formation: "Charte et système réutilisable."
-    notes: {probleme: 4, formation: 5}
-    demande:
-    demande_source: ""
-    faits: []
-    veille: [remotion, design system, brand]
-
-  - n: 3
-    segment: createur_freelance
-    theme: motion
-    sujet: "Montrer une erreur de rendu et sa correction."
-    hook: "Voilà le défaut que j'ai dû corriger avant l'export."
-    preuve: "Première version, remarque précise, seconde version."
-    formation: "Prévisualisation, itération et contrôle qualité."
-    notes: {probleme: 4, formation: 4}
-    demande:
-    demande_source: ""
-    faits: []
-    veille: [remotion]
-
-  - n: 4
-    segment: createur_freelance
-    theme: motion
-    sujet: "Construire un lookbook de scènes réutilisables."
-    hook: "Une fois ton système visuel prêt, tu ne repars pas de zéro."
-    preuve: "Trois compositions utilisant la même charte."
-    formation: "Templates et workflow de production."
-    notes: {probleme: 3, formation: 5}
-    demande:
-    demande_source: ""
-    faits: []
-    veille: [remotion, template]
-
-  - n: 5
-    segment: commercant
-    theme: motion
-    sujet: "Transformer une vraie photo de produit en publicité animée."
-    hook: "Cette photo de ton produit peut devenir une vidéo prête à publier."
-    preuve: "Photo d'origine, rendu final, prix et consigne vérifiés."
-    formation: "Préparation d'assets et vérification de l'offre."
-    notes: {probleme: 5, formation: 5}
-    demande:
-    demande_source: ""
-    faits: []
-    veille: []
-
-  - n: 6
-    segment: commercant
-    theme: visuels
-    sujet: "Créer un visuel promo en gardant le produit fidèle."
-    hook: "Si l'IA invente ton produit, ta promo perd en confiance."
-    preuve: "Photo réelle et visuel transformé, erreurs repérées et corrigées."
-    formation: "Assets, identité de marque et contrôle qualité."
-    notes: {probleme: 4, formation: 4}
-    demande:
-    demande_source: ""
-    faits: []
-    veille: []
-
-  - n: 7
-    segment: createur_freelance
-    theme: visuels
-    sujet: "Réutiliser la même charte dans plusieurs visuels."
-    hook: "Voici comment garder la même identité sur trois formats."
-    preuve: "Variantes d'images/animations dérivées du même système."
-    formation: "Tokens, composants et styles réutilisables."
-    notes: {probleme: 3, formation: 4}
-    demande:
-    demande_source: ""
-    faits: []
-    veille: [design system]
-
-  - n: 8
-    segment: commercant
-    theme: visuels
-    sujet: "Faire trois versions visuelles d'une offre sans changer ses détails."
-    hook: "Une même offre, trois façons de la présenter."
-    preuve: "Variantes de bénéfice/accroche, avec les mêmes informations réelles."
-    formation: "Déclinaisons et modèles adaptables."
-    notes: {probleme: 4, formation: 4}
-    demande:
-    demande_source: ""
-    faits: []
-    veille: []
-
-  - n: 9
-    segment: createur_freelance
-    theme: sites
-    sujet: "Construire une landing page simple à partir d'un brief."
-    hook: "Un brief clair avant le site évite une page jolie mais inutile."
-    preuve: "Brief, aperçu mobile, liens et formulaire testés."
-    formation: "Site, composants et contrôle avant livraison."
-    notes: {probleme: 3, formation: 3}
-    demande:
-    demande_source: ""
-    faits: []
-    veille: [landing page, claude code]
-
-  - n: 10
-    segment: commercant
-    theme: sites
-    sujet: "Montrer une page produit/offre mobile à partir d'un vrai commerce."
-    hook: "Ta page doit répondre à ces trois questions avant le clic."
-    preuve: "Produit, prix/conditions et action de commande réels."
-    formation: "Parcours offre, vérification mobile et conversion."
-    notes: {probleme: 4, formation: 3}
-    demande:
-    demande_source: ""
-    faits: []
-    veille: []
-
-  - n: 11
-    segment: commercant
-    theme: contenus
-    sujet: "Transformer une question fréquente en contenu court."
-    hook: "On te pose toujours cette question sur ton produit ?"
-    preuve: "Question réelle/anonymisée et réponse simple."
-    formation: "Script, storyboard et réutilisation des FAQ."
-    notes: {probleme: 4, formation: 3}
-    demande:
-    demande_source: ""
-    faits: []
-    veille: []
-
-  - n: 12
-    segment: commercant
-    theme: contenus
-    sujet: "Préparer le brief d'un restaurant, d'une boutique ou d'un salon."
-    hook: "Avant l'IA, écris ces trois détails sur ton offre."
-    preuve: "Offre, client visé, action attendue."
-    formation: "Brief et script, pas seulement l'outil."
-    notes: {probleme: 4, formation: 4}
-    demande:
-    demande_source: ""
-    faits: []
-    veille: []
-
-  - n: 13
-    segment: createur_freelance
-    theme: contenus
-    sujet: "Transformer un texte en script visuel en trois étapes."
-    hook: "Ne demande pas encore la vidéo : commence par le storyboard."
-    preuve: "Script, trois scènes, aperçu et correction."
-    formation: "Brief, storyboard et composition."
-    notes: {probleme: 3, formation: 4}
-    demande:
-    demande_source: ""
-    faits: []
-    veille: [storyboard]
-
-  - n: 14
-    segment: createur_freelance
-    theme: contenus
-    sujet: "Comparer Remotion et un éditeur classique par cas d'usage."
-    hook: "Pour cette animation répétable, je choisis X ; pour ce montage, Y."
-    preuve: "Même brief, critères précis et limites."
-    formation: "Choix d'outil et coûts."
-    notes: {probleme: 3, formation: 3}
-    demande:
-    demande_source: ""
-    faits: [remotion-licence-gratuite, remotion-licence-createurs]
-    veille: [remotion, capcut]
-
-  - n: 15
-    segment: createur_freelance
-    theme: contenus
-    sujet: "Clarifier « gratuit », « open source » et licence commerciale."
-    hook: "Vérifie la licence avant d'appeler cet outil gratuit."
-    preuve: "Page officielle, date, taille de l'organisation et coût applicables."
-    formation: "Réduire les mauvaises surprises."
-    notes: {probleme: 3, formation: 3}
-    demande:
-    demande_source: ""
-    faits: [remotion-licence-gratuite, remotion-licence-createurs, remotion-licence-automatisation, remotion-licence-seuil]
-    veille: [remotion, license]
-
-  - n: 16
-    segment: commercant
-    theme: contenus
-    sujet: "Mesurer l'effet d'une vidéo sans promettre des ventes."
-    hook: "Les vues ne disent pas à elles seules si ta vidéo a vendu."
-    preuve: "Lien suivi, messages ou achats réels et anonymisés, si disponibles."
-    formation: "Mesure/attribution ; aucun chiffre sans preuve."
-    notes: {probleme: 3, formation: 2}
-    demande:
-    demande_source: ""
-    faits: []
-    veille: []
+idees:
+  # --- méthode
+  - {id: m01, famille: methode, sujet: "4 réglages à faire sur son téléphone avant de filmer", reserve: r6_telephone}
+  - {id: m02, famille: methode, sujet: "Écrire une accroche : la première phrase qui retient", angle: "trois formes d'accroche (résultat, problème, question), avec un exemple de chacune"}
+  - {id: m03, famille: methode, sujet: "Écrire le script d'une vidéo de 45 secondes en 4 parties", angle: "accroche, promesse, points, consigne finale"}
+  - {id: m04, famille: methode, sujet: "Filmer un produit près d'une fenêtre : placer la lumière", angle: "de face, de côté, jamais dans le dos"}
+  - {id: m05, famille: methode, sujet: "Enregistrer une voix claire avec son téléphone", angle: "pièce calme, téléphone proche de la bouche, tissu autour pour couper l'écho"}
+  - {id: m06, famille: methode, sujet: "Préparer une semaine de vidéos en une seule séance", angle: "une idée par jour, mêmes réglages, tourner à la suite"}
+  # --- liste
+  - {id: l01, famille: liste, sujet: "5 plans à filmer pour vendre un produit", reserve: r5_plans}
+  - {id: l02, famille: liste, sujet: "5 idées de vidéos quand on ne veut pas montrer son visage", angle: "mains, produit, écran, coulisses, avant/après"}
+  - {id: l03, famille: liste, sujet: "4 fonds simples pour filmer un produit à la maison", angle: "tissu uni, table en bois, mur clair, feuille de papier"}
+  - {id: l04, famille: liste, sujet: "5 phrases de fin qui disent clairement quoi faire", angle: "une consigne à la fois"}
+  - {id: l05, famille: liste, sujet: "4 moments de la journée d'un commerce à filmer", angle: "l'ouverture, la préparation, l'emballage, la remise au client (sans montrer le client)"}
+  # --- erreurs
+  - {id: e01, famille: erreurs, sujet: "3 erreurs qui font zapper une vidéo dès le début", reserve: r2_zapper}
+  - {id: e02, famille: erreurs, sujet: "3 erreurs de texte à l'écran", angle: "trop petit, trop long, collé aux bords où les boutons le cachent"}
+  - {id: e03, famille: erreurs, sujet: "3 erreurs quand on filme un produit", angle: "fond chargé, produit trop loin, lumière dans le dos"}
+  - {id: e04, famille: erreurs, sujet: "3 erreurs dans une légende de vidéo", angle: "pas d'accroche, pas d'étapes, pas de consigne"}
+  # --- avant / après
+  - {id: a01, famille: avant_apres, sujet: "1 rush, 5 effets : avant et après le montage", reserve: r4_effets}
+  - {id: a02, famille: avant_apres, sujet: "Le même rush avec et sans sous-titres", angle: "ce qu'on comprend sans le son"}
+  - {id: a03, famille: avant_apres, sujet: "Recadrer un rush : montrer le produit, pas le décor", angle: "le zoom qui guide l'œil"}
+  # --- coulisses
+  - {id: c01, famille: coulisses, sujet: "Cette vidéo n'a pas de monteur : comment elle est fabriquée", reserve: r1_monteur}
+  - {id: c02, famille: coulisses, sujet: "Comment le programme choisit ses images", angle: "recherche, contrôle du format, contrôle de la netteté, contrôle du sujet"}
+  - {id: c03, famille: coulisses, sujet: "Pourquoi ce compte ne donne jamais de chiffre sans source", angle: "chaque chiffre vient d'une page officielle, sinon il n'est pas dit"}
+  # --- outil (un fait vérifié est indispensable)
+  - {id: o01, famille: outil, sujet: "Où trouver des vidéos libres de droits quand on n'a pas de caméra", faits: [pexels-licence, pixabay-licence], reserve: r3_rushs}
+  - {id: o02, famille: outil, sujet: "Les règles à respecter avec une vidéo de banque d'images", faits: [pexels-licence, pixabay-licence], angle: "pas de revente telle quelle, respect des personnes, pas de fausse recommandation"}
+  # --- alerte
+  - {id: x01, famille: alerte, sujet: "Une vidéo de banque d'images n'est pas un témoignage client", angle: "ce qui est honnête et ce qui trompe le public"}

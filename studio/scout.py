@@ -181,11 +181,16 @@ def _texte_page(url: str) -> tuple[int, str]:
     return r.status_code, re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", t)))
 
 
-def charger_faits(root: str | Path) -> dict:
+def charger_faits(root: str | Path, state=None) -> dict:
+    """Les faits du dépôt (data/faits.yaml) et, si la mémoire est fournie, ceux que l'agent a trouvés lui-même (state/faits_auto.json)."""
     import yaml
     p = Path(root) / "data" / "faits.yaml"
     d = (yaml.safe_load(p.read_text(encoding="utf-8")) if p.exists() else {}) or {}
-    return {"fraicheur_jours": int(d.get("fraicheur_jours", 3)), "faits": {str(f["id"]): f for f in d.get("faits") or [] if f.get("id")}}
+    faits = {str(f["id"]): f for f in d.get("faits") or [] if f.get("id")}
+    if state is not None:
+        for fid, f in ((state.load("faits_auto", {}) or {}).get("faits") or {}).items():
+            faits.setdefault(str(fid), f)
+    return {"fraicheur_jours": int(d.get("fraicheur_jours", 3)), "faits": faits}
 
 
 def verifier_faits(root: str | Path, state, log=print, force: bool = False, fetch=_texte_page) -> dict:
@@ -193,13 +198,15 @@ def verifier_faits(root: str | Path, state, log=print, force: bool = False, fetc
 
     Mémoire : state/veille.json = {"date", "faits": {id: {"ok", "le", "http", "manque"}}, "changements": [...]}.
     """
-    base = charger_faits(root)
+    base = charger_faits(root, state)
     mem = state.load("veille", {"date": "", "faits": {}, "changements": []})
     today = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
     if mem.get("date") == today and not force:
         return mem
     pages: dict[str, tuple[int, str] | None] = {}
     for fid, f in base["faits"].items():
+        if f.get("verification") == "manuelle":            # page fermée aux robots : lue à la main, valable un temps limité (valable_jours)
+            continue
         url = str(f.get("url") or "")
         if url not in pages:
             try:
@@ -228,19 +235,22 @@ def verifier_faits(root: str | Path, state, log=print, force: bool = False, fetc
     if any(p is not None for p in pages.values()):
         mem["date"] = today
     state.save("veille", mem)
-    n_ok = sum(1 for fid in base["faits"] if (mem["faits"].get(fid) or {}).get("ok") and mem["faits"][fid].get("le") == today)
-    log(f"veille : {n_ok}/{len(base['faits'])} faits reconfirmés aujourd'hui sur {len([p for p in pages.values() if p])} page(s) officielle(s)")
+    auto = [fid for fid, f in base["faits"].items() if f.get("verification") != "manuelle"]
+    n_ok = sum(1 for fid in auto if (mem["faits"].get(fid) or {}).get("ok") and mem["faits"][fid].get("le") == today)
+    log(f"veille : {n_ok}/{len(auto)} faits reconfirmés aujourd'hui sur {len([p for p in pages.values() if p])} page(s) officielle(s)"
+        + (f" ; {len(base['faits']) - len(auto)} fait(s) lus à la main (pages fermées aux robots)" if len(auto) < len(base["faits"]) else ""))
     return mem
 
 
 def faits_confirmes(root: str | Path, state, today: str | None = None) -> dict[str, dict]:
     """{id: fait} pour les faits utilisables aujourd'hui (dernier contrôle réussi et assez récent)."""
-    base = charger_faits(root)
+    base = charger_faits(root, state)
     mem = state.load("veille", {"date": "", "faits": {}, "changements": []})
     now_ = dt.date.fromisoformat(today) if today else dt.datetime.now(dt.timezone.utc).date()
     out = {}
     for fid, f in base["faits"].items():
-        chk = mem["faits"].get(fid)
+        manuel = f.get("verification") == "manuelle"
+        chk = None if manuel else mem["faits"].get(fid)
         if chk is not None and not chk.get("ok"):
             continue
         last = str((chk or {}).get("le") or f.get("verifie_le") or "")
@@ -248,6 +258,75 @@ def faits_confirmes(root: str | Path, state, today: str | None = None) -> dict[s
             age = (now_ - dt.date.fromisoformat(last)).days
         except ValueError:
             continue
-        if age <= base["fraicheur_jours"]:
+        if age <= (int(f.get("valable_jours", 90)) if manuel else base["fraicheur_jours"]):
             out[fid] = {**f, "verifie_le": last}
     return out
+
+
+# --------------------------------------------------------------------------- nouveaux faits, trouvés par l'agent
+PROPOSER = """Tu aides un compte de vidéos courtes (astuces pour filmer, monter et publier des vidéos avec un téléphone et l'IA) à ne dire que des choses vraies.
+Propose des FAITS vérifiables sur des outils utiles à ce public (montage, sous-titres, images, voix, publication).
+Chaque fait doit pouvoir être relu sur une page OFFICIELLE de l'outil (son site, sa documentation, sa page de tarifs ou de licence), accessible sans compte.
+Réponds par un objet JSON : {"faits": [{"id": "outil-sujet" en minuscules, "outil": nom de l'outil, "affirmation": le fait en français, 160 caractères au plus,
+"url": adresse https de la page officielle, "citation": une phrase EXACTE de cette page (4 à 16 mots, dans la langue de la page) qui prouve le fait,
+"gratuit": true seulement si la citation dit que c'est gratuit, "nombres": les chiffres cités, "limite": ce que le fait ne dit pas ou la condition à connaître}]}
+L'affirmation traduit fidèlement la citation, rien de plus. Aucun chiffre qui n'est pas dans la citation. Si tu n'es pas sûr de la phrase exacte, ne propose pas le fait."""
+
+
+def _domaine_officiel(url: str, outil: str) -> bool:
+    m = re.match(r"https://([^/]+)/?", url or "")
+    if not m:
+        return False
+    host = m.group(1).lower()
+    cle = re.sub(r"[^a-z0-9]", "", outil.lower())
+    return bool(cle) and len(cle) >= 3 and cle in re.sub(r"[^a-z0-9]", "", host)
+
+
+def proposer_faits(brain, root: str | Path, state, cfg: dict, log=print, fetch=_texte_page) -> int:
+    """Demande au modèle de nouveaux faits ; ne garde que ceux dont la citation est retrouvée mot pour mot sur la page officielle."""
+    rcfg = cfg.get("research") or {}
+    if not rcfg.get("nouveaux_faits", True) or brain is None or not brain.available():
+        return 0
+    mem = state.load("faits_auto", {}) or {}
+    sem = dt.datetime.now(dt.timezone.utc).strftime("%G-W%V")
+    if mem.get("semaine") == sem and mem.get("demandes", 0) >= 2:
+        return 0                                                    # deux demandes par semaine suffisent
+    connus = charger_faits(root, state)["faits"]
+    try:
+        obj = brain.ask_json(PROPOSER, "Faits déjà connus (n'y reviens pas) : " + ", ".join(connus) + f"\nPropose au plus {int(rcfg.get('nouveaux_faits_par_semaine', 6))} nouveaux faits.",
+                             niveau="controle", temperature=0.3, max_tokens=3000, retries=0, purpose="faits")
+    except Exception as e:  # noqa: BLE001
+        log(f"veille : proposition de nouveaux faits impossible ({type(e).__name__}: {str(e)[:100]})")
+        return 0
+    mem = {"semaine": sem, "demandes": (mem.get("demandes", 0) if mem.get("semaine") == sem else 0) + 1, "faits": dict(mem.get("faits") or {})}
+    today = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
+    gardes = 0
+    for f in (obj.get("faits") or [])[:8]:
+        if not isinstance(f, dict):
+            continue
+        fid = re.sub(r"[^a-z0-9-]", "", str(f.get("id") or "").lower())[:40]
+        outil, aff, url, cit = (str(f.get(k) or "").strip() for k in ("outil", "affirmation", "url", "citation"))
+        if not fid or fid in connus or not (10 <= len(aff) <= 170) or not (4 <= len(cit.split()) <= 18):
+            continue
+        if not _domaine_officiel(url, outil):
+            log(f"veille : fait proposé « {fid} » écarté — {url[:60]} n'est pas le site de {outil}")
+            continue
+        if any(n not in cit for n in re.findall(r"\d+(?:[.,]\d+)?", aff)):
+            log(f"veille : fait proposé « {fid} » écarté — un chiffre de l'affirmation n'est pas dans la citation")
+            continue
+        try:
+            code, text = fetch(url)
+        except Exception:  # noqa: BLE001
+            continue
+        if code != 200 or re.sub(r"\s+", " ", cit).lower() not in text.lower():
+            log(f"veille : fait proposé « {fid} » écarté — citation introuvable sur la page (HTTP {code})")
+            continue
+        gratuit = bool(f.get("gratuit")) and bool(re.search(r"free|gratuit", cit, re.I))
+        mem["faits"][fid] = {"id": fid, "affirmation": aff, "organisme": f"{outil} (site officiel)", "titre": "", "url": url, "doit_contenir": [cit],
+                             "verification": "automatique", "publie_le": "", "verifie_le": today, "territoire": "international",
+                             "limite": str(f.get("limite") or "")[:200], "affichage": re.sub(r"^https://(www\.)?", "", url)[:60], "outils": [outil],
+                             "gratuit": gratuit, "nombres": [str(n) for n in (f.get("nombres") or []) if str(n) in cit], "origine": "modele"}
+        gardes += 1
+        log(f"veille : nouveau fait vérifié « {fid} » — {aff[:90]} ({url[:60]})")
+    state.save("faits_auto", mem)
+    return gardes

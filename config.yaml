@@ -1,177 +1,117 @@
 # =====================================================================
-#  CONFIGURATION DE L'AGENT — le fichier que tu modifies.
-#  Les clés secrètes (API) ne vont JAMAIS ici : elles vont dans les
-#  « Secrets » GitHub (ou dans un fichier .env sur un serveur).
-#
-#  Positionnement (étude de marché du 11 novembre 2026) :
-#  on ne vend pas « Claude sait faire des vidéos ». On montre un résultat utile à une personne précise,
-#  on prouve comment il a été obtenu, et on vend la méthode pour le refaire avec ses propres éléments.
-#  Deux publics, deux séries, jamais mélangés dans une même vidéo.
+#  AGENT VIDÉO — réglages. Tout ce qui est ici peut être changé sans toucher au code.
+#  Aucune clé ne s'écrit dans ce fichier : elles vont dans GitHub > Settings > Secrets and variables > Actions.
 # =====================================================================
 
 brand:
-  name: ""                           # nom de ta marque (facultatif)
-  handle: ""                         # ton identifiant sur les réseaux (facultatif, pour mémoire)
-  language: "fr"
-  avatar: ""                         # photo affichée sur l'écran final (ex. "assets/avatar.jpg") ; vide = aucune
+  name: ""                           # nom du compte (laisse vide tant qu'il n'est pas choisi)
+  handle: ""                         # identifiant affiché sur l'écran de fin, ex. "@moncompte"
+  promesse: "des astuces simples pour faire de meilleures vidéos avec ton téléphone et l'IA"
+  public: "des francophones d'Afrique de l'Ouest, d'Afrique centrale et d'Europe qui créent du contenu ou vendent avec leur téléphone"
+  mention_fin: "Vidéo montée par un programme"     # petite mention honnête sur l'écran de fin (vide = aucune)
+  couleurs:                          # l'identité visuelle : papier quadrillé, encre, surligneur (les couleurs du personnage)
+    papier: "#F5F1E8"
+    encre: "#0E1A38"
+    surligneur: "#FFC531"
 
-segments:                            # LES DEUX PUBLICS — chaque vidéo en choisit exactement un
-  commercant:
-    nom: "Commerçants"
-    serie: "Vidéos pour ton commerce"          # étiquette affichée en haut de chaque vidéo de la série
-    theme: "ivoire"                            # ivoire, vert profond, jaune d'étiquette
-    cible: "commerçants, artisans et prestataires francophones (boutique, restaurant, coiffure, mode, beauté, artisanat, service) qui vendent un vrai produit ou service"
-    veut: "mettre en avant un produit, une nouveauté, une offre ou une réponse client avec une vidéo qu'il peut publier et comprendre"
-    ne_veut_pas: "une suite d'installations techniques, une vidéo qui invente un prix, une promesse de viralité, un rendu beau mais qui ne ressemble pas à son commerce"
-    promesse: "À partir de ton produit et de ton offre, une vidéo promotionnelle crédible, lisible sur téléphone et prête à publier."
-    angle_vente: "Repars avec des vidéos utilisables pour ton activité et une méthode pour les refaire."
-    priorites: ["résultat concret", "facilité", "temps", "coût réel", "confiance", "lisibilité sur téléphone", "outils et prérequis clairs"]
-    regles:
-      - "Parle d'offre, de produit, de client et de publication. N'accumule pas les noms d'outils."
-      - "N'ouvre jamais sur React, Remotion, les skills ou le terminal. Aucun code à l'écran."
-      - "Montre un cas métier concret et une vraie action commerciale (commander, réserver, passer en boutique)."
-      - "Le nom, le prix, le format et la consigne viennent du dossier de preuve. Rien d'autre sur le produit."
-      - "Dis clairement ce qu'il faut pour le refaire (un ordinateur, par exemple) : c'est la limite utile."
-    page: ""                                   # adresse de la page de vente du parcours « Vidéos pour mon commerce »
-  createur_freelance:
-    nom: "Créateurs et freelances"
-    serie: "Motion design reproductible"
-    theme: "nuit"                              # studio de nuit, violet et citron
-    cible: "créateurs de contenu et freelances francophones qui produisent des vidéos ou des animations pour leur chaîne ou pour des clients"
-    veut: "produire plus vite des animations différenciées et réutilisables pour sa chaîne, son portfolio ou ses clients"
-    ne_veut_pas: "un tutoriel de hype qui ne finit pas en MP4, un modèle générique, des commandes qui changent, un outil dont on ne dit pas les limites"
-    promesse: "Un workflow qui transforme une demande écrite en motion design réutilisable et vérifié."
-    angle_vente: "Repars avec un workflow qui transforme un brief en motion design réutilisable et vérifié."
-    priorites: ["preuve du rendu", "workflow", "demandes écrites", "assets", "prévisualisation", "itération", "export", "limites", "coûts", "usage professionnel"]
-    regles:
-      - "Nomme un outil seulement si la vidéo montre son rôle réel. Explique chaque terme technique en mots simples."
-      - "Montre la boucle complète : la demande, le code ou le projet, l'aperçu, la correction, le rendu final."
-      - "Ne promets aucun revenu, aucun nombre de vues, aucune viralité, aucun remplacement d'un monteur."
-      - "Dis ce que chaque outil fait vraiment : l'agent de code écrit le code, le moteur de rendu calcule la vidéo."
-    page: ""                                   # adresse de la page de vente du parcours « Motion design reproductible »
-
-niche:                               # mots cherchés par la veille des outils (les 5 premiers servent à la recherche GitHub)
-  keywords: ["claude code video", "motion graphics", "remotion video", "video skill", "claude skills", "claude design"]
-
-offer:                               # LA FORMATION VENDUE PAR LE LIEN EN BIO
-  name: ""                           # nom de la formation (à remplir quand elle existe)
-  # --- Phrase de fin de CHAQUE vidéo, pour les deux publics. Elle est dite et écrite mot pour mot ; le modèle ne peut pas y toucher.
-  #     « MOT » est remplacé par le mot-clé de la vidéo. Commenter ne fait rien recevoir : aucun envoi n'est promis.
-  cta: "Commente MOT si tu veux la suite. La formation complète est en promo, lien en bio."
-  cta_mot_fixe: ""                   # vide = un mot-clé par vidéo (INTRO, CHARTE…). Écris un mot ici pour utiliser le même dans toutes les vidéos.
-  lien_bio: ""                       # adresse de ta page d'aiguillage : deux boutons visibles, « Commerçant » et « Créateur / freelance »
-  promo:                             # la phrase de fin dit « en promo » : l'agent ne publie que si c'est vrai
-    confirmee: false                 # passe à true quand la promotion est réellement en ligne
-    jusquau: ""                      # dernier jour de la promotion (AAAA-MM-JJ) ; après cette date, la publication se suspend toute seule
-    preuve: ""                       # adresse de la page qui montre le prix, la réduction et les dates
+offer:                               # L'ÉCRAN DE FIN
+  # Phrase dite à la fin de CHAQUE vidéo. « MOT » = le mot à commenter, « PROMESSE » = ce que la vidéo suivante apportera.
+  # L'agent tient cette promesse lui-même : la suite annoncée est mise en tête de sa liste de sujets.
+  cta: "Abonne-toi pour ne rien rater. Et commente MOT si tu veux [p]PROMESSE."
+  cta_mot_fixe: ""                   # vide = un mot par vidéo ; écris un mot pour utiliser toujours le même
+  # La formation n'est annoncée QUE si les trois lignes ci-dessous sont remplies (sinon l'agent n'en parle pas, et publie quand même) :
+  lien_bio: ""                       # adresse mise dans la bio du compte
+  promo:
+    confirmee: false                 # true quand la promotion est réellement en ligne
+    jusquau: ""                      # dernier jour de la promotion (AAAA-MM-JJ) ; après, l'agent arrête d'en parler tout seul
+  cta_promo: " [promo]La formation complète est en promo, lien en bio."
+  cta_promo_ecran: "Formation complète en *promo* · lien en bio"
 
 schedule:
   timezone: "Africa/Porto-Novo"
-  videos_per_day: 2                  # 1 vidéo par public et par jour. L'étude conseille de commencer par 2 par public et par SEMAINE :
-                                     # pour suivre ce rythme, mets 1 ici et « jours: [1, 2, 4, 5] » ci-dessous.
+  videos_per_day: 2
   jours: [1, 2, 3, 4, 5, 6, 7]       # jours de publication (1 = lundi … 7 = dimanche)
-  slots: ["07:30", "12:30", "18:30", "20:30"]   # créneaux candidats (heure locale) ; l'agent en choisit N par jour et apprend lesquels marchent
+  slots: ["10:00", "13:00", "18:00", "20:30"]   # créneaux candidats (heure locale) ; l'agent en choisit N par jour et apprend lesquels marchent
+  grace_hours: 4                     # un créneau manqué est rattrapé par un réveil arrivé dans les N heures
 
 video:
-  seconds: [35, 45]                  # format de départ (min, max) — à confirmer avec tes propres mesures
+  seconds: [38, 70]                  # durée visée (min, max)
   fps: 30
-  hold_end: 2.2                      # secondes d'écran final après la voix (le temps de lire la phrase de fin)
-  ajuster_debit: true                # si la vidéo sort hors format, la voix est rejouée un peu plus vite ou plus lentement (une fois)
+  hold_end: 2.0                      # secondes d'écran de fin après la voix
+  scene_gap: 0.16                    # respiration entre deux écrans
+  ajuster_debit: true                # hors format : la voix est rejouée un peu plus vite ou plus lentement (une fois)
 
 voice:
-  order: ["edge", "piper"]           # essayés dans l'ordre. Possibles : edge (naturelle, service non officiel) | gemini (API officielle, clé gratuite) | piper (locale, plus « robot »)
+  order: ["edge", "piper"]           # essayés dans l'ordre : edge (naturelle) | gemini (API Google, clé GEMINI_API_KEY) | piper (locale, plus « robot »)
   edge_voice: "fr-FR-RemyMultilingualNeural"   # autres : fr-FR-HenriNeural, fr-FR-VivienneMultilingualNeural, fr-FR-DeniseNeural
-  rate: "+10%"                        # débit de départ ; l'agent l'ajuste ensuite pour tenir dans video.seconds
+  rate: "+15%"                       # débit de départ ; l'agent l'ajuste ensuite pour tenir dans video.seconds
   pitch: "+0Hz"
   piper_voice: "fr_FR-siwis-medium"
-  max_gap: 0.26                      # silences plus longs que ça sont raccourcis (rythme TikTok)
+  max_gap: 0.24                      # les silences plus longs sont raccourcis
   pronounce:                         # mot affiché -> mot prononcé (la voix seulement)
-    "GitHub": "guite-heub"           # « guit-heub » s'entendait « dix hubs » sous la musique (reconnaissance vocale, 3 essais sur 3)
-    "skills": "skilz"
-    "skill": "skil"
-    "NVIDIA": "ènne-vidia"
-    "MCP": "èm-cé-pé"
+    "GitHub": "guite-heub"
+    "Pexels": "pèxelz"
+    "Pixabay": "pixa-baille"
+    "rush": "reuche"
+    "rushs": "reuche"
 
 audio:
   music: true                        # musique générée par l'agent (aucun droit d'auteur) ; ou dépose tes .mp3 dans assets/music/
-  music_db: -30                      # niveau de la musique sous la voix (dBFS ; la voix est à environ -19)
+  music_db: -30
   sfx: true
-  voice_margin_db: 14                # marge minimale de la voix sur le fond (1–4 kHz) ; en dessous, l'agent baisse musique et bruitages
-  loudness: -14                      # niveau final (LUFS), standard réseaux sociaux
+  voice_margin_db: 14                # marge minimale de la voix sur le fond ; en dessous, l'agent baisse musique et bruitages
+  loudness: -14                      # niveau final (LUFS)
 
-llm:                                 # « cerveau » : essayés dans l'ordre, seuls ceux dont la clé existe sont utilisés
-  providers:
-    - name: nvidia
-      base_url: "https://integrate.api.nvidia.com/v1"
-      key_env: "NVIDIA_API_KEY"
-      model: "nvidia/nemotron-3-ultra-550b-a55b"
-      prefer: ["nemotron-3-ultra", "nemotron-3.5-super", "nemotron-3-super", "deepseek-v4", "kimi", "glm-5", "mistral-large"]
-      rpm: 30                        # garde-fou (le palier gratuit annonce ~40/min)
-      rpd: 300
-    - name: groq
-      base_url: "https://api.groq.com/openai/v1"
-      key_env: "GROQ_API_KEY"
-      model: "openai/gpt-oss-120b"
-      prefer: ["gpt-oss-120b", "qwen", "llama-3.3-70b", "kimi"]
-      rpm: 20
-      rpd: 600                       # palier gratuit annoncé : 1 000/jour
-    - name: gemini
-      base_url: "https://generativelanguage.googleapis.com/v1beta/openai"
-      key_env: "GEMINI_API_KEY"
-      model: "gemini-2.5-flash"
-      prefer: ["gemini-3-flash", "gemini-2.5-flash", "flash"]
-      rpm: 8
-      rpd: 150
-    - name: openrouter
-      base_url: "https://openrouter.ai/api/v1"
-      key_env: "OPENROUTER_API_KEY"
-      model: "auto-free"
-      prefer: [":free"]
-      rpm: 15
-      rpd: 40                        # 50/jour sans achat de crédits
+llm:                                 # LE « CERVEAU » : l'API Gemini de Google (secret GEMINI_API_KEY)
+  # L'agent lit lui-même le catalogue des modèles et prend le Flash le plus récent pour écrire,
+  # le Flash-Lite le plus récent pour regarder les images. Remplis « modeles » seulement pour imposer un choix.
+  modeles: {ecriture: [], controle: []}
   temperature: 0.8
-  max_calls_per_video: 14
-  keyless_fallback: false            # true = essaie aussi des services sans clé (très lents et limités ; dépannage seulement)
+  reprises: 2                        # nombre de corrections demandées au modèle quand un contrôle refuse son texte
+  max_calls_per_video: 10
+  max_par_jour: 60                   # plafond d'appels par jour, tous modèles confondus
+  groq: {model: "llama-3.3-70b-versatile"}   # secours pour le texte seul, si le secret GROQ_API_KEY existe
 
-research:                            # VEILLE QUOTIDIENNE (pages publiques, sans compte ni contournement)
-  faits: true                        # rouvre chaque jour les pages officielles de data/faits.yaml (prix, licences, fonctionnalités)
-  github: true                       # actualité des outils (sert seulement à noter la fraîcheur d'un sujet)
-  hackernews: false                  # actualité générale, souvent polémique : hors de la ligne du compte
-  rss: []                            # flux d'annonces à suivre, ex. ["https://exemple.com/feed.xml"]
-  min_stars: 300
-  require_any: ["claude", "remotion", "coding agent", "agent skill"]
-  exclude_any: ["security", "exploit", "hack", "jailbreak", "watermark", "crack", "leak", "nsfw", "casino", "betting", "trading", "crypto"]
+rushs:                               # LES SÉQUENCES FILMÉES (banques libres de droits)
+  # Secrets : PEXELS_API_KEY et PIXABAY_API_KEY (gratuits). Sans eux, l'agent n'a que la bibliothèque de départ (data/rushs.yaml).
+  vision: true                       # un modèle regarde trois images de chaque séquence avant de l'accepter (demande GEMINI_API_KEY)
+  seuil_vision: 7                    # note minimale sur 10 donnée par le modèle
+  seuil_mots: 0.5                    # sans modèle : part minimale des mots de la recherche retrouvés dans les étiquettes
+  candidats_regardes: 3              # séquences téléchargées et contrôlées par besoin
+  repos_jours: 10                    # une séquence déjà utilisée n'est reprise qu'après N jours (si une autre convient)
+
+research:
+  faits: true                        # rouvre chaque jour les pages officielles de data/faits.yaml
+  nouveaux_faits: true               # avec Gemini : propose de nouveaux faits (outil, page officielle, citation) ; l'agent ne garde que ceux qu'il retrouve mot pour mot sur la page
+  nouveaux_faits_par_semaine: 6
 
 publish:
-  dry_run: true                      # true = MODE ESSAI : la vidéo est fabriquée et contrôlée, rien n'est publié, rien n'est compté.
-  # --- Quand dry_run est à false, une vidéo ne part que si TOUT est vrai :
-  #       1. le dossier de preuve est signé (valide_par) : tu as vérifié le produit, le prix, les droits et les affirmations ;
-  #       2. offer.promo.confirmee est à true et la date offer.promo.jusquau n'est pas dépassée ;
-  #       3. offer.lien_bio est rempli (la page d'aiguillage existe) ;
-  #       4. une suite est réellement prévue pour ce public (un autre sujet avec sa preuve) ;
-  #       5. la validation ci-dessous est donnée.
-  validation: "chaque_video"         # chaque_video = la vidéo attend ton accord (Actions > Run workflow > commande « valider »)
-                                     # preuve_signee = une vidéo bâtie sur un dossier signé part sans attendre (tu délègues la dernière vérification)
-  exemples_fictifs: false            # true = autorise la publication d'un exemple fictif (il reste étiqueté « EXEMPLE FICTIF » à l'écran)
-  attente_jours: 7                   # une vidéo non validée au bout de N jours est abandonnée
-  via: "buffer"                      # buffer (recommandé : 1 seule clé, TikTok public) | native (API officielles de chaque réseau)
-  networks: ["tiktok", "instagram", "facebook"]   # l'offre gratuite de Buffer couvre 3 canaux ; le texte pour YouTube Shorts est préparé dans la fiche de production
-  ai_label: true                     # déclare le contenu comme généré par IA (voix de synthèse)
-  hashtags: 5                        # au plus (ils ne garantissent aucune portée)
+  dry_run: auto                      # auto = MODE ESSAI tant qu'aucune clé de publication n'existe ; dès qu'elle est ajoutée, l'agent publie
+                                     # true = toujours en essai (rien n'est publié)   |   false = publication réelle
+  # Une vidéo part seule si : forme et garde-fous respectés, séquences filmées contrôlées, contrôle qualité réussi.
+  via: "buffer"                      # buffer (1 seule clé pour 3 réseaux) | native (API officielles de Meta et de TikTok)
+  networks: ["facebook", "instagram", "tiktok"]
+  ai_label: true                     # déclare la voix de synthèse aux plateformes qui le demandent
+  hashtags: 8                        # au plus
+  credit_rushs: true                 # ajoute « Images : Pexels (auteur)… » à la fin de la légende
   media_host: "github_pages"         # où la vidéo est hébergée pour que Buffer vienne la chercher : github_pages | cloudinary (secret CLOUDINARY_URL)
-  keep_videos: 30                    # nombre de vidéos conservées en ligne
-  tiktok_native_mode: "inbox"        # inbox = brouillon dans ton TikTok (tu touches « publier »)  |  direct = public (seulement après l'audit TikTok de ton app)
+  keep_videos: 30
+  tiktok_native_mode: "inbox"        # inbox = brouillon dans ton TikTok | direct = public (seulement après l'audit TikTok de ton app)
 
 stats:
   check_after_hours: [24, 72, 168]   # relevés des statistiques après publication
-  source_tiktok: "buffer"            # buffer | api | public (lecture de la page publique, non officielle)
-  # Note de qualité d'une vidéo. Les vues seules ne désignent jamais une « gagnante » : elles servent de dénominateur.
-  # Les vidéos ne sont comparées qu'à celles du MÊME public et du MÊME réseau.
-  weights: {watch: 0.35, shares: 0.25, saves: 0.20, comments: 0.20}
+  source_tiktok: "buffer"            # buffer | api
+  weights: {watch: 0.35, shares: 0.25, saves: 0.20, comments: 0.20}   # note d'une vidéo : les vues seules ne désignent jamais une gagnante
+
+bilan:                               # LE BILAN AUTOMATIQUE
+  tous_les_jours: 3                  # tous les 3 jours : relevé des mesures, classement, nouveaux poids, rapport BILAN.md
+  minimum_videos: 4                  # en dessous, le bilan constate mais ne change rien
+  pas_max: 0.35                      # un poids ne change jamais de plus de 35 % d'un coup
 
 strategy:
-  explore: 0.25                      # part d'essais (0 = n'exploite que ce qui a déjà bien marché)
-  repeat_days: 21                    # délai avant de refaire le même sujet avec la même preuve et la même accroche
+  explore: 0.25                      # part d'essais (0 = ne refait que ce qui a déjà marché)
+  repeat_days: 21                    # délai avant de refaire le même sujet
+  suite_sous_jours: 3                # la suite annoncée par une vidéo est produite dans les N jours
 
 notify:
   telegram: false                    # message Telegram après chaque vidéo (secrets TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID)

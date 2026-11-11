@@ -1,28 +1,30 @@
-/* Moteur de rendu « motion design » — déterministe.
+/* Moteur de rendu « format mascotte » — déterministe.
  *
  * La page ne joue RIEN en temps réel. Python appelle init(timeline) une fois, puis renderAt(t) pour
  * chaque image (t en secondes) et prend une capture. Le même t donne toujours la même image : pas de
- * minuteur, pas de hasard, pas de réseau.
+ * minuteur, pas de hasard, pas de réseau. renderAt(-1) affiche la couverture (miniature).
  *
- * Une vidéo suit toujours le même fil : RÉSULTAT (ce qui a été produit, dès la première image)
- * -> 3 ÉTAPES (chacune avec sa preuve : demande écrite, extrait de code, rendu, avant/après, erreur
- * corrigée) -> VÉRIFICATION (ce qui a été contrôlé + une limite utile) -> APPEL À L'ACTION (texte imposé).
- * Les médias affichés viennent d'un dossier de preuve (preuves/<id>/) : le moteur ne dessine aucun faux écran.
+ * Grammaire d'une vidéo : une suite d'ÉCRANS (titre en majuscules, tuile numérotée facultative,
+ * un ou deux blocs, le personnage dans une pose) puis l'écran de FIN (abonne-toi + mot à commenter).
+ * Les sous-titres sont en haut : trois mots au plus, le mot prononcé est surligné.
+ * Un bloc « rush » ou « avant_apres » affiche une vraie séquence filmée (banque libre de droits),
+ * lue image par image dans un canevas ; le montage (titre, sous-titres, zoom, couleurs, barre) est
+ * réellement appliqué par ce moteur.
  */
 (function () {
   'use strict';
   const $ = (s, r = document) => r.querySelector(s);
   const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  // typographie : pas de retour à la ligne avant « : ; ? ! », ni après un guillemet ouvrant,
-  // ni au milieu d'un nombre (3 500), ni entre un nombre et ce qu'il compte (3 500 FCFA, 200 g, 6 secondes)
+  // typographie : pas de retour à la ligne avant « : ; ? ! », ni au milieu d'un nombre, ni entre un nombre et ce qu'il compte
   const nb = x => String(x == null ? '' : x)
     .replace(/ ([:;?!»])/g, '\u00a0$1').replace(/« /g, '«\u00a0')
     .replace(/(\d) (?=\d{3}(?!\d))/g, '$1\u00a0')
     .replace(/(\d) (?=[A-Za-zÀ-ÿ%€$])/g, '$1\u00a0');
-  const rich = s => esc(nb(s)).replace(/\*([^*]+)\*/g, '<em>$1</em>');    // *mot* -> italique dans la couleur de la série
+  // *mot* -> surligné ; « / » entouré d'espaces -> retour à la ligne voulu
+  const rich = s => esc(nb(s)).replace(/\*([^*]+)\*/g, '<em>$1</em>').replace(/\s+\/\s+/g, '<br>');
   const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
-  const BOTTOM = 1252;                                                     // sous cette ligne : sous-titres puis interface des applications
+  const X0 = 60, W = 960, TOP = 292, FEET = 1752, TEXT_MAX = 1500;
 
   const E = {
     lin: x => x,
@@ -33,11 +35,10 @@
     in: x => x * x * x,
   };
 
-  /* ------------------------------------------------------------------ */
-  /* Interpolations : chaque élément a, par propriété, une liste d'étapes */
-  /* ------------------------------------------------------------------ */
+  /* ---------------- interpolations : par élément et par propriété, une liste d'étapes ---------------- */
   const ITEMS = new Map();
-  const TICK = [];
+  const TICK = [];        // fonctions synchrones appelées à chaque image
+  const ASYNC = [];       // fonctions qui peuvent attendre le décodage d'une image de rush
   function tw(elm, t0, d, props, ease) {
     let it = ITEMS.get(elm);
     if (!it) { it = { el: elm, p: {}, hidden: null }; ITEMS.set(elm, it); }
@@ -58,416 +59,348 @@
     s.opacity = o >= 0.999 ? '' : o.toFixed(3);
     const x = p.x ? val(p.x, t) : 0, y = p.y ? val(p.y, t) : 0, sc = p.s ? val(p.s, t) : 1, r = p.r ? val(p.r, t) : 0;
     s.transform = (x || y || r || sc !== 1) ? `translate(${x.toFixed(2)}px,${y.toFixed(2)}px) rotate(${r.toFixed(3)}deg) scale(${sc.toFixed(4)})` : '';
-    const b = p.b ? val(p.b, t) : 0;
-    s.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : '';
-    if (p.c) { const c = val(p.c, t); s.clipPath = c >= 99.9 ? '' : `inset(-30% ${(100 - c).toFixed(2)}% -30% -6%)`; }
+    if (p.c) { const c = val(p.c, t); s.clipPath = c >= 99.9 ? '' : `inset(0 ${(100 - c).toFixed(2)}% 0 0)`; }
   }
-  const pop = (e, t, d = 0.38) => tw(e, t, d, { o: [0, 1], s: [0.86, 1], y: [16, 0], b: [8, 0] }, 'back');
-  const rise = (e, t, d = 0.34, dy = 34) => tw(e, t, d, { o: [0, 1], y: [dy, 0], b: [6, 0] }, 'outExpo');
+  const pop = (e, t, d = 0.32) => { if (t > 0.001) tw(e, t, d, { o: [0, 1], s: [0.72, 1] }, 'back'); };      // t = 0 : déjà là à la première image
+  const rise = (e, t, d = 0.34, dy = 44) => tw(e, t, d, { o: [0, 1], y: [dy, 0] }, 'outExpo');
+  const slide = (e, t, d = 0.3, dx = -60) => tw(e, t, d, { o: [0, 1], x: [dx, 0] }, 'outExpo');
+  const bump = (e, t, k = 1.08) => { tw(e, t, 0.1, { s: [1, k] }, 'out'); tw(e, t + 0.1, 0.22, { s: [k, 1] }, 'back'); };
 
-  const I = {
-    check: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="var(--on-good,#fff)" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    cross: '<svg viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/></svg>',
-    warn: '<svg viewBox="0 0 24 24"><path d="M12 5.5v8.2M12 18.2v.3" fill="none" stroke="#1A1200" stroke-width="3.8" stroke-linecap="round"/></svg>',
-    arrow: '<svg viewBox="0 0 24 24"><path d="M4.5 12h14M13 6.2l5.8 5.8-5.8 5.8" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    pen: '<svg viewBox="0 0 24 24"><path d="M4 20l1.2-4.6L16.4 4.2a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg>',
-    link: '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
+  /* ---------------- pictogrammes (traits bleu nuit, une touche de jaune) ---------------- */
+  const S = 'fill="none" stroke="#0E1A38" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"';
+  const Y = 'fill="#FFC531" stroke="#0E1A38" stroke-width="3.4" stroke-linejoin="round"';
+  const svg = b => `<svg viewBox="0 0 48 48">${b}</svg>`;
+  const ICON = {
+    video: svg(`<rect x="5" y="13" width="26" height="22" rx="3" ${Y}/><path d="M31 21l11-6v18l-11-6z" ${S}/>`),
+    voix: svg(`<rect x="18" y="5" width="12" height="22" rx="6" ${Y}/><path d="M11 23a13 13 0 0 0 26 0M24 36v7M17 43h14" ${S}/>`),
+    image: svg(`<rect x="5" y="8" width="38" height="32" rx="3" ${S}/><circle cx="16" cy="18" r="4" ${Y}/><path d="M7 36l11-11 8 8 6-6 10 9" ${S}/>`),
+    texte: svg(`<path d="M9 12V8h30v4M24 8v32M17 40h14" ${S}/>`),
+    lien: svg(`<path d="M20 28a8 8 0 0 0 11.3 0l6-6A8 8 0 0 0 26 10.700l-2.5 2.5M28 20a8 8 0 0 0-11.3 0l-6 6A8 8 0 0 0 22 37.300l2.5-2.5" ${S}/>`),
+    telephone: svg(`<rect x="13" y="4" width="22" height="40" rx="4" ${Y}/><path d="M21 38h6" ${S}/>`),
+    ordi: svg(`<rect x="8" y="9" width="32" height="22" rx="2" ${Y}/><path d="M3 38h42M18 31v7M30 31v7" ${S}/>`),
+    horloge: svg(`<circle cx="24" cy="26" r="16" ${Y}/><path d="M24 17v9l6 4M19 5h10" ${S}/>`),
+    cadenas: svg(`<rect x="9" y="21" width="30" height="22" rx="3" ${Y}/><path d="M15 21v-6a9 9 0 0 1 18 0v6M24 30v5" ${S}/>`),
+    loupe: svg(`<circle cx="21" cy="21" r="13" ${Y}/><path d="M31 31l11 11" ${S}/>`),
+    argent: svg(`<circle cx="24" cy="24" r="18" ${Y}/><path d="M29 17c-1.500-2-4-3-6-3-3.500 0-6 2-6 5 0 6.500 13 3.500 13 10 0 3-2.500 5-6.500 5-2.500 0-5-1-6.500-3M24 10v4M24 34v4" ${S}/>`),
+    message: svg(`<path d="M6 9h36v24H22l-10 8v-8H6z" ${Y}/><path d="M15 18h18M15 25h11" ${S}/>`),
+    coche: svg(`<circle cx="24" cy="24" r="18" ${Y}/><path d="M15 25l6 6 12-13" ${S}/>`),
+    croix: svg(`<circle cx="24" cy="24" r="18" ${S}/><path d="M17 17l14 14M31 17L17 31" ${S}/>`),
+    etoile: svg(`<path d="M24 5l5.800 12 13.200 1.800-9.600 9.200 2.400 13L24 34.800 12.200 41l2.400-13L5 18.800 18.200 17z" ${Y}/>`),
+    panier: svg(`<path d="M4 8h7l5 22h21l4-15H13" ${S}/><circle cx="19" cy="38" r="3.500" ${Y}/><circle cx="34" cy="38" r="3.500" ${Y}/>`),
+    photo: svg(`<path d="M5 14h9l3-5h14l3 5h9v25H5z" ${Y}/><circle cx="24" cy="26" r="7.500" ${S}/>`),
+    musique: svg(`<path d="M18 36V10l22-4v26" ${S}/><circle cx="12" cy="36" r="6" ${Y}/><circle cx="34" cy="32" r="6" ${Y}/>`),
+    robot: svg(`<rect x="8" y="15" width="32" height="24" rx="5" ${Y}/><path d="M24 15V7M19 39v4M29 39v4M3 25v8M45 25v8" ${S}/><circle cx="17.500" cy="26" r="2.600" fill="#0E1A38"/><circle cx="30.500" cy="26" r="2.600" fill="#0E1A38"/><path d="M19 33h10" ${S}/>`),
+    ciseaux: svg(`<circle cx="11" cy="13" r="6" ${Y}/><circle cx="11" cy="35" r="6" ${Y}/><path d="M16 16l27 20M16 32L43 12" ${S}/>`),
+    idee: svg(`<path d="M24 5a13 13 0 0 0-7.500 23.600V34h15v-5.400A13 13 0 0 0 24 5z" ${Y}/><path d="M18 40h12M21 45h6" ${S}/>`),
+    cible: svg(`<circle cx="24" cy="24" r="18" ${S}/><circle cx="24" cy="24" r="10" ${Y}/><circle cx="24" cy="24" r="2.500" fill="#0E1A38"/>`),
+    fleche: svg(`<path d="M6 24h34M27 11l13 13-13 13" ${S}/>`),
+    dossier: svg(`<path d="M4 11h15l4 5h21v24H4z" ${Y}/>`),
+    oeil: svg(`<path d="M3 24s8-13 21-13 21 13 21 13-8 13-21 13S3 24 3 24z" ${Y}/><circle cx="24" cy="24" r="6" ${S}/>`),
   };
-  const fmtInt = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
+  const CHECK = '<svg viewBox="0 0 24 24"><path d="M4.500 12.500l5 5L19.500 7" fill="none" stroke="#0E1A38" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const TIMER = `<svg viewBox="0 0 48 48"><circle cx="24" cy="27" r="16" fill="#fff" stroke="#0E1A38" stroke-width="3.6"/><path d="M24 27V11a16 16 0 0 1 13.900 8z" fill="#FFC531" stroke="#0E1A38" stroke-width="3" stroke-linejoin="round"/><path d="M19 5h10M24 5v6" fill="none" stroke="#0E1A38" stroke-width="3.6" stroke-linecap="round"/></svg>`;
+  const CURSOR = '<svg viewBox="0 0 32 32"><path d="M6 3l19 15-9 1.500 5 9-4.500 2.500-5-9.500L6 27z" fill="#fff" stroke="#0E1A38" stroke-width="2.400" stroke-linejoin="round"/></svg>';
+
   let TL = null, DUR = 0;
+  const report = { warnings: [] };
 
-  /* ------------------------------------------------------------------ */
-  /* Médias : image fixe ou planche d'images (un vrai rendu, lu image par image) */
-  /* ------------------------------------------------------------------ */
-  function paint(screen, m, sw, sh, o) {
-    // dessin dans un canevas : l'image est dans la page au moment de la capture (aucun décodage différé)
-    if (!m || !m.imgs || !m.imgs.length) { screen.classList.add('vide'); return; }
-    const cv = el('canvas'); cv.width = sw; cv.height = sh; screen.appendChild(cv);
-    const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-    const draw = i => { const im = m.imgs[i]; if (im) ctx.drawImage(im, 0, 0, sw, sh); };
-    if (m.imgs.length === 1) { draw(0); return; }
-    const start = o.start || 0, off = o.depart != null ? o.depart : (m.depart || 0), loop = o.loop !== false, n = m.imgs.length;
-    let last = -1;
-    TICK.push(t => {
-      let i = Math.floor((Math.max(0, t - start) + off) * m.fps + 1e-6);
-      i = loop ? i % n : Math.min(i, n - 1);
-      if (i !== last) { last = i; draw(i); }
+  /* ---------------- ajustement du texte ---------------- */
+  const RANGE = document.createRange();
+  const contentW = e => { RANGE.selectNodeContents(e); return RANGE.getBoundingClientRect().width; };   // largeur réelle du contenu, quel que soit l'affichage
+  function fitW(e, maxW, min = 0.5) {            // une seule ligne : on réduit le corps jusqu'à ce que le contenu tienne dans maxW
+    if (!e) return 1; const fs = parseFloat(getComputedStyle(e).fontSize); let k = 1, guard = 40;
+    while (contentW(e) > maxW + 0.5 && k > min && guard--) { k -= 0.03; e.style.fontSize = (fs * k).toFixed(1) + 'px'; }
+    return k;
+  }
+  function fitBox(e, maxW, maxH, min = 0.45) {   // plusieurs lignes : on réduit jusqu'à tenir dans la boîte
+    if (!e) return 1; const fs = parseFloat(getComputedStyle(e).fontSize); let k = 1, guard = 44;
+    while ((e.scrollHeight > maxH + 1 || e.scrollWidth > maxW + 1) && k > min && guard--) { k -= 0.03; e.style.fontSize = (fs * k).toFixed(1) + 'px'; }
+    return k;
+  }
+
+  /* ---------------- personnage ---------------- */
+  function masc(pose) {
+    const av = TL.avatar || {}, poses = av.poses || {};
+    const name = poses[pose] ? pose : (poses.presente ? 'presente' : Object.keys(poses)[0]);
+    if (!name) return null;
+    const im = el('img', 'masc'); im.src = av.base + name + '.png'; im._p = poses[name]; im._name = name;
+    return im;
+  }
+  function placeMasc(im, k, cx) {               // k : échelle (1 = un personnage debout de 1000 px) ; cx : centre horizontal
+    const p = im._p, w = p.w * k, h = p.h * k;
+    im.style.width = w.toFixed(1) + 'px'; im.style.height = h.toFixed(1) + 'px';
+    im.style.left = (cx - w / 2).toFixed(1) + 'px'; im.style.top = (FEET - (p.h - p.pieds) * k).toFixed(1) + 'px';
+    return { w, h, top: FEET - (p.h - p.pieds) * k };
+  }
+
+  /* ---------------- rushs : images décodées à la demande ---------------- */
+  const CACHE = new Map();
+  function frameImg(m, i) {
+    const src = m.dir + String(i + 1).padStart(4, '0') + '.' + (m.ext || 'jpg');
+    let p = CACHE.get(src);
+    if (!p) {
+      p = new Promise(res => { const im = new Image(); im.onload = () => (im.decode ? im.decode().then(() => res(im), () => res(im)) : res(im)); im.onerror = () => res(null); im.src = src; });
+      CACHE.set(src, p);
+      if (CACHE.size > 48) CACHE.delete(CACHE.keys().next().value);
+    }
+    return p;
+  }
+  function sequence(cvs, ref, o) {              // dessine la séquence dans un ou plusieurs canevas, à partir de o.start
+    const m = TL.media[ref]; if (!m || !m.n) return false;
+    const ctxs = cvs.map(c => c.getContext('2d')); let last = -1;
+    ASYNC.push(async t => {
+      if (t < o.t0 - 0.05 || t > o.t1 + 0.05) return;
+      let i = Math.floor(Math.max(0, t - o.start) * m.fps + 1e-6);
+      i = Math.min(i, m.n - 1);                  // séquence préparée à la bonne durée : on tient la dernière image, jamais de saut
+      if (i === last) return;
+      const im = await frameImg(m, i);
+      if (im) { ctxs.forEach((c, k) => c.drawImage(im, 0, 0, cvs[k].width, cvs[k].height)); last = i; }
     });
+    return true;
   }
-  function frameBox(ref, cadre, maxW, maxH) {
-    const m = TL.media[ref], ar = m ? m.w / m.h : 9 / 16;
-    cadre = cadre || (Math.abs(ar - 9 / 16) < 0.03 ? 'telephone' : 'photo');
-    const pad = cadre === 'telephone' ? 10 : cadre === 'photo' ? 12 : 0;
-    let sw = Math.floor(maxW - 2 * pad), sh = Math.round(sw / ar);
-    if (sh > maxH - 2 * pad) { sh = Math.floor(maxH - 2 * pad); sw = Math.round(sh * ar); }
-    return { m, cadre, pad, sw, sh, w: sw + 2 * pad, h: sh + 2 * pad };
-  }
-  function frameEl(ref, cadre, maxW, maxH, o = {}) {
-    const b = frameBox(ref, cadre, maxW, maxH);
-    const f = el('div', 'frame ' + b.cadre); f.style.width = b.w + 'px'; f.style.height = b.h + 'px';
-    const s = el('div', 'screen'); f.appendChild(s); paint(s, b.m, b.sw, b.sh, o);
-    if (o.label) { f.appendChild(el('div', 'tagm' + (o.on ? ' on' : ''), esc(o.label))); }
-    f._box = b;
-    return f;
+  const CADRE = { paysage: [888, 500], portrait: [396, 704], carre: [586, 586] };
+  function rushFrame(b, sc) {
+    const m = TL.media[b.ref], cadre = CADRE[b.cadre] ? b.cadre : 'paysage', [w, h] = CADRE[cadre];
+    const f = el('div', 'rush ' + cadre); f.style.width = (w + 14) + 'px'; f.style.height = (h + 14) + 'px';
+    const cv = el('canvas'); cv.width = w; cv.height = h; cv.style.width = w + 'px'; cv.style.height = h + 'px'; f.appendChild(cv);
+    if (!m || !m.n) { f.classList.add('vide'); report.warnings.push(`rush « ${b.ref} » : séquence absente`); }
+    return { f, cv, w, h, ok: !!(m && m.n) };
   }
 
-  /* visuel d'ouverture ou de vérification : un média, ou le contraste avant -> après */
-  function visuel(v, zone, W, H, o) {
-    if (!v) return [];
-    if (v.kind === 'contraste') {
-      const bw = Math.floor((W - 74 - 68) / 2), bh = H - 62;
-      const dep = (TL.media[v.apres.ref] || {}).depart || 0;
-      const a = frameEl(v.avant.ref, v.avant.cadre, bw, bh, { start: o.start, depart: dep, loop: false, label: v.avant.label || 'Avant' });
-      const arrow = el('div', 'arrow', I.arrow); arrow.style.color = 'var(--on-accent2)';
-      const b = frameEl(v.apres.ref, v.apres.cadre, bw, bh, { start: o.start, depart: dep, loop: false, label: v.apres.label || 'Après', on: true });
-      zone.style.alignItems = 'flex-start'; zone.style.paddingTop = Math.max(0, (H - 62 - Math.max(a._box.h, b._box.h)) / 2) + 'px';
-      a.style.marginTop = Math.max(0, (b._box.h - a._box.h) / 2) + 'px'; b.style.marginTop = Math.max(0, (a._box.h - b._box.h) / 2) + 'px';
-      arrow.style.marginTop = (Math.max(a._box.h, b._box.h) / 2 - 37) + 'px';
-      zone.append(a, arrow, b);
-      return [a, arrow, b];
-    }
-    const f = frameEl(v.ref, v.cadre, Math.min(W, o.maxW || 600), H - (v.label ? 62 : 0), { start: o.start, depart: v.depart, loop: false, label: v.label, on: true });
-    zone.appendChild(f);
-    return [f];
-  }
-
-  /* ------------------------------------------------------------------ */
-  /* Blocs d'une étape                                                     */
-  /* ------------------------------------------------------------------ */
-  const MEDIA_KINDS = { media: 1, avant_apres: 1, erreur: 1 };
-
-  function buildMedia(b, wrap, W, H) {
-    const at = b.at;
-    wrap.style.display = 'flex'; wrap.style.justifyContent = 'center'; wrap.style.alignItems = 'flex-start'; wrap.style.gap = '34px'; wrap.style.height = H + 'px';
-    if (b.kind === 'media') {
-      const f = frameEl(b.ref, b.cadre, Math.min(W, 620), H - (b.label ? 62 : 0), { start: at, depart: b.depart != null ? b.depart : 0, loop: b.loop, label: b.label, on: true });
-      wrap.appendChild(f); tw(f, at, 0.5, { o: [0, 1], s: [0.9, 1], y: [40, 0], r: [-3, 0], b: [8, 0] }, 'back');
-    } else if (b.kind === 'avant_apres') {
-      const A = TL.media[b.avant.ref], B = TL.media[b.apres.ref];
-      const same = A && B && Math.abs(A.w / A.h - B.w / B.h) < 0.03;
-      const wt = b.wipeAt != null ? b.wipeAt : at + 0.9, dep = (B || {}).depart || 0;      // les deux rendus avancent ensemble
-      if (same) {
-        const f = frameEl(b.avant.ref, b.cadre, Math.min(W, 620), H, { start: at, depart: dep, loop: false });
-        f.classList.add('aa');
-        const s2 = el('div', 'screen apres'); f.appendChild(s2); paint(s2, B, f._box.sw, f._box.sh, { start: at, depart: dep, loop: false });
-        const bar = el('div', 'bar'); f.appendChild(bar);
-        const av = el('div', 'etq av', esc(b.avant.label || 'Avant')), ap = el('div', 'etq ap', esc(b.apres.label || 'Après')); f.append(av, ap);
-        wrap.appendChild(f); tw(f, at, 0.5, { o: [0, 1], s: [0.9, 1], y: [40, 0], b: [8, 0] }, 'back');
-        pop(av, at + 0.2, 0.3); pop(ap, wt + 0.5, 0.3);
-        const pad = f._box.pad, sw = f._box.sw;
+  /* ---------------- blocs ---------------- */
+  function buildBlock(b, col, sc) {
+    const k = b.kind, t1 = sc.t1; let e, fit = () => {}, anim = () => {};
+    if (k === 'liste') {
+      e = el('div', 'liste');
+      const rows = b.items.map((s, i) => { const r = el('div', 'bar', `<i>${i + (b.debut || 1)}</i><span>${rich(s)}</span>`); e.appendChild(r); return r; });
+      fit = () => rows.forEach(r => fitW($('span', r), r.clientWidth - 126));
+      anim = () => rows.forEach((r, i) => slide(r, b.itemAt[i]));
+    } else if (k === 'check') {
+      e = el('div', 'check');
+      const rows = b.items.map(s => { const r = el('div', 'row', `<i>${CHECK}</i><span>${rich(s)}</span>`); e.appendChild(r); return r; });
+      fit = () => rows.forEach(r => fitW($('span', r), r.clientWidth - 124));
+      anim = () => rows.forEach((r, i) => { slide(r, b.itemAt[i]); const c = $('svg', r); tw(c, b.itemAt[i] + 0.16, 0.2, { o: [0, 1], s: [0.3, 1] }, 'back'); });
+    } else if (k === 'cartes') {
+      e = el('div', 'cartes');
+      const cs = b.cards.map(c => {
+        const d = el('div', 'carte ' + (c.ton === 'oui' ? 'oui' : 'non'), `<div class="bx"><small>${rich(c.tag)}</small><b>${rich(c.text)}</b></div>` + (c.note ? `<div class="note">${rich(c.note)}</div>` : ''));
+        e.appendChild(d); return d;
+      });
+      fit = () => cs.forEach(d => { const bx = $('.bx', d); fitBox($('b', d), bx.clientWidth - 44, 190); fitBox($('small', d), bx.clientWidth - 44, 80); fitW($('.note', d), d.clientWidth - 84); });
+      anim = () => cs.forEach((d, i) => { pop($('.bx', d), b.cardAt[i]); const n = $('.note', d); if (n) pop(n, b.noteAt && b.noteAt[i] != null ? b.noteAt[i] : b.cardAt[i] + 0.5); });
+    } else if (k === 'icones') {
+      e = el('div', 'icones');
+      const it = b.items.map(x => { const d = el('div', 'ico', `${ICON[x.icon] || ICON.idee}<span>${rich(x.label)}</span>`); e.appendChild(d); return d; });
+      fit = () => it.forEach(d => fitW($('span', d), d.clientWidth - 36));
+      anim = () => it.forEach((d, i) => pop(d, b.itemAt[i]));
+    } else if (k === 'chrono') {
+      e = el('div', 'chrono', `${TIMER}<div><em>${esc(b.valeur)}</em> ${esc(b.unite)}</div>`);
+      fit = () => fitW($('div', e), col.clientWidth - 230);
+      anim = () => { pop(e, b.at); tw($('svg', e), b.at, 0.5, { r: [-28, 0] }, 'back'); };
+    } else if (k === 'fenetre') {
+      e = el('div', 'fen', `<div class="tb"><i></i>${esc(b.titre || 'Assistant IA')}</div><div class="bd"><div class="q"><span></span><u class="caret"></u></div>${b.reponse ? '<div class="r"><span></span></div>' : ''}</div>`);
+      const q = $('.q', e), qs = $('.q span', e), r = $('.r', e), rs = r ? $('span', r) : null;
+      fit = () => { qs.textContent = b.question; if (rs) rs.textContent = b.reponse; };
+      anim = () => {
+        pop(e, b.at); tw(q, b.qAt - 0.12, 0.2, { o: [0, 1] }, 'out'); if (r) tw(r, b.rAt, 0.25, { o: [0, 1], y: [18, 0] }, 'outExpo');
+        const qd = Math.min(1.1, Math.max(0.4, b.question.length * 0.035)), caret = $('.caret', e);
         TICK.push(t => {
-          const x = E.inOut(clamp((t - wt) / 0.95));
-          s2.style.clipPath = `inset(0 ${((1 - x) * 100).toFixed(2)}% 0 0)`;
-          bar.style.left = (pad + x * sw).toFixed(1) + 'px'; bar.style.opacity = (x <= 0 || x >= 1) ? 0 : 1;
+          const n = Math.round(clamp((t - b.qAt) / qd) * b.question.length), cur = b.question.slice(0, n);
+          if (qs.textContent !== cur) qs.textContent = cur;
+          caret.style.visibility = t < b.qAt + qd + 0.3 && Math.floor(Math.max(0, t - sc.t0) / 0.3) % 2 === 0 ? 'inherit' : 'hidden';
+          if (rs) { const rd = Math.min(1.2, Math.max(0.4, b.reponse.length * 0.025)), m2 = Math.round(clamp((t - b.rAt - 0.15) / rd) * b.reponse.length), c2 = b.reponse.slice(0, m2); if (rs.textContent !== c2) rs.textContent = c2; }
         });
-      } else {
-        const bw = Math.floor((W - 74 - 68) / 2);
-        const a = frameEl(b.avant.ref, b.avant.cadre, bw, H - 62, { start: at, depart: dep, loop: false, label: b.avant.label || 'Avant' });
-        const arrow = el('div', 'arrow', I.arrow); arrow.style.color = 'var(--on-accent2)';
-        const c = frameEl(b.apres.ref, b.apres.cadre, bw, H - 62, { start: at, depart: dep, loop: false, label: b.apres.label || 'Après', on: true });
-        const mh = Math.max(a._box.h, c._box.h);
-        a.style.marginTop = (mh - a._box.h) / 2 + 'px'; c.style.marginTop = (mh - c._box.h) / 2 + 'px'; arrow.style.marginTop = (mh / 2 - 37) + 'px';
-        wrap.append(a, arrow, c);
-        tw(a, at, 0.45, { o: [0, 1], s: [0.9, 1], y: [30, 0], b: [8, 0] }, 'back'); pop(arrow, wt - 0.12, 0.3);
-        tw(c, wt, 0.5, { o: [0, 1], s: [0.86, 1], x: [-60, 0], b: [10, 0] }, 'back');
-      }
-    } else if (b.kind === 'erreur') {
-      const f = frameEl(b.ref, b.cadre, Math.min(W, 620), H, { start: at });
-      f.classList.add('err'); wrap.appendChild(f); tw(f, at, 0.5, { o: [0, 1], s: [0.9, 1], y: [40, 0], b: [8, 0] }, 'back');
-      const bx = f._box, z = b.zone || { x: 10, y: 40, w: 80, h: 20 };
-      const zx = bx.pad + bx.sw * z.x / 100, zy = bx.pad + bx.sh * z.y / 100, zw = bx.sw * z.w / 100, zh = bx.sh * z.h / 100;
-      const zt = b.zoneAt != null ? b.zoneAt : at + 0.7, ft = b.fixAt != null ? b.fixAt : zt + 1.4;
-      const mk = (cls, txt, ic) => {
-        const ring = el('div', 'ring ' + cls);
-        Object.assign(ring.style, { left: (zx - 10) + 'px', top: (zy - 10) + 'px', width: (zw + 20) + 'px', height: (zh + 20) + 'px' });
-        const d = el('div', 'diag ' + cls, ic + '<span>' + esc(txt) + '</span>');
-        d.style.left = clamp(zx + zw / 2, 90, bx.w - 90) + 'px';
-        d.style.top = (zy - 84 > 30 ? zy - 84 : zy + zh + 30) + 'px';
-        d.style.translate = '-50% 0';                       // centrage indépendant des animations (transform)
-        f.append(ring, d);
-        return { ring, d };
       };
-      const bad = mk('', b.label || 'défaut', I.cross);
-      tw(bad.ring, zt, 0.34, { o: [0, 1], s: [1.25, 1] }, 'outExpo'); tw(bad.d, zt + 0.12, 0.34, { o: [0, 1], s: [0.7, 1], y: [10, 0] }, 'back');
-      if (b.fix && TL.media[b.fix.ref]) {
-        const s2 = el('div', 'screen'); s2.style.zIndex = 1; f.insertBefore(s2, f.children[1]); paint(s2, TL.media[b.fix.ref], bx.sw, bx.sh, { start: ft });
-        tw(s2, ft, 0.4, { o: [0, 1] }, 'inOut');
-        const ok = mk('ok', b.fix.label || 'corrigé', I.check);
-        tw(bad.ring, ft, 0.2, { o: [1, 0] }, 'in'); tw(bad.d, ft, 0.2, { o: [1, 0] }, 'in');
-        tw(ok.ring, ft + 0.1, 0.34, { o: [0, 1], s: [1.15, 1] }, 'outExpo'); tw(ok.d, ft + 0.22, 0.34, { o: [0, 1], s: [0.7, 1], y: [10, 0] }, 'back');
-      }
-    }
-  }
-
-  function buildBlock(b, col) {
-    const at = b.at;
-    if (b.kind === 'brief') {
-      const card = el('div', 'card brief'); col.appendChild(card);
-      card.appendChild(el('div', 'label', `${I.pen}<span>${esc(b.label || 'Demande écrite')}</span>${b.extrait ? '<span class="tag">extrait</span>' : ''}`));
-      const txt = el('div', 'txt'); card.appendChild(txt);
-      // surlignages : on repère chaque passage dans le texte, puis on découpe en mots
-      const text = nb(b.text), ranges = [];
-      (b.hl || []).forEach((h, k) => { h = nb(h); const i = text.indexOf(h); if (i >= 0 && h) ranges.push([i, i + h.length, k]); });
-      ranges.sort((a, c) => a[0] - c[0]);
-      let pos = 0; const parts = [];
-      for (const [a, c, k] of ranges) { if (a < pos) continue; if (a > pos) parts.push([text.slice(pos, a), -1]); parts.push([text.slice(a, c), k]); pos = c; }
-      if (pos < text.length) parts.push([text.slice(pos), -1]);
-      const words = [], marks = [];
-      for (const [seg, k] of parts) {
-        const host = k >= 0 ? el('mark') : txt, mine = [];
-        if (k >= 0) { txt.appendChild(host); marks.push([host, k, mine]); }
-        seg.split(/([ \t\n]+)/).forEach(w => {
-          if (!w) return;
-          if (/^[ \t\n]+$/.test(w)) { host.appendChild(document.createTextNode(' ')); return; }
-          const s = el('span', 'w', esc(w)); host.appendChild(s); words.push(s); mine.push(s);
+    } else if (k === 'mot') {
+      e = el('div', 'mot', `<b>${rich(b.text)}</b>` + (b.sous ? `<span>${rich(b.sous)}</span>` : ''));
+      fit = () => { fitW($('b', e), col.clientWidth - 124); };
+      anim = () => { pop($('b', e), b.at); const s = $('span', e); if (s) rise(s, b.sousAt != null ? b.sousAt : b.at + 0.4); };
+    } else if (k === 'etiquette') {
+      e = el('div', 'etq', rich(b.text));
+      fit = () => fitW(e, col.clientWidth - 80);
+      anim = () => pop(e, b.at);
+    } else if (k === 'tuiles_video') {
+      e = el('div', 'tv');
+      const n = Math.max(2, Math.min(4, b.n || 4)), vs = [];
+      for (let i = 0; i < n; i++) { const v = el('div', 'v', '<i></i><u><s></s></u>'); e.appendChild(v); vs.push(v); }
+      anim = () => { vs.forEach((v, i) => pop(v, b.at + i * 0.16)); TICK.push(t => vs.forEach((v, i) => { $('s', v).style.width = (clamp((t - b.at - i * 0.16) / Math.max(1, t1 - b.at)) * (62 + 9 * i)).toFixed(1) + '%'; })); };
+    } else if (k === 'rush') {
+      const fr = rushFrame(b, sc); e = fr.f;
+      if (b.label) e.appendChild(el('div', 'tag', esc(b.label)));
+      anim = () => { pop(e, b.at); if (fr.ok) sequence([fr.cv], b.ref, { start: b.at, t0: b.at - 0.1, t1: sc.t1 }); };
+    } else if (k === 'avant_apres') {
+      // un seul cadre : la séquence brute, puis un volet qui révèle la même séquence montée ; chaque effet est réellement appliqué ici
+      e = el('div', 'aa');
+      const fr = rushFrame(b, sc); e.appendChild(fr.f);
+      const fx = el('div', 'fx'); fr.f.appendChild(fx);
+      const cv2 = el('canvas'); cv2.width = fr.w; cv2.height = fr.h; cv2.style.width = fr.w + 'px'; cv2.style.height = fr.h + 'px'; fx.appendChild(cv2);
+      const sep = el('div', 'sep'); fr.f.appendChild(sep);
+      const tagA = el('div', 'tag', 'Avant · rush brut'), tagB = el('div', 'tag on', 'Après · monté'); fr.f.appendChild(tagA); fr.f.appendChild(tagB);
+      const eff = (b.effets || []).filter(x => ['couleurs', 'zoom', 'titre', 'sous_titres', 'barre'].includes(x));
+      const NOM = { couleurs: 'Couleurs', zoom: 'Zoom', titre: 'Titre', sous_titres: 'Sous-titres', barre: 'Barre' };
+      const chips = el('div', 'chips'); e.appendChild(chips);
+      const chip = {}; eff.forEach(x => { chip[x] = el('span', '', NOM[x]); chips.appendChild(chip[x]); });
+      const at = x => { const i = eff.indexOf(x); return i < 0 ? null : b.fxAt[i]; };
+      let ttl = null, cap = null, bar = null, words = [];
+      if (at('titre') != null && b.titre) { ttl = el('div', 'fxt', rich(b.titre)); fx.appendChild(ttl); }
+      if (at('sous_titres') != null && b.sous_titre) { cap = el('div', 'fxc'); words = String(b.sous_titre).split(/\s+/).slice(0, 4).map(w => { const s = el('span', '', esc(w)); cap.appendChild(s); return s; }); fx.appendChild(cap); }
+      if (at('barre') != null) { bar = el('div', 'fxb'); fx.appendChild(bar); }
+      fit = () => { if (ttl) fitBox(ttl, fr.w, fr.h * 0.36); if (cap) fitW(cap, fr.w - 30); };
+      anim = () => {
+        pop(fr.f, b.at); if (fr.ok) sequence([fr.cv, cv2], b.ref, { start: b.at, t0: b.at - 0.1, t1: sc.t1 });
+        const w0 = b.wipeAt, wd = 0.55;
+        tw(fx, w0, wd, { c: [0, 100] }, 'inOut');
+        tw(tagA, b.at + 0.15, 0.2, { o: [0, 1] }, 'out'); tw(tagA, w0 + wd * 0.5, 0.15, { o: [1, 0] }, 'in'); pop(tagB, w0 + wd * 0.6);
+        chips.childNodes.forEach(c => tw(c, b.at + 0.2, 0.25, { o: [0, 1] }, 'out'));
+        if (ttl) pop(ttl, at('titre')); if (cap) rise(cap, at('sous_titres'), 0.3, 20); 
+        const zt = at('zoom'), ct = at('couleurs'), bt = at('barre'), st = at('sous_titres');
+        TICK.push(t => {
+          const p = clamp((t - w0) / wd), x = (p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2) * (fr.w + 6) - 6;
+          sep.style.transform = `translateX(${x.toFixed(1)}px)`; sep.style.visibility = p > 0 && p < 1 ? 'inherit' : 'hidden';
+          const z = zt == null ? 1 : 1 + 0.17 * E.inOut(clamp((t - zt) / 1.1));
+          cv2.style.transform = z > 1.001 ? `scale(${z.toFixed(4)})` : '';
+          const c = ct == null ? 0 : clamp((t - ct) / 0.4);
+          cv2.style.filter = c > 0 ? `contrast(${(1 + 0.14 * c).toFixed(3)}) saturate(${(1 + 0.38 * c).toFixed(3)}) brightness(${(1 + 0.04 * c).toFixed(3)})` : '';
+          if (bar) bar.style.width = (clamp((t - bt) / Math.max(0.8, t1 - bt - 0.2)) * 100).toFixed(1) + '%';
+          if (cap && words.length) { const i = t < st ? -1 : Math.floor((t - st) / 0.34) % words.length; words.forEach((s, j) => { const on = j === i; if (s._on !== on) { s._on = on; s.className = on ? 'on' : ''; } }); }
+          eff.forEach((xn, i) => { const on = t >= b.fxAt[i]; if (chip[xn]._on !== on) { chip[xn]._on = on; chip[xn].className = on ? 'on' : ''; } });
         });
-      }
-      pop(card, at);
-      const t0 = at + 0.22, step = Math.min(0.06, (b.dur || 1.6) / Math.max(1, words.length)), tEnd = t0 + step * words.length;
-      const state = words.map(() => -1);
-      TICK.push(t => {
-        for (let i = 0; i < words.length; i++) { const o = Math.round(clamp((t - (t0 + i * step)) / 0.09) * 20) / 20; if (o !== state[i]) { state[i] = o; words[i].style.opacity = o; } }
-        for (const [m, k, mine] of marks) {
-          const mt = (b.hlAt && b.hlAt[k] != null) ? Math.max(b.hlAt[k], t0 + 0.1) : tEnd + 0.12 + k * 0.22;
-          const p = E.out(clamp((t - mt) / 0.4));
-          m.style.backgroundSize = (p * 100).toFixed(1) + '% 100%';
-          mine.forEach((w, j) => { w.style.color = p * mine.length > j + 0.45 ? 'var(--mark-ink)' : ''; if (p > 0 && w.style.opacity !== '1') w.style.opacity = 1; });
-        }
-      });
-    } else if (b.kind === 'code') {
-      const card = el('div', 'card code'); col.appendChild(card);
-      card.appendChild(el('div', 'tab', `<i></i><span>${esc(b.file || 'code')}</span><span class="tag">extrait</span>`));
-      const body = el('div', 'body'); card.appendChild(body);
-      pop(card, at);
-      (b.lines || []).forEach((ln, i) => {
-        const lt = (b.lineAt && b.lineAt[i] != null) ? b.lineAt[i] : at + 0.25 + i * 0.16;
-        const d = el('div', 'ln', `<span class="no">${i + 1}</span><span class="tx">${esc(ln)}</span>`); body.appendChild(d);
-        tw(d, lt, 0.26, { o: [0, 1], x: [-16, 0] });
-        if (b.hl === i + 1) {
-          const h = el('div', 'hlb'); d.insertBefore(h, d.firstChild);
-          const ht = b.hlAt != null ? b.hlAt : at + 0.25 + (b.lines.length) * 0.16 + 0.15;
-          TICK.push(t => { h.style.transform = `scaleX(${E.out(clamp((t - ht) / 0.4)).toFixed(4)})`; });
-        }
-      });
-    } else if (b.kind === 'checklist' || b.kind === 'compare') {
-      const card = el('div', 'card'); col.appendChild(card);
-      if (b.label) card.appendChild(el('div', 'label', esc(b.label)));
-      pop(card, at);
-      (b.rows || []).forEach((row, i) => {
-        const r = typeof row === 'string' ? { text: row, ok: true } : row;
-        const rt = (b.rowAt && b.rowAt[i] != null) ? b.rowAt[i] : at + 0.25 + i * 0.3;
-        const d = el('div', 'row' + (r.hot ? ' hot' : ''), `<span class="ck${r.ok === false ? ' no' : ''}">${r.ok === false ? I.cross : I.check}</span><span class="tx">${rich(r.text)}</span>`);
-        card.appendChild(d);
-        tw(d, rt, 0.24, { o: [0, 1], x: [-18, 0], b: [5, 0] });
-        tw($('.ck', d), rt + 0.1, 0.3, { o: [0, 1], s: [0.2, 1] }, 'back');
-      });
-    } else if (b.kind === 'stat') {
-      const card = el('div', 'card stat'); col.appendChild(card);
-      if (b.label) card.appendChild(el('div', 'label', esc(b.label)));
-      const big = el('div', 'big'); card.appendChild(big);
-      const hasNum = typeof b.value === 'number' && isFinite(b.value);
-      big.innerHTML = `<span class="v">${hasNum ? fmtInt(b.value) : esc(b.value)}</span>${esc(b.suffix || '')}<span class="u">${esc(b.unit || '')}</span>`;
-      pop(card, at);
-      if (hasNum) {
-        const v = $('.v', big), t0 = at + 0.04, d = 0.75, dec = (String(b.value).split('.')[1] || '').length;
-        TICK.push(t => { const n = b.value * E.out(clamp((t - t0) / d)); const txt = dec ? n.toFixed(dec).replace('.', ',') : fmtInt(n); if (v.textContent !== txt) v.textContent = txt; });
-      }
-    } else if (b.kind === 'pill') {
-      const w = el('div', 'pillwrap'); const p = el('div', 'pill', rich(b.text)); w.appendChild(p); col.appendChild(w); pop(p, at, 0.34);
-    } else if (b.kind === 'terminal') {
-      const card = el('div', 'card term'); col.appendChild(card);
-      card.innerHTML = `<div class="tab">${esc(b.label || 'commande')}</div><div class="cmd">&gt; <span class="ty"></span><span class="caret"></span></div>`;
-      pop(card, at);
-      const ty = $('.ty', card), caret = $('.caret', card), txt = String(b.text || ''), t0 = at + 0.3, d = Math.min(1.1, 0.045 * txt.length + 0.2);
-      TICK.push(t => {
-        const cur = txt.slice(0, Math.round(clamp((t - t0) / d) * txt.length)); if (ty.textContent !== cur) ty.textContent = cur;
-        caret.style.opacity = (Math.floor(t * 2.5) % 2 === 0 || (t > t0 && t < t0 + d)) ? 1 : 0;
-      });
-    } else if (b.kind === 'chips') {
-      const w = el('div', 'chips'); col.appendChild(w);
-      (b.items || []).forEach((c, i) => { const ch = el('div', 'chip', rich(c)); w.appendChild(ch); pop(ch, (b.itemAt && b.itemAt[i] != null) ? b.itemAt[i] : at + i * 0.22, 0.34); });
-    } else if (b.kind === 'note') {
-      const card = el('div', 'card note', rich(b.text)); col.appendChild(card); pop(card, at);
-    } else if (b.kind === 'source') {
-      const s = el('div', 'src', `${I.link}<span>${esc(b.text)}</span>`); col.appendChild(s); rise(s, at, 0.3, 14);
+        eff.forEach((xn, i) => bump(chip[xn], b.fxAt[i], 1.12));
+      };
+    } else {
+      e = el('div'); report.warnings.push(`bloc inconnu : ${k}`);
     }
+    col.appendChild(e);
+    return { e, fit, anim, kind: k, b };
   }
 
-  function fitWidth(e, maxW, min = 0.45) {
-    if (!e) return 1; let fs = parseFloat(getComputedStyle(e).fontSize), k = 1, guard = 40;
-    while (e.scrollWidth > maxW + 0.5 && k > min && guard--) { k -= 0.03; e.style.fontSize = (fs * k).toFixed(1) + 'px'; }
-    return k;
-  }
-  function fitLines(e, lines, min = 0.5) {
-    if (!e) return 1; const cs = getComputedStyle(e), fs = parseFloat(cs.fontSize), lh = parseFloat(cs.lineHeight) / fs; let k = 1, guard = 40;
-    while ((e.offsetHeight > lines * lh * fs * k * 1.15 + 2 || e.scrollWidth > e.clientWidth + 0.5) && k > min && guard--) { k -= 0.03; e.style.fontSize = (fs * k).toFixed(1) + 'px'; }
-    return k;
+  /* ---------------- écran ---------------- */
+  function buildEcran(sc, root, idx) {
+    const first = idx === 0, t0 = sc.t0;
+    let hb;
+    if (sc.tuile) {
+      const TW_ = 236, TH_ = 252;
+      const tile = el('div', 'tuile', `<span>${esc(sc.tuile.label)}</span><b>${esc(sc.tuile.n)}</b>`); root.appendChild(tile);
+      tile.style.left = X0 + 'px'; tile.style.top = TOP + 'px'; fitW($('span', tile), 196); fitW($('b', tile), 200);
+      const ttl = el('div', 'ttl cote', `<span>${rich(sc.title)}</span>`); root.appendChild(ttl);
+      ttl.style.left = (X0 + TW_ + 44) + 'px'; ttl.style.top = TOP + 'px'; ttl.style.width = (W - TW_ - 44) + 'px'; ttl.style.height = (TH_ + 8) + 'px';
+      fitBox($('span', ttl), W - TW_ - 44, TH_ + 8);
+      const a = sc.tuile.at, mv = Math.max(a + 0.42, Math.min(sc.titleAt - 0.3, a + 0.8));
+      const dx = 540 - (X0 + TW_ / 2), dy = 700 - (TOP + TH_ / 2);
+      tw(tile, a, 0.3, { o: [0, 1], s: [0.5, 1.6], x: [dx, dx], y: [dy, dy] }, 'back');
+      tw(tile, mv, 0.34, { s: [1.6, 1], x: [dx, 0], y: [dy, 0] }, 'inOut');
+      slide(ttl, Math.max(sc.titleAt, mv + 0.2), 0.3, 50);
+      hb = TOP + TH_ + 12;
+    } else {
+      const ttl = el('div', 'ttl', rich(sc.title)); root.appendChild(ttl); ttl.style.top = TOP + 'px';
+      const lh = parseFloat(getComputedStyle(ttl).fontSize) * 1.07;
+      fitBox(ttl, W, lh * (first ? 3 : 2) + 6);
+      if (!first) pop(ttl, sc.titleAt);
+      hb = TOP + ttl.offsetHeight;
+    }
+    const blocks = sc.blocks || [];
+    const col = el('div', 'col'); root.appendChild(col); col.style.top = (hb + 48) + 'px';
+    const built = blocks.map(b => buildBlock(b, col, sc));
+    const cadre = b => (b.kind === 'rush' || b.kind === 'avant_apres') ? (CADRE[b.cadre] ? b.cadre : 'paysage') : null;
+    const forceB = blocks.some(b => cadre(b) === 'portrait' || cadre(b) === 'carre');
+    const forceA = blocks.some(b => cadre(b) === 'paysage' || ['cartes', 'fenetre', 'chrono', 'mot'].includes(b.kind));
+    let cb = blocks.length ? hb + 48 + col.offsetHeight : hb;
+    let mode = 'A';
+    if (forceB || (blocks.length && !forceA && FEET - cb - 26 < 470)) {
+      mode = 'B'; col.classList.add('etroit');
+      // avec une séquence verticale, toute la colonne prend la largeur du cadre : le personnage a le reste de l'écran
+      const rw = Math.max(0, ...blocks.filter(b => cadre(b)).map(b => CADRE[cadre(b)][0] + 14));
+      if (rw) col.style.width = rw + 'px';
+    }
+    built.forEach(x => x.fit());
+    cb = blocks.length ? hb + 48 + col.offsetHeight : hb;
+    built.forEach(x => x.anim());
+    if (cb > TEXT_MAX) report.warnings.push(`écran ${idx + 1} : le contenu descend à ${Math.round(cb)} px (limite ${TEXT_MAX})`);
+
+    const im = masc(sc.pose);
+    if (im) {
+      const p = im._p; let k, cx;
+      if (mode === 'B') {
+        // le personnage prend toute la place libre à droite de la colonne
+        const colW = Math.max(0, ...built.map(x => x.e.offsetWidth)), free = 1080 - 16 - (X0 + colW + 20);
+        k = Math.min(free / p.w, (FEET - hb - 16) / p.corps, 1.0); cx = X0 + colW + 20 + free / 2;
+      }
+      else { const avail = FEET - cb - 26; k = Math.min(avail / p.corps, 0.9); cx = 540; }
+      if (k < 0.3) report.warnings.push(`écran ${idx + 1} : pas de place pour le personnage`);
+      else {
+        root.insertBefore(im, root.firstChild); placeMasc(im, k, cx);
+        if (!first) tw(im, sc.poseAt != null ? sc.poseAt : t0 + 0.12, 0.36, { o: [0, 1], y: [90, 0] }, 'back');
+        // le personnage réagit à chaque apparition d'un bloc
+        blocks.forEach(b => { if (b.at != null && b.at > t0 + 0.6) bump(im, b.at + 0.05, 1.025); });
+      }
+    }
+    return { mode, cb };
   }
 
-  /* ------------------------------------------------------------------ */
+  /* ---------------- écran de fin ---------------- */
+  function buildFin(sc, root) {
+    const t0 = sc.t0, panel = el('div', 'panel'); root.appendChild(panel);
+    tw(panel, t0, 0.36, { y: [1920, 0] }, 'outExpo');
+    const f1 = el('div', 'f1', 'Abonne-toi'); panel.appendChild(f1); pop(f1, t0 + 0.2);
+    const btn = el('div', 'btn', "<span>S'abonner</span>"); panel.appendChild(btn); pop(btn, t0 + 0.42);
+    const cur = el('div', 'cur', CURSOR); panel.appendChild(cur);
+    const ck = sc.clickAt;
+    tw(cur, ck - 0.62, 0.5, { o: [0, 1], x: [900, 672], y: [930, 548] }, 'inOut'); tw(cur, ck + 0.5, 0.3, { o: [1, 0] }, 'in');
+    bump(btn, ck, 0.93);
+    TICK.push(t => { const ok = t >= ck; if (btn._ok !== ok) { btn._ok = ok; btn.className = 'btn' + (ok ? ' ok' : ''); btn.innerHTML = ok ? `<span>Abonné</span>${CHECK}` : "<span>S'abonner</span>"; } });
+    const box = el('div', 'box', `<small>Commente</small><div class="kw"><b></b><i class="caret"></i></div>`); panel.appendChild(box); pop(box, sc.boxAt);
+    const kwb = $('.kw b', box), caret = $('.caret', box), kw = String(sc.keyword || '').toUpperCase();
+    kwb.textContent = kw; fitW($('.kw', box), 820, 0.4); kwb.textContent = '';
+    const k0 = sc.kwAt, kd = Math.min(0.5, 0.07 * kw.length + 0.1);
+    TICK.push(t => {
+      const cur_ = kw.slice(0, Math.round(clamp((t - k0) / kd) * kw.length)); if (kwb.textContent !== cur_) { kwb.textContent = cur_; kwb.style.display = cur_ ? '' : 'none'; }
+      caret.style.visibility = (t < k0 + kd + 0.25) && Math.floor(Math.max(0, t - t0) / 0.3) % 2 === 0 ? 'inherit' : 'hidden';
+    });
+    bump(box, k0 + kd, 1.04);
+    if (sc.promesse) { const g = el('div', 'egal', '= ' + rich(sc.promesse)); panel.appendChild(g); fitBox(g, 900, 124); pop(g, sc.promesseAt); }
+    if (sc.promo) { const p = el('div', 'promo', `<span>${rich(sc.promo)}</span>`); panel.appendChild(p); if (!sc.promesse) p.style.top = '1060px'; p.style.whiteSpace = 'nowrap'; fitW($('span', p), 900, 0.5); rise(p, sc.promoAt); }
+    if (TL.mention) { const m = el('div', 'mention', esc(TL.mention)); panel.appendChild(m); tw(m, t0 + 0.9, 0.4, { o: [0, 1] }, 'out'); }
+    if (TL.handle) { const h = el('div', 'handle', esc(TL.handle)); panel.appendChild(h); fitW(h, 300); tw(h, t0 + 0.9, 0.4, { o: [0, 1] }, 'out'); }
+    const im = masc(sc.pose || 'pouce');
+    if (im) { panel.appendChild(im); placeMasc(im, 0.58, 540); tw(im, t0 + 0.34, 0.4, { o: [0, 1], y: [120, 0] }, 'back'); bump(im, k0 + kd, 1.04); }
+  }
+
+  /* ---------------- couverture ---------------- */
+  function buildCover(cv) {
+    const C = $('#cover'); C.appendChild(el('div', 'g'));
+    const lines = (cv.lines || []).slice(0, 4), box = el('div', 'lines'); C.appendChild(box);
+    lines.forEach((s, i) => { const hot = /\*/.test(s); const l = el('span', 'l' + (hot ? ' hot' : ''), `<span>${esc(String(s).replace(/\*/g, ''))}</span>`); box.appendChild(l); fitW(l, 980, 0.4); });
+    const im = masc(cv.pose || 'pointe');
+    if (im) { C.appendChild(im); const top = 190 + box.offsetHeight + 40; const k = Math.min((FEET + 40 - top) / im._p.corps, 1.15); placeMasc(im, k, 540); }
+  }
+
+  /* ---------------------------------------------------------------- */
   window.init = async function (tl) {
     TL = tl; DUR = tl.duration; TL.media = tl.media || {};
     const th = tl.theme || {}, rs = document.documentElement.style;
     for (const k in th) rs.setProperty('--' + k, th[k]);
-    await Promise.all(['800 60px "Inter Tight"', '900 60px "Inter Tight"', '700 60px "Inter Tight"', '600 60px "Inter Tight"', 'italic 60px "Instrument Serif"', '400 20px "JetBrains Mono"', '700 20px "JetBrains Mono"', '700 60px "Caveat"'].map(f => document.fonts.load(f)));
+    await Promise.all(['900 60px "Montserrat"', '800 60px "Montserrat"', '700 60px "Montserrat"', '600 60px "Montserrat"'].map(f => document.fonts.load(f)));
     await document.fonts.ready;
-    // les images des preuves doivent être décodées avant la première capture
-    const miss = [];
-    const load = src => new Promise(res => { const im = new Image(); im.onload = () => (im.decode ? im.decode().then(() => res(im), () => res(im)) : res(im)); im.onerror = () => res(null); im.src = src; });
-    await Promise.all(Object.entries(TL.media).map(async ([k, m]) => {
-      m.imgs = (await Promise.all((m.srcs || []).map(load))).filter(Boolean);
-      if (m.imgs.length !== (m.srcs || []).length || !m.imgs.length) miss.push(k);
-    }));
-    const report = { warnings: miss.map(k => `média « ${k} » : image illisible, le cadre déborde du contrôle (fichier manquant)`) };
     const scenesRoot = $('#scenes');
-
-    /* repères permanents */
-    const hud = $('#hud');
-    if (tl.serie) { const s = el('div', 'serie', `<i></i><span>${esc(tl.serie)}</span>`); hud.appendChild(s); }
-    else hud.appendChild(el('div'));
-    if (tl.fictif) hud.appendChild(el('div', 'fictif', esc(tl.fictif)));
-
-    const steps = tl.scenes.filter(s => s.type === 'etape').length || 3;
+    let fin = null;
     tl.scenes.forEach((sc, idx) => {
-      const first = idx === 0, last = idx === tl.scenes.length - 1, t0 = sc.t0, t1 = sc.t1;
+      const first = idx === 0, last = idx === tl.scenes.length - 1;
       const root = el('div', 'scene ' + sc.type); scenesRoot.appendChild(root);
-      if (!first) tw(root, t0, 0.3, { o: [0, 1], y: [46, 0], b: [10, 0] }, 'outExpo');
-      if (!last) tw(root, t1 - 0.13, 0.13, { o: [1, 0], y: [0, -28], b: [0, 8] }, 'in');
-
-      const rail = (done, cur) => {
-        const r = el('div', 'rail'); root.appendChild(r);
-        for (let i = 0; i < steps; i++) {
-          const u = el('u'); const b = el('b'); b.appendChild(u); r.appendChild(b);
-          if (i < done) u.style.width = '100%';
-          else if (i === cur) TICK.push(t => { u.style.width = (clamp((t - t0) / Math.max(0.2, t1 - t0 - 0.2)) * 100).toFixed(1) + '%'; });
-        }
-      };
-
-      if (sc.type === 'resultat') {
-        const head = el('div', 'head', `<div class="ttl">${rich(sc.title)}</div>`); root.appendChild(head);
-        const ttl = $('.ttl', head); fitLines(ttl, 2, 0.55);
-        if (!first) rise(ttl, t0 + 0.05, 0.4, 40);
-        let pub = null;
-        if (sc.public) {
-          const w = el('div', '', `<div class="public">${I.arrow}<span>${esc(nb(sc.public))}</span></div>`); head.appendChild(w); pub = $('.public', w);
-          fitWidth(pub, 940, 0.6);
-          tw(pub, sc.publicAt != null ? sc.publicAt : t0 + 1.8, 0.4, { o: [0, 1], s: [0.7, 1], x: [-30, 0], b: [6, 0] }, 'back');
-        }
-        const top = head.offsetTop + head.offsetHeight + 34, H = BOTTOM - top;
-        const zone = el('div', 'zone'); zone.style.top = top + 'px'; zone.style.height = H + 'px'; root.appendChild(zone);
-        const els = visuel(sc.visuel, zone, 952, H, { start: t0, maxW: 600 });
-        // le résultat est à l'image dès la première image : il se pose, il n'apparaît pas
-        els.forEach((e, i) => {
-          if (e.classList.contains('arrow')) pop(e, t0 + 0.34, 0.3);
-          else if (first && i === 0) tw(e, 0, 0.6, { s: [1.07, 1], r: [-3, 0] }, 'outExpo');
-          else if (first) tw(e, 0, 0.7, { s: [0.9, 1], x: [-46, 0], r: [4, 0] }, 'back');
-          else tw(e, t0 + 0.1 + i * 0.1, 0.5, { o: [0, 1], s: [0.9, 1], y: [40, 0], b: [8, 0] }, 'back');
-        });
-      }
-
-      else if (sc.type === 'etape') {
-        rail(sc.n - 1, sc.n - 1);
-        const head = el('div', 'head', `<div class="kick">Étape <span>${esc(sc.n)}</span>/${steps}</div><div class="ttl">${rich(sc.title)}</div>`); root.appendChild(head);
-        fitLines($('.ttl', head), 2, 0.6);
-        rise($('.ttl', head), t0 + 0.06, 0.4, 30);
-        const top = head.offsetTop + head.offsetHeight + 34;
-        const col = el('div', 'col'); col.style.top = top + 'px'; root.appendChild(col);
-        const later = [];
-        (sc.blocks || []).forEach(b => {
-          if (MEDIA_KINDS[b.kind]) { const w = el('div', 'mwrap'); col.appendChild(w); later.push([b, w]); }
-          else buildBlock(b, col);
-        });
-        col.querySelectorAll('.row .tx').forEach(e => fitWidth(e, e.clientWidth, 0.55));
-        col.querySelectorAll('.stat .big').forEach(e => fitWidth(e, 880, 0.4));
-        col.querySelectorAll('.code').forEach(c => {            // toutes les lignes d'un extrait gardent la même taille
-          const max = 952 - 56 - 60; let w = 0; c.querySelectorAll('.ln .tx').forEach(e => { w = Math.max(w, e.scrollWidth); });
-          const solo = (sc.blocks || []).length === 1;
-          const fs = Math.max(20, Math.min(solo ? 50 : 38, 38 * max / w));
-          if (fs !== 38) c.querySelectorAll('.ln').forEach(e => { e.style.fontSize = fs.toFixed(1) + 'px'; e.style.height = Math.round(fs * 1.63) + 'px'; });
-        });
-        const terms = (sc.blocks || []).filter(b => b.kind === 'terminal');
-        col.querySelectorAll('.term .cmd').forEach((e, i) => { const ty = $('.ty', e), full = terms[i]; if (full) { ty.textContent = full.text; fitWidth(e, e.clientWidth, 0.5); ty.textContent = ''; } });
-        col.querySelectorAll('.pill, .chip, .src').forEach(e => fitWidth(e, 930, 0.5));
-        if (later.length) {
-          const free = BOTTOM - top - col.scrollHeight;
-          const each = Math.max(260, Math.floor(free / later.length));
-          later.forEach(([b, w]) => buildMedia(b, w, 952, each));
-        }
-        const avail = BOTTOM - top;
-        if (!later.length) {
-          // une étape sans rendu : le texte prend la place disponible (plus lisible sur un téléphone), puis se pose un peu au-dessus du centre
-          const txt = col.querySelector('.brief .txt');
-          if (txt && (sc.blocks || []).length === 1) for (const fs of [66, 60, 54]) { txt.style.fontSize = fs + 'px'; if (col.scrollHeight <= avail * 0.62) break; txt.style.fontSize = ''; }
-          const free = avail - col.scrollHeight;
-          if (free > 40) col.style.top = (top + Math.min(150, free * 0.3)) + 'px';
-        }
-        if (col.scrollHeight > avail + 1) { const s = avail / col.scrollHeight; col.style.zoom = s.toFixed(3); report.warnings.push(`scène ${idx + 1} : contenu réduit à ${(s * 100).toFixed(0)} %`); }
-      }
-
-      else if (sc.type === 'verif') {
-        rail(steps, -1);
-        const head = el('div', 'head', `<div class="kick"><span>✓</span> Vérification</div><div class="ttl">${rich(sc.title)}</div>`); root.appendChild(head);
-        fitLines($('.ttl', head), 2, 0.6); rise($('.ttl', head), t0 + 0.06, 0.4, 30);
-        const top = head.offsetTop + head.offsetHeight + 36, H = BOTTOM - top;
-        let x0 = 64, W = 952;
-        if (sc.visuel) {
-          const side = el('div', 'side'); side.style.top = top + 'px'; root.appendChild(side);
-          const f = frameEl(sc.visuel.ref, sc.visuel.cadre, 380, Math.min(H, 700), { start: t0, depart: sc.visuel.depart, loop: false });
-          side.appendChild(f); tw(f, t0 + 0.1, 0.5, { o: [0, 1], s: [0.88, 1], x: [-40, 0], r: [-4, 0], b: [8, 0] }, 'back');
-          x0 = 64 + f._box.w + 32; W = 1016 - x0;
-        }
-        const rows = el('div', 'rows'); rows.style.left = x0 + 'px'; rows.style.width = W + 'px'; rows.style.top = top + 'px'; root.appendChild(rows);
-        (sc.rows || []).forEach((r, i) => {
-          const d = el('div', 'vrow', `<span class="ck${r.ok === false ? ' no' : ''}">${r.ok === false ? I.cross : I.check}</span><span class="tx">${rich(r.text)}</span>`); rows.appendChild(d);
-          const rt = (sc.rowAt && sc.rowAt[i] != null) ? sc.rowAt[i] : t0 + 0.5 + i * 0.5;
-          tw(d, rt, 0.3, { o: [0, 1], x: [30, 0], b: [6, 0] }, 'outExpo'); tw($('.ck', d), rt + 0.12, 0.3, { o: [0, 1], s: [0.2, 1] }, 'back');
-        });
-        if (sc.limite) {
-          const d = el('div', 'vrow lim', `<span class="ck warn">${I.warn}</span><span class="tx"><span class="k">À savoir</span>${rich(sc.limite)}</span>`); rows.appendChild(d);
-          const lt = sc.limiteAt != null ? sc.limiteAt : t1 - 1.6;
-          tw(d, lt, 0.36, { o: [0, 1], s: [0.92, 1], y: [20, 0], b: [6, 0] }, 'back');
-        }
-        if (sc.source) { const s = el('div', 'src', `${I.link}<span>${esc(sc.source)}</span>`); s.style.alignSelf = 'flex-start'; rows.appendChild(s); fitWidth(s, W, 0.55); rise(s, sc.sourceAt != null ? sc.sourceAt : t1 - 1.2, 0.3, 14); }
-        if (rows.scrollHeight > H + 1) { const s = H / rows.scrollHeight; rows.style.zoom = s.toFixed(3); report.warnings.push(`scène ${idx + 1} : vérification réduite à ${(s * 100).toFixed(0)} %`); }
-      }
-
-      else if (sc.type === 'cta') {
-        if (tl.avatar) { const a = el('div', 'avatar'); a.style.backgroundImage = `url("${tl.avatar}")`; root.appendChild(a); pop(a, t0 + 0.12, 0.45); }
-        const card = el('div', 'ctacard', `<div class="cta-word">${esc(sc.verb || 'Commente')}</div><div class="kw"><span class="kwt"></span><span class="caret"></span></div><div class="l2">${esc(sc.l2 || '')}</div>`);
-        root.appendChild(card);
-        tw(card, t0 + 0.04, 0.5, { o: [0, 1], y: [80, 0], r: [-8, -2], b: [10, 0], s: [0.9, 1] }, 'back');
-        const kwt = $('.kwt', card), kw = String(sc.keyword || ''), k0 = sc.kwAt != null ? sc.kwAt : t0 + 0.6, kd = Math.max(0.2, 0.055 * kw.length);
-        const pill = $('.kw', card);
-        tw(pill, k0 + kd, 0.14, { s: [1, 1.07] }, 'out'); tw(pill, k0 + kd + 0.14, 0.3, { s: [1.07, 1] }, 'back');
-        // tant que le mot-clé n'est pas prononcé, un curseur clignote dans la pastille (elle n'a jamais l'air vide)
-        const caret = $('.caret', card);
-        TICK.push(t => {
-          const cur = kw.slice(0, Math.round(clamp((t - k0) / kd) * kw.length)); if (kwt.textContent !== cur) kwt.textContent = cur;
-          const typing = t < k0 + kd, lit = t >= k0 || Math.floor(Math.max(0, t - t0) / 0.4) % 2 === 0;
-          caret.style.display = typing ? '' : 'none'; caret.style.opacity = typing && lit ? '1' : '0';
-        });
-        kwt.textContent = kw; caret.style.display = 'none'; fitWidth(pill, 740, 0.45); kwt.textContent = ''; caret.style.display = '';
-        const l2 = $('.l2', card); fitWidth(l2, 780, 0.6);
-        tw(l2, sc.l2At != null ? sc.l2At : k0 + kd + 0.2, 0.34, { o: [0, 1], y: [18, 0], b: [5, 0] }, 'outExpo');
-        if (sc.l3) {
-          // la phrase imposée s'affiche en entier, coupée seulement à la virgule
-          const parts = String(sc.l3).split(/,\s+/); const html = parts.map((p, i) => `<span>${esc(p + (i < parts.length - 1 ? ',' : ''))}</span>`).join('');
-          const s = el('div', 'l3', html); root.appendChild(s);
-          s.querySelectorAll('span').forEach(e => fitWidth(e, 940, 0.55));
-          const st = sc.subAt != null ? sc.subAt : k0 + kd + 0.9;
-          s.querySelectorAll('span').forEach((e, i) => tw(e, st + i * 0.55, 0.6, { o: [0, 1], c: [0, 100] }, 'inOut'));
-        }
-      }
+      if (!first) tw(root, sc.t0, sc.type === 'fin' ? 0.01 : 0.14, { o: [0, 1] }, 'out');
+      if (!last) tw(root, sc.t1 - 0.11, 0.11, { o: [1, 0] }, 'in');
+      if (sc.type === 'fin') { buildFin(sc, root); fin = sc; } else buildEcran(sc, root, idx);
     });
+    if (tl.cover) buildCover(tl.cover);
 
-    /* --- sous-titres : mots révélés un par un, mot-repère encadré --- */
+    // les images du personnage doivent être décodées avant la première capture
+    await Promise.all([...document.querySelectorAll('img.masc')].map(im => (im.decode ? im.decode().catch(() => { report.warnings.push(`personnage : image « ${im._name} » illisible`); }) : Promise.resolve())));
+
+    /* sous-titres */
     const C = $('#captions');
     const caps = (tl.captions || []).map(g => {
       const d = el('div', 'cap'); C.appendChild(d);
-      const ws = g.words.map(w => { const s = el('span', 'w' + (w.hl ? ' hl' : ''), esc(w.w)); d.appendChild(s); return { s, t: w.t, o: -1 }; });
-      d.style.visibility = 'hidden';
-      let k = 1; const fs = 64; let guard = 30;
-      while (d.scrollWidth > 860 && k > 0.5 && guard--) { k -= 0.04; ws.forEach(w => { w.s.style.fontSize = (fs * k).toFixed(1) + 'px'; }); }
+      const ws = g.words.map(w => { const s = el('span', 'w', esc(w.w)); d.appendChild(s); return { s, t: w.t, on: false }; });
+      fitW(d, 1000, 0.5); d.style.visibility = 'hidden';
       return { d, ws, t0: g.t0, t1: g.t1, on: false };
     });
     TICK.push(t => {
@@ -475,44 +408,41 @@
         const on = t >= g.t0 && t < g.t1;
         if (on !== g.on) { g.d.style.visibility = on ? 'visible' : 'hidden'; g.on = on; }
         if (!on) continue;
-        for (const w of g.ws) {
-          const p = clamp((t - w.t) / 0.1); const o = Math.round(p * 100) / 100;
-          if (o !== w.o) { w.o = o; w.s.style.opacity = o; w.s.style.filter = o < 1 ? `blur(${((1 - o) * 9).toFixed(1)}px)` : ''; w.s.style.transform = o < 1 ? `translateY(${((1 - o) * 6).toFixed(1)}px)` : ''; }
+        for (let i = 0; i < g.ws.length; i++) {
+          const w = g.ws[i], nx = g.ws[i + 1], cur = t >= w.t - 0.03 && (!nx || t < nx.t - 0.03);
+          if (cur !== w.on) { w.on = cur; w.s.className = cur ? 'w on' : 'w'; }
         }
       }
+      const inv = !!fin && t >= fin.t0 + 0.2; if (C._inv !== inv) { C._inv = inv; C.className = inv ? 'inv' : ''; }
     });
-
-    /* --- fond vivant : halos qui dérivent lentement --- */
-    const blobs = [...document.querySelectorAll('.blob')];
-    TICK.push(t => {
-      blobs.forEach((b, i) => {
-        const x = Math.sin(t * 0.21 + i * 2.1) * 46, y = Math.cos(t * 0.17 + i * 1.3) * 54, s = 1 + Math.sin(t * 0.25 + i) * 0.05;
-        b.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${s.toFixed(3)})`;
-      });
-    });
+    const cover = $('#cover'); let cov = null;
+    TICK.push(t => { const on = t < 0; if (on !== cov) { cov = on; cover.style.visibility = on ? 'visible' : 'hidden'; } });
 
     for (const it of ITEMS.values()) for (const k in it.p) it.p[k].sort((a, b) => a.t0 - b.t0);
 
-    /* --- contrôle de mise en page (tout affiché, état final de chaque scène) --- */
-    renderAt(DUR + 99);
+    /* contrôle de mise en page : chaque écran dans son état final */
     document.querySelectorAll('.scene').forEach((s, i) => {
-      s.style.visibility = 'visible'; s.style.opacity = 1; s.style.filter = ''; s.style.transform = '';
-      s.querySelectorAll('.ttl,.public,.tx,.big,.chip,.pill,.kw,.l2,.l3 span,.note,.label,.cmd,.frame,.vrow,.card,.tagm,.src').forEach(e => {
+      const sc = tl.scenes[i];
+      for (const it of ITEMS.values()) apply(it, Math.max(sc.t0, sc.t1 - 0.2));
+      for (const f of TICK) f(Math.max(sc.t0, sc.t1 - 0.2));
+      s.querySelectorAll('.ttl,.tuile,.bar,.row,.bx,.note,.ico,.chrono,.fen,.mot b,.mot span,.etq,.rush,.chips span,.f1,.btn,.box,.egal,.promo').forEach(e => {
         const r = e.getBoundingClientRect();
-        if (r.width && (r.left < 24 || r.right > 1056)) report.warnings.push(`scène ${i + 1} : « ${(e.textContent || e.className).slice(0, 28)} » déborde (${Math.round(r.left)}–${Math.round(r.right)})`);
-        if (r.width && r.bottom > BOTTOM + 10 && !s.classList.contains('cta')) report.warnings.push(`scène ${i + 1} : « ${(e.textContent || e.className).slice(0, 28)} » descend sous la zone de contenu (${Math.round(r.bottom)})`);
+        if (!r.width) return;
+        const name = (e.textContent || e.className).trim().slice(0, 28);
+        if (r.left < 26 || r.right > 1054) report.warnings.push(`écran ${i + 1} : « ${name} » déborde (${Math.round(r.left)}–${Math.round(r.right)})`);
+        if (sc.type !== 'fin' && r.bottom > TEXT_MAX + 6) report.warnings.push(`écran ${i + 1} : « ${name} » descend sous la zone lisible (${Math.round(r.bottom)})`);
       });
     });
-    document.querySelectorAll('.scene').forEach(s => { s.style.visibility = ''; s.style.opacity = ''; });
     for (const it of ITEMS.values()) it.hidden = null;
-    renderAt(0);
+    await window.renderAt(0);
     report.items = ITEMS.size; report.captions = caps.length; report.scenes = tl.scenes.length; report.media = Object.keys(TL.media).length;
     return report;
   };
 
-  window.renderAt = function (t) {
+  window.renderAt = async function (t) {
     for (const it of ITEMS.values()) apply(it, t);
     for (const f of TICK) f(t);
+    if (ASYNC.length) await Promise.all(ASYNC.map(f => f(t)));
     return true;
   };
 })();

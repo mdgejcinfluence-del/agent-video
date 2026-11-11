@@ -1,179 +1,118 @@
-"""Garde-fous de FOND : ce qu'une vidéo n'a pas le droit de dire ou de montrer.
+"""Garde-fous : ce qu'une vidéo n'a pas le droit de dire. Appliqués à TOUT storyboard, écrit par un modèle ou pris en réserve.
 
-Ces contrôles sont du code, pas des consignes : un storyboard écrit par un modèle, de réserve ou à la main
-passe par les mêmes. `controle()` renvoie la liste des problèmes (vide = le storyboard est acceptable).
-
-  1. Preuve : tout média cité existe dans le dossier ; tout extrait de la demande s'y retrouve mot pour mot ;
-     toute ligne de code affichée se retrouve telle quelle dans un fichier source du dossier.
-  2. Nombres : tout nombre affiché ou prononcé figure dans le dossier de preuve ou dans un fait vérifié cité.
-     Un nombre suivi d'une unité sensible (minutes, %, FCFA, €…) doit s'y trouver avec cette unité.
-  3. Formulations : pas de promesse invérifiable ; « gratuit » et « open source » seulement avec leur précision,
-     appuyée sur un fait vérifié ; pas de confusion entre l'agent qui écrit le code et l'outil qui rend la vidéo.
-  4. Un seul public : une vidéo « commerçant » ne montre ni code ni terminal et n'ouvre pas sur un nom d'outil.
-  5. Un seul appel à l'action : la phrase de fin imposée. Rien d'autre n'invite à commenter, à cliquer ou à recevoir.
+L'agent publie seul : ces contrôles sont donc automatiques et sans exception.
+  1. Aucune promesse de revenu, de vues, de résultat garanti ; aucune astuce de contournement.
+  2. Aucune expérience personnelle inventée (« j'ai testé », « mes clients ») : le compte ne ment pas sur ce qu'il a fait.
+  3. Aucun envoi promis en privé : l'agent ne sait pas envoyer de message.
+  4. Tout outil nommé et tout chiffre (prix, durée, pourcentage, audience) doit venir d'un fait vérifié sur une page
+     officielle (data/faits.yaml), cité dans le storyboard et confirmé par la veille.
+  5. « Gratuit » seulement si un fait cité le dit, et la limite est écrite dans la légende.
+  6. Une séquence de banque d'images n'est jamais présentée comme un client, un résultat ou un témoignage.
 """
 from __future__ import annotations
 
 import re
+import unicodedata
 
-from . import preuves, schema
-from .align import norm
+from . import schema
 
-UNITES = (r"minutes?|min|secondes?|sec|heures?|jours?|semaines?|mois|ans?|années?|%|pour ?cent|€|euros?|\$|dollars?|fcfa|f ?cfa|cfa|francs?(?: cfa)?|"
-          r"vues?|abonnés?|clients?|ventes?|commandes?|likes?|commentaires?|fois|x|personnes?|grammes?|g|kilos?|kg|ml|cl|l|images?|px|pixels?")
-ALIAS = {"pourcent": "%", "euros": "€", "euro": "€", "dollars": "$", "dollar": "$", "cfa": "fcfa", "francs": "fcfa", "franc": "fcfa", "francscfa": "fcfa",
-         "franccfa": "fcfa", "min": "minute", "sec": "seconde", "pixels": "px", "pixel": "px", "grammes": "g", "gramme": "g", "kilos": "kg", "kilo": "kg"}
-NUM_UNIT = re.compile(rf"(\d{{1,3}}(?:[ \u00a0\u202f]\d{{3}})+(?!\d)|\d+(?:[.,]\d+)?)\s*({UNITES})\b", re.I)
 
-# formulations refusées dans tous les cas (aucune précision ne les rattrape)
-INTERDIT = [
-    (r"\bsans (?:aucun )?effort\b", "« sans effort »"),
-    (r"\ben (?:deux|2|quelques|trois|3|cinq|5) (?:minutes?|secondes?|clics?)\b", "une durée promise (« en deux minutes »)"),
-    (r"\bexplos\w+", "« explose »"),
-    (r"\bd[ée]trui\w+|\b[ée]cras\w+|\btue\b", "« détruit / écrase »"),
-    (r"\bviral\w*|\bviraux\b|\bbuzz\b", "une promesse de viralité"),
-    (r"\bgaranti\w*", "« garanti »"),
-    (r"\billimit[ée]\w*", "« illimité »"),
-    (r"\bremplac\w+\b[^.!?]{0,40}\b(?:monteurs?|graphistes?|designers?|agences?|m[ée]tiers?|[ée]quipes?)\b", "« remplace un métier »"),
-    (r"\b(?:plus besoin|pas besoin|sans) (?:de |d'un |d'une )?(?:monteurs?|graphistes?|designers?|agences?)\b", "« plus besoin de monteur »"),
-    (r"\bsans (?:savoir )?coder\b|\bsans (?:une |aucune )?ligne de code\b|\bz[ée]ro code\b", "« sans coder » (il faut un ordinateur, une installation et des corrections)"),
-    (r"\brevenus?\b|\bgagn\w+ (?:de l'argent|\d)|\bchiffre d'affaires\b|\brentab\w+|\bmillionnaire\b", "une promesse de revenu"),
-    (r"\b(?:le|la) meilleur\w*\b|\bn° ?1\b|\bnum[ée]ro un\b|\bimbattable\b|\bincroyable\b|\bmagique\b|\br[ée]volution\w*", "un superlatif invérifiable"),
-    (r"\bdoubl\w+ (?:tes|vos|ses) ventes\b|\bplus de ventes\b|\bvend(?:s|re)? plus\b|\bboost\w*", "une promesse de ventes"),
-    (r"\bt[ée]moignage\w*|\bavis clients?\b|\bmes clients (?:disent|adorent)\b", "un témoignage ou un avis (aucun n'est fourni)"),
+def _n(s: str) -> str:
+    s = unicodedata.normalize("NFD", str(s).lower())
+    return "".join(c for c in s if unicodedata.category(c) != "Mn").replace("’", "'")
+
+
+INTERDITS = [
+    (r"\bj'ai (teste|essaye|gagne|vendu|utilise|obtenu|decouvert)\b", "expérience personnelle invérifiable (« j'ai testé / j'ai gagné… ») : le compte n'a rien testé lui-même"),
+    (r"\b(mes|mon|ma) (clients?|eleves?|abonnes?|boutique|chiffre)\b", "référence à des clients, des élèves ou une boutique qui n'existent pas"),
+    (r"\bje t'envoie\b|\ben (message )?prive\b|\ben dm\b|\bdans tes dm\b|\binbox\b|\bje te reponds en\b", "promesse d'envoi en privé : l'agent ne sait pas envoyer de message"),
+    (r"\b(gagne[rsz]?|gagnant) (de l'argent|\d|des milliers|des millions)|\brevenus?\b|\bchiffre d'affaires\b|\bdevenir riche\b|\bmillionnaire\b|\brentabilis", "promesse de revenu"),
+    (r"\bgaranti[es]?\b|\bassure[es]? de\b|\ba coup sur\b|\bsans effort\b|\bsans rien faire\b", "résultat garanti ou sans effort"),
+    (r"\bviral[es]?\b|\bvirales\b|\bbuzz\b|\bexplos(e|er|ent) (tes|les|vos) (vues|ventes)|\bdes milliers de vues\b|\bpercer\b", "promesse d'audience (viral, percer, des milliers de vues)"),
+    (r"\ba l'infini\b|\billimite[es]?\b|\b100 ?% gratuit", "« illimité », « à l'infini », « 100 % gratuit » : aucune offre ne l'est sans condition"),
+    (r"\bvpn\b|\bcontourn|\bcrack|\bpirat|\bsans (filigrane|watermark)\b|\bfaux (avis|comptes?|temoignages?)\b|\b(e-?mail|adresse) (jetable|temporaire)\b|\bessais? gratuits? (en )?illimite", "astuce de contournement des règles d'un service"),
+    (r"\bdeepfake\b|\bcloner? (la|une|sa|ta) voix\b|\busurp", "imitation d'une personne réelle"),
+    (r"\bremplace[rsz]? (un|ton|le|les) (monteur|graphiste|developpeur|salarie)", "promesse de remplacer un métier"),
+    (r"\bplus que \d+ places?\b|\bderniere chance\b|\boffre expire\b", "fausse urgence"),
+    (r"\ben \d+ (secondes?|minutes?|clics?) seulement\b", "durée promise"),
 ]
-# envoi promis après un commentaire, ou second appel à l'action
-APPEL = [
-    (r"\bje t'envoie\w*|\bt'envoyer\b|\btu recevras\b|\bre[cç]ois\b|\brecevoir\b|\bdm\b|\bmessages? priv\w+|\ben priv[ée]\b|\bcadeau\w*|\boffert\w*",
-     "une promesse d'envoi (commenter ne fait rien recevoir)"),
-    (r"\bcommente\w*\b|\bcommentaire\b|\blien en bio\b|\ben bio\b|\babonne[- ]toi\b|\bpartage cette\b|\bclique\b|\ben promo\b|\bla formation\b|\bpromotion\b",
-     "un appel à l'action en dehors de la phrase de fin imposée"),
-]
-# l'agent écrit le code ; c'est le moteur de rendu qui fabrique les images
-CONFUSION = re.compile(r"\bclaude(?: code)?\b[^.!?;:]{0,24}\b(?:filme|tourne|monte\b|exporte|rend(?:u)? (?:la|ta|une|ma|cette) vid[ée]o|"
-                       r"g[ée]n[èe]re (?:directement )?(?:la|ta|une|ma|des|cette) (?:vid[ée]os?|images?|pixels?)|fabrique (?:la|ta|une|ma|cette) vid[ée]o|"
-                       r"cr[ée]e (?:directement )?(?:la|ta|une|ma) vid[ée]o)", re.I)
-OUTILS = ["react", "remotion", "skill", "skills", "terminal", "node", "npm", "npx", "typescript", "javascript", "github", "framework", "api"]
-SENSIBLES = {"gratuit": r"\bgratuit\w*", "open source": r"\bopen[- ]source\b"}
+# outils et services : en parler demande un fait vérifié qui les couvre (champ « outils » du fait)
+OUTILS = ["chatgpt", "gpt", "openai", "claude", "anthropic", "gemini", "copilot", "grok", "mistral", "deepseek", "midjourney", "dall-e", "sora", "veo",
+          "runway", "kling", "pika", "heygen", "elevenlabs", "capcut", "canva", "photoshop", "premiere", "after effects", "davinci", "figma",
+          "notion", "remotion", "hyperframes", "github", "vercel", "supabase", "pexels", "pixabay", "google ai studio", "notebooklm", "perplexity",
+          "higgsfield", "seedance", "pomelli", "meta ai", "suno", "descript", "opus clip", "invideo", "synthesia"]
+UNITES = r"(secondes?|minutes?|heures?|jours?|semaines?|mois|ans?|annees?|€|euros?|francs?|fcfa|cfa|\$|dollars?|%|pour ?cent|k\b|millions?|milliards?|vues|abonnes|clients|ventes|fois plus|x plus|go\b|mo\b|credits?)"
+GRATUIT = r"\bgratuit(e|es|s|ement)?\b|\bsans payer\b|\bzero franc\b|\b0 franc\b|\bsans abonnement\b"
+FAUX_RUSH = r"\bclient|\btemoignage|\bresultat (reel|obtenu)|\bma boutique|\bmon (produit|client)|\bavis\b"
 
 
-def _phrases(texts: list[str]) -> list[str]:
-    out = []
-    for t in texts:
-        out += [p.strip() for p in re.split(r"(?<=[.!?…])\s+", t) if p.strip()]
-    return out
-
-
-def _pairs(text: str) -> set[tuple[str, str]]:
-    out = set()
-    for m in NUM_UNIT.finditer(text):
-        raw = m.group(2).lower().strip()
-        u = norm(raw) or raw                                   # « % », « € » et « $ » n'ont pas de lettres
-        u = ALIAS.get(u, u if len(u) <= 2 else u.rstrip("s"))
-        out.add((schema._num(m.group(1)), u))
-    return out
-
-
-def controle(story: dict, pack: dict, faits: dict[str, dict] | None = None) -> list[str]:
-    """`story` a déjà passé schema.check ; `faits` = faits vérifiés et confirmés aujourd'hui ({id: fait})."""
-    faits = faits or {}
-    out: list[str] = []
-    seg = story.get("segment")
-
-    # ---- 0. cohérence avec le dossier
-    pb = preuves.problemes(pack)
-    if pb:
-        return [f"dossier de preuve « {pack.get('id')} » inutilisable : " + " ; ".join(pb)]
-    if pack.get("segment") != seg:
-        out.append(f"le dossier de preuve « {pack['id']} » est fait pour le public « {pack.get('segment')} », pas « {seg} » : on ne mélange pas les deux publics")
-    if story.get("sujet") not in (pack.get("sujets") or []):
-        out.append(f"le dossier de preuve « {pack['id']} » ne couvre pas le sujet n° {story.get('sujet')} (il couvre : {pack.get('sujets')})")
-    cites = {}
+def _faits_de(story: dict, faits_ok: dict) -> tuple[list[dict], list[str]]:
+    cites, pb = [], []
     for fid in story.get("faits") or []:
-        if fid not in faits:
-            out.append(f"le fait « {fid} » n'est pas confirmé par la veille du jour : retire ce qui s'appuie dessus")
+        f = (faits_ok or {}).get(fid)
+        if f is None:
+            pb.append(f"fait « {fid} » cité mais non confirmé par la veille (ou inconnu) : retire-le, ou n'utilise que les faits fournis")
         else:
-            cites[fid] = faits[fid]
+            cites.append(f)
+    return cites, pb
 
-    # ---- 1. preuve : médias, extraits, code
-    media = pack.get("media") or {}
-    for ref in sorted(schema.refs_in(story)):
-        if ref not in media:
-            out.append(f"média « {ref} » absent du dossier de preuve (disponibles : {', '.join(media)})")
-    has_code = False
-    for s in story["scenes"]:
-        for b in s.get("blocks") or []:
-            if b["kind"] == "brief":
-                where = preuves.extrait_ok(pack, b["text"])
-                if where is None:
-                    out.append(f"extrait « {b['text'][:50]}… » introuvable mot pour mot dans la demande écrite du dossier : recopie un passage exact")
-                elif where != b.get("source"):
-                    b["source"] = where
-                    b["label"] = "Correction demandée" if where == "correction" else "Demande écrite"
-            elif b["kind"] == "code":
-                has_code = True
-                bad = preuves.code_faux(pack, b["file"], b["lines"])
-                if bad:
-                    out.append(f"code affiché introuvable dans {b['file']} : « {bad[0][:60]} » — recopie des lignes exactes du fichier")
-            elif b["kind"] == "terminal":
-                has_code = True
-                ok_src = norm(preuves.texte_nombres(pack) + " " + " ".join(str(f.get("affirmation", "")) for f in cites.values()))
-                if norm(b["text"]) not in ok_src:
-                    out.append(f"commande « {b['text']} » introuvable dans le dossier de preuve : on ne montre qu'une commande réellement utilisée")
-            elif b["kind"] == "erreur" and not (media.get(b["ref"]) or {}).get("zone"):
-                out.append(f"bloc « erreur » : le média « {b['ref']} » n'indique pas où se trouve le défaut (zone) dans preuve.yaml")
 
-    # ---- 2. nombres
-    texts = schema.texts_in(story)
-    blob = " | ".join(texts)
-    allowed_text = preuves.texte_nombres(pack) + "\n" + "\n".join(str(f.get("affirmation", "")) for f in cites.values())
-    ok_num = schema.find_numbers(allowed_text)
-    ok_pairs = _pairs(allowed_text)
-    for n, u in sorted(_pairs(blob)):
-        if (n, u) not in ok_pairs and not (u == "personne" and n in ok_num):
-            out.append(f"« {n} {u} » ne figure ni dans le dossier de preuve ni dans un fait vérifié cité : retire ce chiffre")
-    for n in sorted(schema.find_numbers(blob)):
-        try:
-            small = float(n) <= 10 and float(n) == int(float(n))
-        except ValueError:
-            small = False
-        if n not in ok_num and not small:
-            out.append(f"le nombre {n} ne figure ni dans le dossier de preuve ni dans un fait vérifié cité : retire-le")
-    if sum(1 for s in story["scenes"] for b in s.get("blocks") or [] if b["kind"] == "stat") > 1:
-        out.append("une statistique au plus par vidéo")
-
-    # ---- 3. formulations
-    low = blob.lower()
-    for rx, what in INTERDIT + APPEL:
-        m = re.search(rx, low)
+def controle(story: dict, cfg: dict, faits_ok: dict | None) -> list[str]:
+    """Liste des problèmes (vide = le storyboard peut être fabriqué et publié)."""
+    cites, pb = _faits_de(story, faits_ok or {})
+    dits = schema.textes_dits(story)
+    ecran = schema.textes_ecran(story)
+    leg = story.get("legende") or {}
+    tout = dits + ecran + [leg.get("accroche", ""), leg.get("limite", "")] + list(leg.get("points") or []) + [story.get("promesse", "")]
+    blob = _n(" \n ".join(tout))
+    for rx, why in INTERDITS:
+        m = re.search(rx, blob)
         if m:
-            out.append(f"formulation refusée — {what} : « {low[max(0, m.start() - 20):m.end() + 20].strip()} »")
-    m = CONFUSION.search(blob)
-    if m:
-        out.append(f"confusion technique : « {m.group(0)} » — l'agent écrit le code, c'est le moteur de rendu qui fabrique la vidéo")
-    autorise: dict[str, list[str]] = {}
-    for f in cites.values():
-        for mot, precisions in (f.get("mots") or {}).items():
-            autorise.setdefault(str(mot), []).extend(str(p).lower() for p in precisions)
-    for ph in _phrases(texts):
-        pl = ph.lower()
-        for mot, rx in SENSIBLES.items():
-            if re.search(rx, pl) and not any(p in pl for p in autorise.get(mot, [])):
-                need = f" (précision attendue : {' ou '.join(autorise[mot])})" if autorise.get(mot) else " (aucun fait vérifié cité ne l'autorise)"
-                out.append(f"« {mot} » sans la précision qui le rend exact : « {ph[:70]} »{need}")
+            pb.append(f"formulation interdite — {why} : « {m.group(0)} »")
+    # outils nommés -> fait cité qui les couvre
+    couverts = {_n(o) for f in cites for o in (f.get("outils") or [])}
+    for o in OUTILS:
+        if re.search(rf"(?<![a-z]){re.escape(o)}(?![a-z])", blob) and o not in couverts:
+            pb.append(f"outil « {o} » nommé sans fait vérifié qui le couvre : cite un fait de la liste fournie qui parle de cet outil, ou n'en parle pas")
+    # chiffres avec unité -> présents dans un fait cité
+    autorises = set()
+    for f in cites:
+        autorises |= {str(x) for x in (f.get("nombres") or [])}
+        autorises |= set(re.findall(r"\d+(?:[.,]\d+)?", str(f.get("affirmation") or "")))
+    for m in re.finditer(rf"(\d+(?:[.,]\d+)?)\s*{UNITES}", blob):
+        if m.group(1) not in autorises:
+            pb.append(f"chiffre sans source : « {m.group(0).strip()} » — un prix, une durée, un pourcentage ou une audience doit venir d'un fait vérifié cité")
+    for m in re.finditer(r"(?<![\d.,])(\d{2,})(?![\d.,])", blob):
+        v = m.group(1)
+        if int(v) > 12 and v not in autorises and not re.fullmatch(r"20\d\d", v):
+            pb.append(f"nombre sans source : « {v} »")
+    # gratuit
+    if re.search(GRATUIT, blob) and not any(f.get("gratuit") for f in cites):
+        pb.append("« gratuit / sans payer » : seulement si un fait vérifié cité le dit (champ gratuit du fait) — sinon retire le mot")
+    # rushs : jamais présentés comme une preuve
+    for sc in story.get("scenes") or []:
+        for b in sc.get("blocks") or []:
+            if b.get("kind") in ("rush", "avant_apres"):
+                lab = _n(" ".join(str(b.get(k) or "") for k in ("label", "titre")))
+                if re.search(FAUX_RUSH, lab):
+                    pb.append(f"étiquette de séquence trompeuse « {b.get('label') or b.get('titre')} » : une image de banque n'est ni un client ni un résultat")
+    prom = _n(story.get("promesse", ""))
+    if prom and not re.search(r"suite|partie|video|episode|tuto|prochain", prom):
+        pb.append("« promesse » doit annoncer la vidéo suivante (ex. « la partie 2 : le script exact ») : c'est la seule chose que le compte sait tenir")
+    if re.search(r"lien|pdf|fichier|liste|envoi|document|modele a copier|prompt", prom):
+        pb.append("« promesse » ne peut pas annoncer un lien, un fichier ou une liste à recevoir : annonce la vidéo suivante")
+    return pb
 
-    # ---- 4. un seul public
-    first = story["scenes"][0]
-    if seg == "commercant":
-        if has_code:
-            out.append("vidéo « commerçant » : ni code ni terminal à l'écran (on montre le produit, la demande et le résultat)")
-        opening = re.sub(r"[^a-zà-ÿ0-9]+", " ", " ".join([first.get("title", ""), first.get("public", ""), first.get("say", "")]).lower())
-        hit = next((o for o in OUTILS + ["claude code"] if re.search(rf"\b{re.escape(o)}\b", opening)), None)
-        if hit:
-            out.append(f"vidéo « commerçant » : l'ouverture ne cite pas d'outil (« {hit} ») — elle montre le résultat pour le commerce")
-        named = {o for o in OUTILS if re.search(rf"\b{re.escape(o)}\b", low)}
-        if len(named) > 1:
-            out.append(f"vidéo « commerçant » : trop de noms d'outils ({', '.join(sorted(named))}) — parle d'offre, de produit, de client")
-    if pack.get("fictif") and re.search(r"\b(?:vrai|vraie|r[ée]el|r[ée]elle|authentique)s? (?:commerce|boutique|client|produit|commande|vente)", low):
-        out.append("l'exemple est fictif : ne le présente pas comme un vrai commerce, un vrai produit ou une vraie vente")
-    return out
+
+def resume() -> list[str]:
+    """Les règles en clair (pour la consigne du scénariste et le README)."""
+    return [
+        "Aucune promesse de revenu, de vues, de succès garanti, de rapidité (« en 2 minutes seulement »), ni de remplacement d'un métier.",
+        "N'écris jamais « j'ai testé », « j'ai gagné », « mes clients » : le compte n'a rien testé lui-même. Écris « voici comment », « tu peux », « regarde ».",
+        "Ne promets jamais d'envoyer quelque chose (« je t'envoie », « en privé », « en DM »). La seule promesse permise : la vidéo suivante.",
+        "Ne nomme un outil, une application ou un site (ChatGPT, CapCut, Canva, Pexels…) que si un FAIT VÉRIFIÉ de la liste le couvre, et cite l'identifiant de ce fait dans « faits ».",
+        "Aucun chiffre avec une unité (prix, durée, pourcentage, nombre de vues) qui ne figure pas dans un fait vérifié cité. Les simples comptes (« 3 erreurs », « étape 2 ») sont libres.",
+        "« Gratuit » seulement si un fait vérifié cité le dit ; les mots « illimité », « à l'infini », « viral », « garanti » sont interdits.",
+        "Aucune astuce de contournement (VPN, e-mail jetable, essais gratuits à répétition, retrait de filigrane), aucune imitation d'une personne réelle.",
+        "Une séquence filmée de banque d'images illustre un geste ou sert d'exemple de montage. Elle n'est jamais présentée comme un client, un témoignage ou un résultat.",
+    ]

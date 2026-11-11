@@ -1,0 +1,153 @@
+{
+ "famille": "methode",
+ "hook_type": "resultat",
+ "title": "4 réglages avant de filmer avec ton téléphone",
+ "couverture": [
+  "AVANT DE",
+  "FILMER :",
+  "*4 RÉGLAGES*"
+ ],
+ "keyword": "FILMER",
+ "promesse": "la suite : les plans à filmer",
+ "suite": {
+  "reserve": "r5_plans"
+ },
+ "legende": {
+  "accroche": "Ton téléphone suffit pour filmer. Mais 4 réglages changent tout, avant même d'appuyer sur le bouton 👇",
+  "points": [
+   "Nettoie l'objectif",
+   "Cherche la lumière du jour",
+   "Stabilise le téléphone",
+   "Filme à la verticale"
+  ],
+  "limite": "Ces réglages améliorent l'image ; pour le son, il faut encore un endroit calme ou un micro."
+ },
+ "hashtags": [
+  "#astucevideo",
+  "#filmer",
+  "#smartphone",
+  "#creationdecontenu",
+  "#videoverticale",
+  "#entrepreneuriat"
+ ],
+ "faits": [],
+ "outils": [],
+ "scenes": [
+  {
+   "title": "Avant de *filmer*",
+   "pose": "telephone",
+   "say": "Ton téléphone suffit pour filmer. [a]Mais quatre réglages changent tout, avant même d'appuyer sur le bouton.",
+   "blocks": [
+    {
+     "kind": "rush",
+     "q": "phone tripod filming light",
+     "voir": "un téléphone sur trépied en train de filmer",
+     "cadre": "portrait",
+     "label": "Prêt à filmer"
+    }
+   ]
+  },
+  {
+   "title": "Nettoie *l'objectif*",
+   "tuile": {
+    "label": "RÉGLAGE",
+    "n": 1
+   },
+   "pose": "pointe",
+   "say": "Réglage un : nettoie l'objectif. [a1]Une trace de doigt, et toute l'image devient voilée. [a2]Un coup de tissu propre, et elle redevient nette.",
+   "blocks": [
+    {
+     "kind": "cartes",
+     "cards": [
+      {
+       "tag": "Objectif sale",
+       "text": "Image voilée",
+       "ton": "non"
+      },
+      {
+       "tag": "Objectif propre",
+       "text": "Image nette",
+       "ton": "oui"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Cherche la *lumière*",
+   "tuile": {
+    "label": "RÉGLAGE",
+    "n": 2
+   },
+   "pose": "presente",
+   "say": "Réglage deux : la lumière. [a]Place ton produit près d'une fenêtre. La lumière du jour l'éclaire bien, sans rien acheter.",
+   "blocks": [
+    {
+     "kind": "rush",
+     "q": "cosmetic bottles table sunlight",
+     "voir": "des flacons sur une table éclairés par la lumière du soleil",
+     "cadre": "portrait",
+     "label": "Lumière du jour"
+    }
+   ]
+  },
+  {
+   "title": "*Stabilise* le téléphone",
+   "tuile": {
+    "label": "RÉGLAGE",
+    "n": 3
+   },
+   "pose": "mains_hanches",
+   "say": "Réglage trois : stabilise. [a]Pose le téléphone contre un objet, ou sur un support. Une image qui tremble fatigue l'œil.",
+   "blocks": [
+    {
+     "kind": "rush",
+     "q": "phone holder tripod stable",
+     "voir": "un téléphone fixé dans un support, sur un trépied",
+     "cadre": "portrait",
+     "label": "Sur un support"
+    }
+   ]
+  },
+  {
+   "title": "Filme *à la verticale*",
+   "tuile": {
+    "label": "RÉGLAGE",
+    "n": 4
+   },
+   "pose": "telephone",
+   "say": "Réglage quatre : filme à la verticale. [a1]C'est le format des vidéos courtes : [a2]ton image remplit tout l'écran.",
+   "blocks": [
+    {
+     "kind": "icones",
+     "items": [
+      {
+       "icon": "telephone",
+       "label": "Vertical"
+      },
+      {
+       "icon": "oeil",
+       "label": "Plein écran"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Les *4 réglages*",
+   "pose": "pouce",
+   "say": "Objectif propre, lumière du jour, téléphone stable, format vertical. [a]Quatre gestes à faire avant chaque vidéo.",
+   "blocks": [
+    {
+     "kind": "check",
+     "items": [
+      "Objectif propre",
+      "Lumière du jour",
+      "Téléphone stable",
+      "Format vertical"
+     ]
+    }
+   ]
+  }
+ ]
+}
