@@ -66,6 +66,7 @@ jobs:
           key: outils-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
 
       - name: Installation
+        timeout-minutes: 15          # un miroir de paquets en panne ne doit pas bloquer la file d'attente
         run: bash setup.sh
 
       - name: Tests (logique interne, sans réseau)
