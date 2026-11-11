@@ -1,0 +1,3 @@
+Dépose ici tes propres musiques (.mp3, .wav, .m4a) si tu préfères les tiennes à la musique générée par l'agent.
+Elles deviennent prioritaires : l'agent en prend une différente à chaque vidéo.
+N'y mets que des morceaux que tu as le droit d'utiliser dans des vidéos commerciales.

@@ -1,0 +1,109 @@
+{
+  "title": "Claude ne génère pas ta vidéo : il la code",
+  "keyword": "CODE",
+  "caption": "Claude ne génère pas ta vidéo : il la code. Textes nets, couleurs respectées, et tout reste modifiable. Commente CODE si tu veux la suite. La formation complète est en promo : lien en bio.",
+  "hashtags": [
+    "claudecode",
+    "motiondesign",
+    "claudeai",
+    "videoia",
+    "ia"
+  ],
+  "scenes": [
+    {
+      "type": "hook",
+      "kicker": "Claude · idée reçue",
+      "title": "Claude ne fait pas de *vidéo* ?",
+      "chips": [
+        "Pas un générateur",
+        "Du code",
+        "Un vrai MP4"
+      ],
+      "stamp": "FAUX",
+      "pill": "il la code",
+      "icon": "bolt",
+      "say": "Claude ne sait pas faire de vidéo ? [stamp]Faux. Il ne la génère pas : [pill]il la code. Et ça change tout."
+    },
+    {
+      "type": "section",
+      "title": "Du *code*, pas un modèle",
+      "icon": "bulb",
+      "blocks": [
+        {
+          "id": "a",
+          "kind": "checklist",
+          "label": "COMMENT IL FAIT",
+          "rows": [
+            "Il écrit l'animation en code",
+            "Chaque image est calculée",
+            "Résultat : un vrai MP4"
+          ]
+        }
+      ],
+      "say": "Ici, pas de modèle vidéo. [a1]Il écrit l'animation en code, avec un outil comme Remotion. [a2]Chaque image est calculée, et [a3]tu récupères un vrai MP4."
+    },
+    {
+      "type": "section",
+      "title": "Ce que ça *change*",
+      "icon": "check",
+      "blocks": [
+        {
+          "id": "a",
+          "kind": "checklist",
+          "label": "UNE VIDÉO EN CODE",
+          "rows": [
+            "Textes toujours nets",
+            "Tes vraies couleurs",
+            "Modifiable à volonté"
+          ]
+        }
+      ],
+      "say": "Ce que ça change : [a1]les textes restent nets, [a2]tes couleurs sont respectées, et [a3]tu modifies ce que tu veux, juste en le demandant."
+    },
+    {
+      "type": "section",
+      "title": "La *preuve*",
+      "icon": "star",
+      "blocks": [
+        {
+          "id": "a",
+          "kind": "stat",
+          "label": "anything2explainer · GitHub",
+          "value": 3200,
+          "unit": "étoiles"
+        },
+        {
+          "id": "b",
+          "kind": "chips",
+          "items": [
+            "Voix off",
+            "Sous-titres",
+            "Chapitres"
+          ]
+        }
+      ],
+      "say": "La preuve : un skill pour Claude Code, à plus de [a]3 200 étoiles sur GitHub. Tu donnes un sujet, il sort une vidéo explicative avec [b1]voix off, [b2]sous-titres et [b3]chapitres."
+    },
+    {
+      "type": "cta",
+      "keyword": "CODE",
+      "sub": "la formation est en promo, lien en bio",
+      "say": "Tu veux apprendre à le faire toi-même ? [kw]Commente CODE si tu veux la suite. [sub]La formation complète est en promo, lien en bio."
+    }
+  ],
+  "links": [
+    {
+      "n": "anything2explainer (GitHub)",
+      "u": "https://github.com/Vincentwei1021/anything2explainer"
+    },
+    {
+      "n": "video-shotcraft (GitHub)",
+      "u": "https://github.com/Vincentwei1021/video-shotcraft"
+    },
+    {
+      "n": "Remotion (GitHub)",
+      "u": "https://github.com/remotion-dev/remotion"
+    }
+  ],
+  "_sources": "Vérifié le 2026-11-11 sur GitHub : anything2explainer 3 215 étoiles (« Topic in, narrated explainer video out… TTS voiceover, subtitles and a chapter progress bar… no generative video model ») ; video-shotcraft (« Every frame is drawn by code… sharp, on-brand and fully editable »)."
+}

@@ -1,0 +1,134 @@
+# =====================================================================
+#  CONFIGURATION DE L'AGENT — le seul fichier à modifier.
+#  Les clés secrètes (API) ne vont JAMAIS ici : elles vont dans les
+#  « Secrets » GitHub (ou dans un fichier .env sur un serveur).
+# =====================================================================
+
+brand:
+  name: ""                           # nom de ta marque (facultatif ; s'il est rempli, le scénariste peut le citer)
+  handle: ""                         # ton identifiant sur les réseaux (facultatif, pour mémoire)
+  language: "fr"
+  theme: "papier"                    # papier | ocean | menthe | nuit
+  accent: ""                         # couleur de marque (ex. "#1F6FEB") ; vide = couleur du thème
+  avatar: ""                         # photo affichée sur l'écran final (ex. "assets/avatar.jpg") ; vide = aucune
+
+niche:                               # DE QUOI PARLENT LES VIDÉOS
+  description: "Créer avec Claude et Claude Code : des vidéos motion design propres, des visuels et des contenus, à partir d'une simple demande écrite"
+  audience: "créateurs de contenu, entrepreneurs et freelances francophones qui veulent produire leurs vidéos eux-mêmes, sans monteur et sans savoir coder"
+  line: "Chaque vidéo montre une chose concrète que Claude ou Claude Code sait fabriquer (d'abord des vidéos motion design, ensuite des visuels, des sites, des contenus) et donne envie d'apprendre à le faire soi-même. Jamais d'actualité polémique, jamais de robot qui publie à ta place, jamais de sujet sans rapport avec la création avec Claude."
+  tone: "direct, concret, tutoiement, phrases courtes, zéro jargon inutile"
+  # mots cherchés par la veille (les 5 premiers servent à la recherche GitHub)
+  keywords: ["claude code video", "motion graphics", "claude design", "video skill", "remotion video", "claude skills"]
+
+offer:                               # LA FORMATION VENDUE PAR LE LIEN EN BIO
+  name: ""                           # nom de la formation (à remplir quand elle existe)
+  promise: "Apprends à faire fabriquer tes vidéos motion design par Claude, sans monteur et sans savoir coder"
+  price: ""                          # ex. "29 €" (ne sert qu'aux vidéos de présentation de la formation)
+  points: []                         # ce qu'elle contient, ex. ["12 leçons vidéo", "les demandes prêtes à copier"] ; vide = pas de vidéo de présentation
+  pitch_every: 6                     # 1 vidéo sur N présente directement la formation (0 = jamais ; inactif tant que name et points sont vides)
+  # --- Fin de CHAQUE vidéo. C'est l'agent qui l'écrit, mot pour mot : le modèle ne peut pas la changer.
+  # Règle : commenter ne fait rien recevoir. On ne promet donc jamais un envoi, un guide ou un cadeau.
+  cta_comment: "si tu veux la suite"                                # la voix dit : « Commente MOT si tu veux la suite. »
+  cta_say: "La formation complète est en promo, lien en bio."       # dernière phrase prononcée
+  cta_sub: "la formation est en promo, lien en bio"                 # écrit à l'écran sous le mot-clé (44 caractères max)
+  caption_end: "La formation complète est en promo : lien en bio."  # fin de la légende de chaque post
+
+schedule:
+  timezone: "Africa/Porto-Novo"
+  videos_per_day: 2
+  slots: ["07:30", "12:30", "18:30", "20:30"]   # créneaux candidats (heure locale) ; l'agent en choisit 2 par jour et apprend lesquels marchent
+
+video:
+  seconds: [28, 48]                  # durée visée (min, max)
+  fps: 30
+  hold_end: 1.7                      # secondes d'écran final après la voix
+
+voice:
+  order: ["edge", "piper"]           # essayés dans l'ordre. Possibles : edge (naturelle, service non officiel) | gemini (API officielle, clé gratuite) | piper (locale, plus « robot »)
+  edge_voice: "fr-FR-RemyMultilingualNeural"   # autres : fr-FR-HenriNeural, fr-FR-VivienneMultilingualNeural, fr-FR-DeniseNeural
+  rate: "+16%"
+  pitch: "+0Hz"
+  piper_voice: "fr_FR-siwis-medium"
+  max_gap: 0.26                      # silences plus longs que ça sont raccourcis (rythme TikTok)
+  pronounce:                         # mot affiché -> mot prononcé (la voix seulement)
+    "GitHub": "guite-heub"           # « guit-heub » s'entendait « dix hubs » sous la musique (reconnaissance vocale, 3 essais sur 3)
+    "skills": "skilz"
+    "skill": "skil"
+    "NVIDIA": "ènne-vidia"
+    "MCP": "èm-cé-pé"
+
+audio:
+  music: true                        # musique générée par l'agent (aucun droit d'auteur) ; ou dépose tes .mp3 dans assets/music/
+  music_db: -30                      # niveau de la musique sous la voix (dBFS ; la voix est à environ -19)
+  sfx: true
+  voice_margin_db: 14                # marge minimale de la voix sur le fond (1–4 kHz) ; en dessous, l'agent baisse musique et bruitages
+  loudness: -14                      # niveau final (LUFS), standard réseaux sociaux
+
+llm:                                 # « cerveau » : essayés dans l'ordre, seuls ceux dont la clé existe sont utilisés
+  providers:
+    - name: nvidia
+      base_url: "https://integrate.api.nvidia.com/v1"
+      key_env: "NVIDIA_API_KEY"
+      model: "nvidia/nemotron-3-ultra-550b-a55b"
+      prefer: ["nemotron-3-ultra", "nemotron-3.5-super", "nemotron-3-super", "deepseek-v4", "kimi", "glm-5", "mistral-large"]
+      rpm: 30                        # garde-fou (le palier gratuit annonce ~40/min)
+      rpd: 300
+    - name: groq
+      base_url: "https://api.groq.com/openai/v1"
+      key_env: "GROQ_API_KEY"
+      model: "openai/gpt-oss-120b"
+      prefer: ["gpt-oss-120b", "qwen", "llama-3.3-70b", "kimi"]
+      rpm: 20
+      rpd: 600                       # palier gratuit annoncé : 1 000/jour
+    - name: gemini
+      base_url: "https://generativelanguage.googleapis.com/v1beta/openai"
+      key_env: "GEMINI_API_KEY"
+      model: "gemini-2.5-flash"
+      prefer: ["gemini-3-flash", "gemini-2.5-flash", "flash"]
+      rpm: 8
+      rpd: 150
+    - name: openrouter
+      base_url: "https://openrouter.ai/api/v1"
+      key_env: "OPENROUTER_API_KEY"
+      model: "auto-free"
+      prefer: [":free"]
+      rpm: 15
+      rpd: 40                        # 50/jour sans achat de crédits
+  temperature: 0.8
+  max_calls_per_video: 14
+  keyless_fallback: false            # true = essaie aussi des services sans clé (très lents et limités ; dépannage seulement)
+
+research:                            # veille (sources gratuites, sans clé)
+  github: true
+  hackernews: false                  # actualité générale, souvent polémique : hors de la ligne du compte
+  rss: []                            # flux d'annonces à suivre, ex. ["https://exemple.com/feed.xml"]
+  min_stars: 300
+  # un sujet n'est retenu que si son nom, sa description ou ses thèmes contiennent l'un de ces mots
+  require_any: ["claude", "remotion", "coding agent", "agent skill"]
+  # … et s'il ne contient aucun de ceux-ci (sujets sans rapport, ou qui abîmeraient l'image du compte)
+  exclude_any: ["security", "exploit", "hack", "jailbreak", "watermark", "crack", "leak", "nsfw", "casino", "betting", "trading", "crypto"]
+
+publish:
+  dry_run: true                      # true = MODE ESSAI : la vidéo est fabriquée, rien n'est publié, rien n'est compté.
+                                     # Passe à false seulement quand : 1) le journal d'un essai te convient, 2) la clé Buffer est en place,
+                                     # 3) la page de vente de la formation est en ligne et son lien est dans ta bio.
+  via: "buffer"                      # buffer (recommandé : 1 seule clé, TikTok public) | native (API officielles de chaque réseau)
+  networks: ["tiktok", "instagram", "facebook"]
+  ai_label: true                     # déclare le contenu comme généré par IA (voix de synthèse)
+  hashtags: 5
+  media_host: "github_pages"         # où la vidéo est hébergée pour que Buffer vienne la chercher : github_pages | cloudinary (secret CLOUDINARY_URL)
+  keep_videos: 30                    # nombre de vidéos conservées en ligne
+  tiktok_native_mode: "inbox"        # inbox = brouillon dans ton TikTok (tu touches « publier »)  |  direct = public (seulement après l'audit TikTok de ton app)
+
+stats:
+  check_after_hours: [24, 72, 168]   # relevés des statistiques après publication
+  source_tiktok: "buffer"            # buffer | api | public (lecture de la page publique, non officielle)
+  weights: {views: 0.5, comments: 0.2, shares: 0.15, saves: 0.15}
+
+strategy:
+  explore: 0.2                       # part d'essais nouveaux (0 = n'exploite que ce qui marche)
+  remake_every: 5                    # 1 vidéo sur N refait un sujet gagnant sous un nouvel angle
+  formats: ["liste", "transforme", "tuto", "mythe", "comparatif"]
+
+notify:
+  telegram: false                    # message Telegram après chaque vidéo (secrets TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID)

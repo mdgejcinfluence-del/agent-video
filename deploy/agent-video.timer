@@ -1,0 +1,10 @@
+[Unit]
+Description=Réveille l'agent vidéo toutes les 20 minutes (il ne travaille que si un créneau est dû)
+
+[Timer]
+OnCalendar=*:0/20
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,17 @@
+# Variante « vrai serveur » (VPS, Oracle Cloud Always Free, vieux PC sous Linux…).
+# Copie ce fichier et agent-video.timer dans /etc/systemd/system/, adapte le chemin et l'utilisateur, puis :
+#   sudo systemctl daemon-reload && sudo systemctl enable --now agent-video.timer
+[Unit]
+Description=Agent vidéo motion design (un réveil)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/agent
+ExecStart=/usr/bin/python3 run.py tick
+# la mémoire est aussi poussée sur GitHub (facultatif : supprime la ligne si tu ne veux pas)
+ExecStartPost=/bin/bash -c 'git add state && git diff --cached --quiet || (git commit -q -m "mémoire" && git push -q)'
+TimeoutStartSec=2700
+Nice=5

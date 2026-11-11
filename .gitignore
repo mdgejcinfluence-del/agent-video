@@ -1,0 +1,9 @@
+# secrets : jamais dans le dépôt
+.env
+# fichiers produits
+out/
+.voices/
+.media_work/
+__pycache__/
+*.pyc
+state/*.tmp

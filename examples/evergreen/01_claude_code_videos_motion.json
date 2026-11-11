@@ -1,0 +1,126 @@
+{
+  "title": "Claude Code fabrique tes vidéos motion design : la méthode en 3 étapes",
+  "keyword": "MOTION",
+  "caption": "Claude Code peut fabriquer tes vidéos motion design : il écrit l'animation, Remotion sort le MP4. La méthode en 3 étapes. Commente MOTION si tu veux la suite. La formation complète est en promo : lien en bio.",
+  "hashtags": [
+    "claudecode",
+    "motiondesign",
+    "remotion",
+    "claudeai",
+    "ia"
+  ],
+  "scenes": [
+    {
+      "type": "hook",
+      "kicker": "Claude Code · vidéo",
+      "title": "Tes vidéos *motion* par Claude",
+      "chips": [
+        "Un projet Remotion",
+        "Les skills officiels",
+        "Ta demande écrite"
+      ],
+      "stamp": "Zéro montage",
+      "pill": "3 étapes",
+      "icon": "play",
+      "say": "Claude Code peut fabriquer tes vidéos motion design, [stamp]sans logiciel de montage. La méthode [pill]en 3 étapes."
+    },
+    {
+      "type": "section",
+      "title": "Le *principe*",
+      "icon": "bulb",
+      "blocks": [
+        {
+          "id": "a",
+          "kind": "stat",
+          "label": "Remotion · GitHub",
+          "value": 72000,
+          "unit": "étoiles"
+        },
+        {
+          "id": "b",
+          "kind": "checklist",
+          "label": "UNE VIDÉO ÉCRITE EN CODE",
+          "rows": [
+            "Chaque image est calculée",
+            "Textes toujours nets",
+            "Tout reste modifiable"
+          ]
+        }
+      ],
+      "say": "Le principe : Remotion, plus de [a]72 000 étoiles sur GitHub, fabrique des vidéos [b]avec du code. [b1]Chaque image est calculée, [b2]les textes restent nets, et [b3]tout reste modifiable."
+    },
+    {
+      "type": "section",
+      "title": "Les *3 étapes*",
+      "icon": "gear",
+      "blocks": [
+        {
+          "id": "a",
+          "kind": "terminal",
+          "label": "terminal",
+          "text": "npx create-video@latest"
+        },
+        {
+          "id": "b",
+          "kind": "terminal",
+          "label": "terminal",
+          "text": "npx remotion skills add"
+        },
+        {
+          "id": "c",
+          "kind": "pill",
+          "text": "puis : ta demande"
+        }
+      ],
+      "say": "Étape 1 : tu crées le projet [a]en une commande. Étape 2 : tu ajoutes [b]les skills officiels, le mode d'emploi de Claude Code. Étape 3 : [c]tu décris ta vidéo, et il écrit l'animation."
+    },
+    {
+      "type": "section",
+      "title": "À *savoir*",
+      "icon": "coin",
+      "blocks": [
+        {
+          "id": "a",
+          "kind": "compare",
+          "label": "Avant de te lancer",
+          "rows": [
+            {
+              "text": "Remotion : gratuit en solo",
+              "ok": true
+            },
+            {
+              "text": "Gratuit jusqu'à 3 employés",
+              "ok": true
+            },
+            {
+              "text": "Claude Code : abonnement",
+              "ok": false
+            }
+          ]
+        }
+      ],
+      "say": "À savoir : Remotion est [a1]gratuit pour un particulier, et pour une entreprise [a2]jusqu'à 3 employés. Claude Code, lui, [a3]demande un abonnement."
+    },
+    {
+      "type": "cta",
+      "keyword": "MOTION",
+      "sub": "la formation est en promo, lien en bio",
+      "say": "Tu veux apprendre à le faire toi-même ? [kw]Commente MOTION si tu veux la suite. [sub]La formation complète est en promo, lien en bio."
+    }
+  ],
+  "links": [
+    {
+      "n": "Remotion — créer une vidéo avec un agent de code (documentation)",
+      "u": "https://www.remotion.dev/docs/ai/claude-code"
+    },
+    {
+      "n": "Remotion — licence",
+      "u": "https://github.com/remotion-dev/remotion/blob/main/LICENSE.md"
+    },
+    {
+      "n": "Remotion (GitHub)",
+      "u": "https://github.com/remotion-dev/remotion"
+    }
+  ],
+  "_sources": "Vérifié le 2026-11-11 : 72 366 étoiles ; commandes et prérequis d'après remotion.dev/docs/ai/claude-code ; licence gratuite pour les particuliers et les entreprises de 3 employés au plus."
+}
