@@ -72,16 +72,17 @@ et `python3 run.py plan` te disent à tout moment ce qui manque.
 
 | Brique | État au 11/11/2026 |
 |---|---|
-| Moteur de rendu v2, voix, mixage, contrôle qualité | **A tourné** en local : les 6 vidéos de réserve passent tous les contrôles ; une vidéo complète sort en 2 minutes (36,5 s, 1080×1920, 30 img/s, −14,2 LUFS). |
+| Moteur de rendu v2, voix, mixage, contrôle qualité | **A tourné** : les 6 vidéos de réserve ont été fabriquées en entier et passent le contrôle qualité (35,3 à 38,5 s, 1080×1920, 30 img/s, −14,2 LUFS). Une vidéo sort en 1 à 2 minutes. |
 | Dossiers de preuve | **Réels pour la technique** : les rendus de `preuves/*/media/` ont été calculés par Remotion 4.0.542 à partir du projet `preuves/projet-remotion/` (rejoués à l'identique, à l'octet près). Le premier rendu défectueux et sa correction sont de vrais rendus. **Fictif pour le commerce** : produit, prix et photo d'exemple. |
 | Veille des faits | **A tourné** : les 4 pages officielles de Remotion ont été rouvertes et les 6 faits reconfirmés (licence gratuite jusqu'à 3 personnes, tarifs, principe du rendu). |
 | Garde-fous (preuve mot pour mot, nombres, formulations, un seul public, phrase de fin) | **60 tests automatiques passent** (`python3 -m unittest discover -s tests`). |
-| Chaîne complète en mode essai, sans aucune clé | **A tourné** en local (`python3 run.py make --no-publish`). Sur GitHub : voir l'onglet *Actions*. |
+| Chaîne complète en mode essai, sans aucune clé | **A tourné sur GitHub** le 11/11/2026 : 4 exécutions lancées à la main, 4 réussies (tests, veille, choix du sujet, vidéo, fiche de production, mémoire). Chaque vidéo se télécharge dans *Actions* → l'exécution → *Artifacts*, pendant 14 jours. |
+| Réveils automatiques de GitHub | **Pas encore observés.** Le dépôt date du 11/11/2026 et le réveil de 11:20 UTC n'a pas eu lieu : GitHub retarde ou saute parfois un réveil, surtout sur un dépôt récent. À vérifier dans *Actions* après 18:20, heure de Cotonou. Un créneau manqué est rattrapé par le réveil suivant s'il arrive dans les 4 heures. |
 | Écriture du scénario par NVIDIA / Groq | **Pas encore testée avec un vrai modèle** (aucune clé en place). Le dialogue est testé contre un faux serveur, y compris le refus d'un extrait reformulé. La qualité des scénarios se jugera sur les premiers essais. |
 | Attente de validation, puis publication | Logique testée (faux hébergement, faux Buffer). **Jamais exécutée pour de vrai.** |
 | Publication et mesures par Buffer | **Jamais envoyé au vrai Buffer.** Requêtes écrites d'après sa documentation. |
 | YouTube Shorts | Le texte est préparé dans chaque fiche de production ; **la publication n'est pas reliée** (l'offre gratuite de Buffer couvre 3 canaux). |
-| Son | Mesuré par le calcul (voix 22 dB au-dessus du fond). **Personne n'a écouté ces vidéos** : écoute-les. |
+| Son | Mesuré par le calcul (voix 22 à 25 dB au-dessus du fond) et relu par une transcription automatique : la phrase de fin est dite mot pour mot dans les 6 vidéos. **Personne n'a écouté ces vidéos** : écoute-les. |
 
 ---
 
