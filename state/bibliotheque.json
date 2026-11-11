@@ -1,0 +1,70 @@
+{
+ "suivant": 3,
+ "fiches": [
+  {
+   "id": "P-0001",
+   "cle": "01d528b7220af2",
+   "cree_le": "2026-11-11",
+   "videos": [
+    {
+     "id": "demo-p1_business",
+     "le": "2026-11-11",
+     "publiee": false
+    }
+   ],
+   "titre": "Cinq idées de business adaptées à ton budget",
+   "categorie": "Business et entrepreneuriat",
+   "famille": "business",
+   "outil": "ChatGPT",
+   "type": "prompt",
+   "fonction": "Obtenir cinq activités possibles avec un petit capital : investissement, clients, risques, prix, premières étapes",
+   "prompt": "Agis comme un consultant spécialisé dans la création de petites entreprises en Afrique de l'Ouest. Je vis à [ville] et je dispose d'un capital de [montant]. Propose-moi 5 activités adaptées à mon budget et à mon environnement. Pour chacune, détaille les investissements nécessaires, les clients potentiels, les risques, les prix possibles et les premières étapes pour démarrer. Ne propose pas de revenus garantis.",
+   "exemple": {
+    "valeurs": {
+     "ville": "Cotonou",
+     "montant": "50 000 FCFA"
+    },
+    "instruction_envoyee": "Agis comme un consultant spécialisé dans la création de petites entreprises en Afrique de l'Ouest. Je vis à Cotonou et je dispose d'un capital de 50 000 FCFA. Propose-moi 5 activités adaptées à mon budget et à mon environnement. Pour chacune, détaille les investissements nécessaires, les clients potentiels, les risques, les prix possibles et les premières étapes pour démarrer. Ne propose pas de revenus garantis."
+   },
+   "resultat_attendu": "Une liste de cinq activités, chacune détaillée : investissement, clients, risques, prix possibles, premières étapes.",
+   "personnalisation": "Remplace [ville] et [montant]. Tu peux ajouter ce que tu sais faire, le temps dont tu disposes et ce que tu ne veux pas vendre.",
+   "statut": "à vérifier",
+   "verification": "non testé (aucune clé GEMINI_API_KEY)",
+   "date_verification": "",
+   "teste_sur": ""
+  },
+  {
+   "id": "P-0002",
+   "cle": "1f5f09e8e8d968",
+   "cree_le": "2026-11-11",
+   "videos": [
+    {
+     "id": "demo-p2_consignes",
+     "le": "2026-11-11",
+     "publiee": false
+    }
+   ],
+   "titre": "Tes consignes permanentes pour ChatGPT",
+   "categorie": "Commandes et fonctions méconnues",
+   "famille": "commandes",
+   "outil": "ChatGPT",
+   "type": "reglage",
+   "fonction": "Texte à coller une fois dans les instructions personnalisées : ChatGPT en tient compte dans toutes les discussions",
+   "prompt": "Je m'appelle [prénom] et je vis à [ville]. Je suis [métier]. Réponds-moi toujours en français simple, avec des phrases courtes. Donne-moi des étapes numérotées et un exemple concret. Si ma demande n'est pas claire, pose-moi une question avant de répondre.",
+   "exemple": {
+    "valeurs": {
+     "prénom": "Awa",
+     "ville": "Cotonou",
+     "métier": "vendeuse de tissus en ligne"
+    },
+    "instruction_envoyee": "Je m'appelle Awa et je vis à Cotonou. Je suis vendeuse de tissus en ligne. Réponds-moi toujours en français simple, avec des phrases courtes. Donne-moi des étapes numérotées et un exemple concret. Si ma demande n'est pas claire, pose-moi une question avant de répondre."
+   },
+   "resultat_attendu": "ChatGPT applique ces consignes à toutes les discussions, sans que tu les répètes.",
+   "personnalisation": "Remplace [prénom], [ville] et [métier], puis ajoute tes préférences : le ton, la longueur des réponses, la langue.",
+   "statut": "validé",
+   "verification": "page officielle relue",
+   "date_verification": "2026-11-11",
+   "teste_sur": "help.openai.com — ChatGPT Custom Instructions"
+  }
+ ]
+}
