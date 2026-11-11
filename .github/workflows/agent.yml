@@ -99,8 +99,9 @@ jobs:
       - name: Enregistrer la mémoire de l'agent
         if: always()
         run: |
-          git config user.name "studio-agent"
-          git config user.email "studio-agent@users.noreply.github.com"
+          # identité officielle des commits faits par GitHub Actions (aucun compte de personne n'est cité)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           BR="${GITHUB_REF_NAME}"
           git add state
           if git diff --cached --quiet; then echo "mémoire inchangée"; exit 0; fi

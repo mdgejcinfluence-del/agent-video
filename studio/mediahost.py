@@ -16,6 +16,10 @@ from pathlib import Path
 import requests
 
 
+# identité officielle des commits faits par GitHub Actions : aucun compte de personne n'est cité dans l'historique
+BOT = ("github-actions[bot]", "41898282+github-actions[bot]@users.noreply.github.com")
+
+
 def _git(args: list[str], cwd: Path, check: bool = True) -> subprocess.CompletedProcess:
     return subprocess.run(["git", *args], cwd=str(cwd), capture_output=True, text=True, check=check)
 
@@ -71,7 +75,7 @@ def publish(files: dict[str, Path], cfg: dict, root: Path, keep: int = 30, log=p
     # un seul commit, sans historique
     _git(["checkout", "--orphan", "media_tmp"], work)
     _git(["add", "-A"], work)
-    _git(["-c", "user.name=studio-agent", "-c", "user.email=studio-agent@users.noreply.github.com", "commit", "-q", "-m", "media"], work)
+    _git(["-c", f"user.name={BOT[0]}", "-c", f"user.email={BOT[1]}", "commit", "-q", "-m", "media"], work)
     sha = _git(["rev-parse", "HEAD"], work).stdout.strip()
     # l'envoi part du dépôt principal et non du dossier de travail : c'est là que GitHub Actions range ses droits d'écriture
     push = _git(["push", "--force", "origin", f"{sha}:refs/heads/studio-media"], root, check=False)

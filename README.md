@@ -40,8 +40,8 @@ de la chaîne. Détail des services gratuits, de leurs quotas et de leurs condit
 | Veille GitHub filtrée sur la ligne du compte | **A tourné.** |
 | Chaîne complète en mode essai, sans aucune clé | **A tourné** : `python3 run.py tick --force` va du réveil à la vidéo en un peu plus de 2 minutes (scénario de réserve). |
 | Logique interne (repères voix/image, réparation du scénario, fin imposée, mode essai, apprentissage du stratège, quotas, mesure du son) | **32 tests automatiques passent** (`python3 -m unittest discover -s tests`). |
-| Tâche GitHub Actions | **A tourné** le 11/11/2026, sans aucune clé : installation, 32 tests, veille, voix, rendu d'une vidéo de réserve de 40,8 s, contrôle qualité, mémoire enregistrée dans le dépôt. 3 minutes en tout. La voix edge répond depuis les machines de GitHub. |
-| GitHub Pages (là où Buffer vient chercher la vidéo) | **A tourné** : une vidéo de 8 Mo envoyée sur la branche `studio-media` répondait à son adresse publique 24 s plus tard (bon type, bonne taille). Le fichier d'essai a été retiré. |
+| Tâche GitHub Actions | **A tourné** le 11/11/2026, sans aucune clé : installation, 32 tests, veille, voix, rendu, contrôle qualité, mémoire enregistrée dans le dépôt. Les 3 vidéos de réserve y ont été fabriquées (37 à 41 s chacune), en 2 à 3 minutes par réveil. |
+| GitHub Pages (là où Buffer vient chercher la vidéo) | **A tourné** : depuis la machine de GitHub, la commande `doctor` a envoyé un fichier d'essai sur la branche `studio-media` et l'a relu à son adresse publique 26 s plus tard. Une vidéo de 8 Mo y a aussi été servie correctement (bon type, bonne taille), puis retirée. |
 | Écriture du scénario par NVIDIA / Groq | **Pas encore testée avec un vrai modèle** (aucune clé en place). Le dialogue avec le modèle est testé contre un faux serveur ; la qualité des scénarios se jugera sur les premiers essais. |
 | Publication et statistiques par Buffer | **Jamais envoyé au vrai Buffer.** Requêtes écrites d'après sa documentation et testées contre un faux serveur. |
 | Publication native Meta et TikTok, Cloudinary, voix Gemini | Écrites d'après les documentations, **non testées**. |
@@ -88,7 +88,7 @@ a branch* → `studio-media`, dossier `/ (root)`.
 | Si aucun réseau ne reçoit la vidéo | — | l'exécution passe en échec, rien n'est compté |
 
 En publication réelle, si aucune clé de modèle ne répond et que les 3 scénarios de réserve ont
-déjà servi, l'exécution échoue (GitHub t'envoie un e-mail) : c'est le signal qu'une clé manque.
+déjà servi, l'exécution échoue (GitHub t'envoie alors un e-mail, sauf si tu as coupé ces notifications) : c'est le signal qu'une clé manque.
 
 ---
 
