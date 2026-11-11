@@ -36,6 +36,12 @@
    "le": "2026-11-11",
    "http": 200,
    "manque": []
+  },
+  "pixabay-libre-de-droits": {
+   "ok": true,
+   "le": "2026-11-11",
+   "http": 200,
+   "manque": []
   }
  },
  "changements": []
