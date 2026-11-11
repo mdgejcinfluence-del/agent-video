@@ -51,46 +51,62 @@ def still(timeline: dict, t: float, out: str | Path, quality: int = 92) -> str:
     return str(out)
 
 
+# Une image qui ne revient pas en 20 s est considérée comme bloquée (le navigateur est alors rouvert).
+JS_IMAGE = ("t => Promise.race([Promise.resolve(window.renderAt(t)), "
+            "new Promise((_, non) => setTimeout(() => non(new Error('image bloquée')), 20000))])")
+
+
+class RenduTropLent(RuntimeError):
+    """Le rendu n'avance plus (machine à court de mémoire, navigateur bloqué) : on arrête au lieu d'attendre des heures."""
+
+
 def _segment(args):
-    timeline_path, f0, f1, fps, out, crf, preset = args
+    timeline_path, f0, f1, fps, out, crf, preset, limite = args
     from playwright.sync_api import sync_playwright
     timeline = json.loads(Path(timeline_path).read_text(encoding="utf-8"))
+    debut = time.time()
     cmd = ["ffmpeg", "-v", "error", "-y", "-f", "image2pipe", "-vcodec", "mjpeg", "-framerate", str(fps), "-i", "-",
            "-c:v", "libx264", "-preset", preset, "-crf", str(crf), "-pix_fmt", "yuv420p", "-r", str(fps),
            "-vf", "scale=in_range=pc:out_range=tv,format=yuv420p", "-color_range", "tv", "-colorspace", "bt709",
            "-color_primaries", "bt709", "-color_trc", "bt709",
            "-g", str(fps * 2), "-bf", "0", "-an", str(out)]
     ff = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    with sync_playwright() as p:
-        browser, page, _ = _open(p, timeline)
-        try:
-            for i in range(f0, f1):
-                shot = None
-                for essai in range(4):
-                    # une capture peut échouer quand la machine manque de mémoire : on réessaie, puis on rouvre le navigateur
-                    try:
-                        page.evaluate("t => window.renderAt(t)", i / fps)
-                        shot = page.screenshot(type="jpeg", quality=94)
-                        break
-                    except Exception:  # noqa: BLE001
-                        if essai == 3:
-                            raise
-                        time.sleep(0.6 * (essai + 1))
-                        if essai >= 1:
-                            try:
-                                browser.close()
-                            except Exception:  # noqa: BLE001
-                                pass
-                            browser, page, _ = _open(p, timeline)
-                ff.stdin.write(shot)
-        finally:
+    try:
+        with sync_playwright() as p:
+            browser, page, _ = _open(p, timeline)
             try:
-                browser.close()
-            except Exception:  # noqa: BLE001
-                pass
-    ff.stdin.close()
-    if ff.wait() != 0:
-        raise RuntimeError(f"ffmpeg a échoué sur le segment {f0}-{f1}")
+                for i in range(f0, f1):
+                    if time.time() - debut > limite:
+                        raise RenduTropLent(f"rendu trop lent : {i - f0} images sur {f1 - f0} en {limite:.0f} s")
+                    shot = None
+                    for essai in range(4):
+                        # une capture peut échouer quand la machine manque de mémoire : on réessaie, puis on rouvre le navigateur
+                        try:
+                            page.evaluate(JS_IMAGE, i / fps)
+                            shot = page.screenshot(type="jpeg", quality=94, timeout=20000)
+                            break
+                        except Exception:  # noqa: BLE001
+                            if essai == 3:
+                                raise
+                            time.sleep(0.6 * (essai + 1))
+                            if essai >= 1:
+                                try:
+                                    browser.close()
+                                except Exception:  # noqa: BLE001
+                                    pass
+                                browser, page, _ = _open(p, timeline)
+                    ff.stdin.write(shot)
+            finally:
+                try:
+                    browser.close()
+                except Exception:  # noqa: BLE001
+                    pass
+        ff.stdin.close()
+        if ff.wait(timeout=120) != 0:
+            raise RuntimeError(f"ffmpeg a échoué sur le segment {f0}-{f1}")
+    finally:
+        if ff.poll() is None:                      # en cas d'erreur, on ne laisse aucun processus derrière soi
+            ff.kill()
     return str(out)
 
 
@@ -105,14 +121,23 @@ def render_video(timeline: dict, audio: str | Path | None, out: str | Path, work
     tmp = out.parent / f".{out.stem}_tmp"; tmp.mkdir(exist_ok=True)
     tl_path = tmp / "timeline.json"; tl_path.write_text(json.dumps(timeline, ensure_ascii=False), encoding="utf-8")
     bounds = [round(n * k / workers) for k in range(workers + 1)]
-    jobs = [(str(tl_path), bounds[k], bounds[k + 1], fps, str(tmp / f"seg{k:02d}.mp4"), crf, preset)
+    # Durée maximale d'un segment : un rendu normal fait 7 à 9 images par seconde et par processus ; on tolère
+    # 1 image par seconde (et jamais moins de 5 minutes). Réglable avec AGENT_RENDU_LIMITE (en secondes).
+    limite = float(os.environ.get("AGENT_RENDU_LIMITE") or max(300.0, math.ceil(n / workers) * 1.0))
+    jobs = [(str(tl_path), bounds[k], bounds[k + 1], fps, str(tmp / f"seg{k:02d}.mp4"), crf, preset, limite)
             for k in range(workers) if bounds[k + 1] > bounds[k]]
     t0 = time.time()
-    if len(jobs) == 1:
-        segs = [_segment(jobs[0])]
-    else:
-        with ProcessPoolExecutor(max_workers=len(jobs)) as ex:
-            segs = list(ex.map(_segment, jobs))
+    try:
+        if len(jobs) == 1:
+            segs = [_segment(jobs[0])]
+        else:
+            with ProcessPoolExecutor(max_workers=len(jobs)) as ex:
+                segs = list(ex.map(_segment, jobs))
+    except BaseException:
+        for f in tmp.iterdir():                    # rendu interrompu : on ne garde pas de morceaux de vidéo
+            f.unlink()
+        tmp.rmdir()
+        raise
     lst = tmp / "list.txt"; lst.write_text("".join(f"file '{Path(s).name}'\n" for s in segs))
     cmd = ["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(lst)]
     if audio:
