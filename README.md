@@ -22,7 +22,10 @@ Une clé ne s'écrit jamais ailleurs (ni dans le code, ni dans une conversation)
 | `PIXABAY_API_KEY` | Cherche des séquences filmées sur Pixabay | https://pixabay.com/api/docs/ (la clé s'affiche une fois connecté) | idem |
 | `BUFFER_API_KEY` | Publie sur Facebook, Instagram et TikTok, et lit les statistiques | https://buffer.com (offre gratuite : 3 canaux), puis *Settings → API* | Mode essai : rien n'est publié |
 
-Les quatre ensemble = l'agent complet. Tu peux les ajouter dans n'importe quel ordre : à chaque réveil, il se sert de ce qu'il trouve.
+Les quatre ensemble = l'agent complet. À chaque réveil, il se sert de ce qu'il trouve.
+**Conseil : ajoute `BUFFER_API_KEY` en dernier.** Avec les trois premières clés seulement, l'agent reste en mode essai : il écrit et
+fabrique de vraies vidéos, visibles dans l'onglet Actions, sans rien publier. Regarde-en deux ou trois (l'écriture par Gemini n'a encore
+jamais tourné avec une vraie clé), puis ajoute la clé Buffer : à partir de là, tout part en ligne sans validation.
 À la place de Buffer, les API officielles fonctionnent aussi : `FB_PAGE_ID` + `FB_PAGE_TOKEN`, `IG_USER_ID` + `IG_TOKEN`,
 `TIKTOK_CLIENT_KEY` + `TIKTOK_CLIENT_SECRET` + `TIKTOK_REFRESH_TOKEN` (et `publish.via: native` dans `config.yaml`).
 
@@ -122,14 +125,15 @@ Les vues seules ne désignent jamais une gagnante. Avec moins de 4 vidéos mesur
 
 | Brique | État au 11/11/2026 |
 |---|---|
-| Format « mascotte », moteur de rendu, voix, son, contrôle qualité | **A tourné** en local : une vidéo de réserve fabriquée en entier (46,5 s, 1080×1920, contrôle qualité réussi). Sur GitHub : voir l'onglet *Actions*. |
+| Format « mascotte », moteur de rendu, voix, son, contrôle qualité | **A tourné sur GitHub** : les 6 vidéos de réserve fabriquées en entier en 7 minutes (40 à 46 s chacune, 1080×1920, contrôle qualité réussi), puis un réveil normal forcé (bilan, choix, vidéo, fiche, porte de publication) en 1 min 20. |
+| Installation sur GitHub | Le 11/11/2026, les miroirs de paquets d'Ubuntu ne répondaient plus depuis les machines de GitHub : deux exécutions sont restées bloquées. Depuis, l'installation ne dépend plus d'eux (ffmpeg autonome gardé en cache), chaque étape a une durée maximale, et un rendu qui n'avance plus est arrêté. |
 | Séquences filmées, sans clé | **A tourné** : 14 séquences Pexels choisies et regardées une par une, téléchargées, contrôlées, recadrées, montées. |
 | Recherche Pexels / Pixabay par leurs API | **Jamais exécutée pour de vrai** (aucune clé en place). Écrite d'après leur documentation ; testée contre des réponses de même forme. |
 | Écriture par Gemini, contrôle des séquences par l'image, bilan rédigé, nouveaux faits | **Jamais exécutés avec une vraie clé.** Testés contre un faux serveur Gemini (catalogue, quotas, corrections, images). La qualité des textes se jugera sur les premières vidéos. |
 | Garde-fous, forme, stratège, bilan chiffré, parcours complet | **51 tests automatiques passent** (`python3 -m unittest discover -s tests`). |
 | Publication et statistiques par Buffer | **Jamais envoyé au vrai Buffer.** Requêtes écrites d'après sa documentation, testées contre un faux serveur. |
 | Réveils automatiques de GitHub | **Pas encore observés** sur ce dépôt (créé le 11/11/2026 ; un réveil prévu ce jour-là n'a pas eu lieu). Toutes les exécutions réussies ont été lancées à la main. |
-| Son | Mesuré par le calcul (niveau, marge de la voix sur le fond). **Personne n'a écouté ces vidéos** : écoute-les. |
+| Son | Mesuré par le calcul (niveau, marge de la voix sur le fond). Une transcription automatique retrouve le texte prévu dans les 6 vidéos de réserve. **Personne n'a écouté ces vidéos** (ton de la voix, prononciation de « rush ») : écoute-les. |
 
 ---
 
@@ -182,6 +186,8 @@ Les vidéos d'une exécution se téléchargent dans **Actions → l'exécution �
 | « CHANGEMENT sur … » | Une page officielle ne contient plus la phrase attendue : le fait est suspendu. |
 | « PUBLICATION RETENUE » | Contrôle qualité en échec ou fait suspendu : la raison suit. |
 | « aucun réseau n'a reçu la vidéo » | Clé Buffer invalide, canal déconnecté, ou vidéo refusée : le détail est dans le journal. |
+| « rendu trop lent » | La machine manque de mémoire ou le navigateur est bloqué : l'agent arrête ce rendu et réessaie au réveil suivant. |
+| « Impossible d'installer ffmpeg » | Ni le téléchargement direct ni le gestionnaire de paquets n'ont répondu : panne de réseau passagère, le réveil suivant reprend. |
 | Les réveils s'arrêtent | GitHub suspend les tâches planifiées d'un dépôt resté 60 jours sans activité : onglet Actions → « Enable workflow ». |
 
 ## 11. Variante : sur un serveur à toi
