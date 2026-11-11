@@ -14,7 +14,13 @@
   const $ = (s, r = document) => r.querySelector(s);
   const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const rich = s => esc(s).replace(/\*([^*]+)\*/g, '<em>$1</em>');        // *mot* -> italique dans la couleur de la série
+  // typographie : pas de retour à la ligne avant « : ; ? ! », ni après un guillemet ouvrant,
+  // ni au milieu d'un nombre (3 500), ni entre un nombre et ce qu'il compte (3 500 FCFA, 200 g, 6 secondes)
+  const nb = x => String(x == null ? '' : x)
+    .replace(/ ([:;?!»])/g, '\u00a0$1').replace(/« /g, '«\u00a0')
+    .replace(/(\d) (?=\d{3}(?!\d))/g, '$1\u00a0')
+    .replace(/(\d) (?=[A-Za-zÀ-ÿ%€$])/g, '$1\u00a0');
+  const rich = s => esc(nb(s)).replace(/\*([^*]+)\*/g, '<em>$1</em>');    // *mot* -> italique dans la couleur de la série
   const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
   const BOTTOM = 1252;                                                     // sous cette ligne : sous-titres puis interface des applications
 
@@ -200,8 +206,6 @@
       card.appendChild(el('div', 'label', `${I.pen}<span>${esc(b.label || 'Demande écrite')}</span>${b.extrait ? '<span class="tag">extrait</span>' : ''}`));
       const txt = el('div', 'txt'); card.appendChild(txt);
       // surlignages : on repère chaque passage dans le texte, puis on découpe en mots
-      // typographie française : pas de retour à la ligne avant « : ; ? ! » ni après un guillemet ouvrant
-      const nb = x => String(x || '').replace(/ ([:;?!»])/g, '\u00a0$1').replace(/« /g, '«\u00a0');
       const text = nb(b.text), ranges = [];
       (b.hl || []).forEach((h, k) => { h = nb(h); const i = text.indexOf(h); if (i >= 0 && h) ranges.push([i, i + h.length, k]); });
       ranges.sort((a, c) => a[0] - c[0]);
@@ -345,7 +349,7 @@
         if (!first) rise(ttl, t0 + 0.05, 0.4, 40);
         let pub = null;
         if (sc.public) {
-          const w = el('div', '', `<div class="public">${I.arrow}<span>${esc(sc.public)}</span></div>`); head.appendChild(w); pub = $('.public', w);
+          const w = el('div', '', `<div class="public">${I.arrow}<span>${esc(nb(sc.public))}</span></div>`); head.appendChild(w); pub = $('.public', w);
           fitWidth(pub, 940, 0.6);
           tw(pub, sc.publicAt != null ? sc.publicAt : t0 + 1.8, 0.4, { o: [0, 1], s: [0.7, 1], x: [-30, 0], b: [6, 0] }, 'back');
         }

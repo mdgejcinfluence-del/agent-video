@@ -104,7 +104,10 @@ def write_story(state: State, cfg: dict, choix: dict, pack: dict, faits: dict, b
     st = writer.reserve_for(cfg, f["segment"], f["n"], pack["id"], f["hook_type"], skip=skip)
     if st is None:
         return None, "réserve épuisée"
-    log(f"scénariste : storyboard de réserve « {st['_reserve']} »" + (" (essai : rien n'est consommé)" if essai else ""))
+    autre = st.get("hook_type") != f["hook_type"]          # la réserve a sa propre accroche : c'est elle qui est enregistrée et notée
+    log(f"scénariste : storyboard de réserve « {st['_reserve']} »"
+        + (f", écrit avec l'accroche « {st.get('hook_type')} » (et non « {f['hook_type']} »)" if autre else "")
+        + (" — essai : rien n'est consommé" if essai else ""))
     return st, f"réserve {st['_reserve']}"
 
 
