@@ -57,3 +57,15 @@ Besoin réel : **2 vidéos par jour**, soit environ 6 à 10 appels de modèle, 1
 | Mémoire | fichiers `state/` enregistrés dans le dépôt | — |
 | Hébergement des vidéos | GitHub Pages (branche `studio-media`) | 30 vidéos conservées |
 | Publication et statistiques | Buffer (offre gratuite : 3 canaux) ou API officielles de Meta et de TikTok | TikTok en direct demande l'audit de ton application |
+
+## Ligne éditoriale « prompts et commandes d'IA » (11 novembre 2026)
+
+- **Essai des prompts** : Gemini, par la même clé gratuite que l'écriture (un appel au modèle Flash par prompt, deux appels au modèle Flash-Lite
+  pour choisir l'extrait affiché). L'instruction est envoyée seule, sans consigne ajoutée ; la vidéo dit que la réponse vient de Gemini.
+  Tester sur ChatGPT ou Claude demanderait leurs clés, qui sont payantes : non retenu.
+- **Commandes et réglages** : vérifiés sur les pages officielles (centre d'aide d'OpenAI, documentation de ChatGPT et de Claude Code, centre d'aide de
+  Claude), rouvertes chaque jour. L'agent ne peut pas cliquer dans une application : il ne montre que ce qu'une page officielle décrit.
+- **Images** : au 11/11/2026, l'API Gemini ne crée pas d'image avec une clé gratuite (les modèles d'image sont facturés à l'image). La famille
+  « Images et création graphique » reste donc en attente (`actif: false` dans `data/sujets.yaml`) : une vidéo qui promet « voici le résultat »
+  sans montrer une image réellement obtenue serait une fausse démonstration.
+

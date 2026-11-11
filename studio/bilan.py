@@ -86,7 +86,7 @@ def faire(state, cfg: dict, root: str | Path, brain=None, log=print, faits_ok: d
     for p in sorted(notes, key=lambda p: -p["score"])[:2]:
         if len(notes) >= mini and p["score"] >= 0.5 and p["id"] not in connus:
             b = p.get("brief") or {}
-            idee = {"id": f"v-{p['id']}", "famille": b.get("famille") or "methode", "sujet": f"Variante de « {p['title']} » : même sujet, autre angle, autres exemples",
+            idee = {"id": f"v-{p['id']}", "famille": b.get("famille") or "prompts", "sujet": f"Variante de « {p['title']} » : même sujet, autre angle, autres exemples",
                     "angle": "reprendre ce qui a retenu le public (le sujet), changer l'accroche et les exemples ; ne pas répéter les phrases",
                     "origine": "bilan", "source": p["id"], "faits": p.get("faits") or []}
             extra.append(idee); variantes.append(idee)
@@ -131,10 +131,13 @@ def _avis(brain, cfg: dict, bq: dict, tableau: dict, notes: list[dict], faits_ok
         lignes.append(f"- {p['score']:+.2f} | {b.get('famille')} | accroche {b.get('hook_type')} | {p.get('duration')} s | « {p['title']} »")
     lignes.append("Familles possibles : " + ", ".join(f"{k} ({f.get('nom')})" for k, f in bq["familles"].items()))
     lignes.append("Faits vérifiés disponibles (seuls outils qu'une idée peut nommer) : " + (", ".join(f"{k} [{', '.join(f.get('outils') or [])}]" for k, f in faits_ok.items()) or "aucun"))
-    system = ("Tu analyses les mesures d'un compte de vidéos courtes (astuces vidéo et IA, public francophone). Réponds par un objet JSON : "
+    system = ("Tu analyses les mesures d'un compte de vidéos courtes spécialisé dans les prompts, les commandes et les techniques d'intelligence artificielle "
+              "(public : des jeunes francophones débutants). Réponds par un objet JSON : "
               '{"diagnostic": 4 à 6 phrases simples en français : ce qui marche, ce qui ne marche pas, ce qu\'il faut essayer ; sans jargon et sans promesse, '
-              '"idees": 3 à 5 nouvelles idées de vidéo {"famille": identifiant de famille, "sujet": le sujet en une phrase, "angle": comment le traiter, "faits": identifiants des faits nécessaires}}. '
-              "Une idée est un geste, une méthode ou une erreur à éviter : jamais une promesse de revenu ou d'audience, jamais un outil sans fait vérifié.")
+              '"idees": 3 à 5 nouvelles idées de vidéo {"famille": identifiant de famille, "outil": UN outil (ChatGPT, Gemini ou Claude, sauf fait vérifié), '
+              '"sujet": le sujet en une phrase (« Le prompt pour… », « La commande qui… »), "angle": ce que l\'instruction demande et ce qu\'elle rend, "faits": identifiants des faits nécessaires}}. '
+              "Chaque idée doit contenir une instruction concrète à copier, comprise vite, dont le résultat donne envie de tester, et qui n'existe pas déjà dans les vidéos listées. "
+              "Jamais une promesse de revenu ou d'audience, jamais une commande ou une fonction d'outil sans fait vérifié, jamais un conseil général sans instruction.")
     obj = brain.ask_json(system, "\n".join(lignes), niveau="ecriture", temperature=0.6, max_tokens=4096, retries=1, purpose="bilan")
     diag = re.sub(r"\s+", " ", str(obj.get("diagnostic") or "")).strip()[:900]
     out = []

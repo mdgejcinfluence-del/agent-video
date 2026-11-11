@@ -117,7 +117,7 @@ def build(story: dict, voices: list[dict], cfg: dict) -> dict:
             if i == 0 and ats:
                 ats[0] = 0.0          # première image de la vidéo : le premier bloc est déjà là (rien à attendre pour comprendre)
             for k_, ((b, _, marks), b_at) in enumerate(zip(raw, ats)):
-                ob = {k: v for k, v in b.items() if k not in ("id", "q", "voir")}
+                ob = {k: v for k, v in b.items() if k not in ("id", "q", "voir") and not (k == "n" and b["kind"] in ("prompt", "reponse"))}
                 ob["at"] = b_at
                 nxt = ats[k_ + 1] if k_ + 1 < len(ats) else t1
                 kind = b["kind"]
@@ -143,6 +143,16 @@ def build(story: dict, voices: list[dict], cfg: dict) -> dict:
                     if b.get("reponse"):
                         ob["rAt"] = max(q[1], q[0] + 0.9)
                     sfx += [(b_at, "pop")] + [(ob["qAt"] + 0.09 * z, "tick") for z in range(5)]
+                elif kind == "prompt":
+                    # la frappe commence juste après l'apparition de la fenêtre et s'achève avant la fin de l'écran :
+                    # le texte complet reste lisible au moins un tiers du temps
+                    fin = min(nxt, t1) - 0.5
+                    ob["typeAt"] = round(b_at + 0.35, 3)
+                    ob["typeEnd"] = round(max(ob["typeAt"] + 0.8, min(ob["typeAt"] + max(1.2, 0.028 * len(b.get("texte") or "")), b_at + 0.66 * max(1.0, fin - b_at))), 3)
+                    sfx += [(b_at, "pop")] + [(round(ob["typeAt"] + 0.11 * z, 3), "tick") for z in range(6)]
+                elif kind == "reponse":
+                    ob["lineAt"] = spread(len(b.get("lignes") or []), b_at + 0.55, min(nxt, t1) - 0.4, 0.7)
+                    sfx += [(b_at, "pop")] + [(x, "tick") for x in ob["lineAt"]]
                 elif kind == "mot":
                     if b.get("sous"):
                         ob["sousAt"] = clamp(marks[0] if marks and marks[0] is not None else b_at + 0.5, b_at + 0.3, t1 - 0.3)

@@ -6,26 +6,40 @@
 brand:
   name: ""                           # nom du compte (laisse vide tant qu'il n'est pas choisi)
   handle: ""                         # identifiant affiché sur l'écran de fin, ex. "@moncompte"
-  promesse: "des astuces simples pour faire de meilleures vidéos avec ton téléphone et l'IA"
-  public: "des francophones d'Afrique de l'Ouest, d'Afrique centrale et d'Europe qui créent du contenu ou vendent avec leur téléphone"
+  promesse: "chaque jour, un prompt, une commande ou une technique d'intelligence artificielle à copier et à tester tout de suite"
+  public: "des jeunes francophones d'Afrique de l'Ouest et d'Afrique centrale qui débutent avec l'IA : étudiants, entrepreneurs, commerçants, créateurs de contenu, monteurs, graphistes"
   mention_fin: "Vidéo montée par un programme"     # petite mention honnête sur l'écran de fin (vide = aucune)
   couleurs:                          # l'identité visuelle : papier quadrillé, encre, surligneur (les couleurs du personnage)
     papier: "#F5F1E8"
     encre: "#0E1A38"
     surligneur: "#FFC531"
 
+editorial:                           # LA LIGNE ÉDITORIALE : prompts, commandes et techniques d'intelligence artificielle
+  # (mission du 11 novembre 2026 ; les sujets et leur répartition sont dans data/sujets.yaml)
+  outils_de_base: ["ChatGPT", "Gemini", "Claude"]     # peuvent être nommés comme l'endroit où coller une instruction
+  outils_a_explorer: ["Perplexity", "DeepSeek", "Microsoft Copilot", "NotebookLM", "Canva AI", "Leonardo AI", "Midjourney", "Ideogram",
+                      "Suno", "ElevenLabs", "Runway", "Kling AI", "Veo", "Gamma", "Cursor"]   # il faut un fait vérifié (page officielle) pour en décrire une fonction
+  test_prompts: true                 # chaque prompt est réellement envoyé à Gemini avant la vidéo ; sans clé GEMINI_API_KEY il reste « à vérifier » et n'est pas publié
+
 offer:                               # L'ÉCRAN DE FIN
   # Phrase dite à la fin de CHAQUE vidéo. « MOT » = le mot à commenter, « PROMESSE » = ce que la vidéo suivante apportera.
-  # L'agent tient cette promesse lui-même : la suite annoncée est mise en tête de sa liste de sujets.
+  # L'agent tient cette promesse lui-même : la suite annoncée est sa vidéo suivante.
   cta: "Abonne-toi pour ne rien rater. Et commente MOT si tu veux [p]PROMESSE."
   cta_mot_fixe: ""                   # vide = un mot par vidéo ; écris un mot pour utiliser toujours le même
-  # La formation n'est annoncée QUE si les trois lignes ci-dessous sont remplies (sinon l'agent n'en parle pas, et publie quand même) :
-  lien_bio: ""                       # adresse mise dans la bio du compte
-  promo:
-    confirmee: false                 # true quand la promotion est réellement en ligne
-    jusquau: ""                      # dernier jour de la promotion (AAAA-MM-JJ) ; après, l'agent arrête d'en parler tout seul
-  cta_promo: " [promo]La formation complète est en promo, lien en bio."
-  cta_promo_ecran: "Formation complète en *promo* · lien en bio"
+  # L'E-BOOK. Il n'est PAS encore en vente : l'agent n'en parle donc dans aucune vidéo.
+  # Le jour où il est en ligne : mets son adresse dans « lien_bio » et passe « en_vente » à true. C'est tout.
+  lien_bio: ""                       # adresse mise dans la bio du compte (la page où l'on achète l'e-book)
+  ebook:
+    en_vente: false                  # true seulement quand l'e-book peut réellement être acheté
+    titre: "La Bibliothèque ultime des prompts IA"
+    prix: "2 500 FCFA"
+    # la formulation imposée (« PRIX » est remplacé par le prix ci-dessus) :
+    cta: " [promo]Et si tu veux découvrir tous les prompts pour ChatGPT, Gemini, Claude, le business, les images, les vidéos, les études et bien plus encore, notre e-book complet est disponible à seulement PRIX. Clique sur le lien en bio pour le découvrir."
+    # variantes (une par vidéo, à tour de rôle) : elles gardent les trois informations — e-book complet, prix, lien en bio
+    variantes:
+      - " [promo]Ce prompt n'est qu'un exemple. Notre e-book complet en réunit beaucoup d'autres, pour seulement PRIX. Clique sur le lien en bio."
+      - " [promo]Pour d'autres prompts, commandes et techniques d'IA, notre e-book complet est disponible à PRIX. Le lien est en bio."
+    ecran: "E-book complet · *PRIX* · lien en bio"
 
 schedule:
   timezone: "Africa/Porto-Novo"
@@ -54,6 +68,13 @@ voice:
     "Pixabay": "pixa-baille"
     "rush": "reuche"
     "rushs": "reuche"
+    # vérifié à l'oreille d'une machine (transcription) le 11/11/2026 : sans ces lignes, la voix dit « pron » pour « prompt » et « cha » pour « Chat »
+    "prompt": "prommpt"
+    "prompts": "prommpt"
+    "Prompt": "prommpt"
+    "Prompts": "prommpt"
+    "ChatGPT": "tchat-gépété"
+    "FCFA": "francs-CFA"
 
 audio:
   music: true                        # musique générée par l'agent (aucun droit d'auteur) ; ou dépose tes .mp3 dans assets/music/
@@ -68,7 +89,7 @@ llm:                                 # LE « CERVEAU » : l'API Gemini de Google
   modeles: {ecriture: [], controle: []}
   temperature: 0.8
   reprises: 2                        # nombre de corrections demandées au modèle quand un contrôle refuse son texte
-  max_calls_per_video: 10
+  max_calls_per_video: 14            # écriture, essai réel du prompt, extrait de la réponse, contrôle des séquences filmées
   max_par_jour: 60                   # plafond d'appels par jour, tous modèles confondus
   groq: {model: "llama-3.3-70b-versatile"}   # secours pour le texte seul, si le secret GROQ_API_KEY existe
 
@@ -112,6 +133,7 @@ strategy:
   explore: 0.25                      # part d'essais (0 = ne refait que ce qui a déjà marché)
   repeat_days: 21                    # délai avant de refaire le même sujet
   suite_sous_jours: 3                # la suite annoncée par une vidéo est produite dans les N jours
+  pilotes_d_abord: true              # les sujets marqués « pilote » dans data/sujets.yaml passent avant les autres
 
 notify:
   telegram: false                    # message Telegram après chaque vidéo (secrets TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID)

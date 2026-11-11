@@ -211,6 +211,35 @@
           if (rs) { const rd = Math.min(1.2, Math.max(0.4, b.reponse.length * 0.025)), m2 = Math.round(clamp((t - b.rAt - 0.15) / rd) * b.reponse.length), c2 = b.reponse.slice(0, m2); if (rs.textContent !== c2) rs.textContent = c2; }
         });
       };
+    } else if (k === 'prompt') {
+      // l'instruction à copier : la fenêtre de l'outil, le texte exact tapé au clavier, les [champs à remplacer] surlignés
+      e = el('div', 'fen pr', `<div class="tb"><i></i><span>${esc(b.outil || 'Assistant IA')}</span><small>à copier</small></div><div class="bd"><div class="pt"><span></span><u class="caret"></u></div></div>`);
+      const pt = $('.pt', e), ps = $('.pt span', e), txt = String(b.texte || '');
+      const segs = txt.split(/(\[[^\[\]]{1,40}\])/).filter(x => x !== '').map(x => ({ x, hot: /^\[[^\[\]]{1,40}\]$/.test(x) }));
+      const html = n => { let out = '', left = n; for (const g of segs) { if (left <= 0) break; const part = g.x.slice(0, left); left -= part.length; out += g.hot ? `<mark>${esc(part)}</mark>` : esc(part); } return out; };
+      fit = () => {
+        ps.innerHTML = html(txt.length);
+        const maxH = Math.max(120, Math.min(700, b.maxH || 700));
+        fitBox(pt, pt.clientWidth, maxH, 0.62);
+        pt.style.height = pt.offsetHeight + 'px';          // la fenêtre garde sa taille finale pendant la frappe
+        ps.innerHTML = '';
+      };
+      anim = () => {
+        pop(e, b.at);
+        const t0_ = b.typeAt, t1_ = Math.max(b.typeEnd, b.typeAt + 0.3), caret = $('.caret', e); let shown = -1;
+        TICK.push(t => {
+          const n = Math.round(clamp((t - t0_) / (t1_ - t0_)) * txt.length);
+          if (n !== shown) { shown = n; ps.innerHTML = html(n); }
+          caret.style.visibility = t < t1_ + 0.4 && Math.floor(Math.max(0, t - sc.t0) / 0.3) % 2 === 0 ? 'inherit' : 'hidden';
+        });
+      };
+    } else if (k === 'reponse') {
+      // un extrait d'une vraie réponse : le titre, puis les lignes une à une ; la mention dit d'où vient la réponse
+      e = el('div', 'fen rp', `<div class="tb"><i></i><span>Réponse de l'IA</span></div><div class="bd"><div class="rt">${rich(b.titre || 'Réponse')}</div>` +
+        (b.lignes || []).map(x => `<div class="rl"><span>${rich(x)}</span></div>`).join('') + (b.source ? `<div class="src">${esc(b.source)}</div>` : '') + '</div>');
+      const rows = [...e.querySelectorAll('.rl')], rt = $('.rt', e), src = $('.src', e);
+      fit = () => { fitW(rt, e.clientWidth - 76, 0.6); rows.forEach(r => fitW($('span', r), r.clientWidth - 44, 0.6)); if (src) fitW(src, e.clientWidth - 76, 0.6); };
+      anim = () => { pop(e, b.at); rows.forEach((r, i) => slide(r, b.lineAt[i], 0.28, -40)); if (src) tw(src, (b.lineAt[b.lineAt.length - 1] || b.at) + 0.35, 0.3, { o: [0, 1] }, 'out'); };
     } else if (k === 'mot') {
       e = el('div', 'mot', `<b>${rich(b.text)}</b>` + (b.sous ? `<span>${rich(b.sous)}</span>` : ''));
       fit = () => { fitW($('b', e), col.clientWidth - 124); };
@@ -303,7 +332,7 @@
     const built = blocks.map(b => buildBlock(b, col, sc));
     const cadre = b => (b.kind === 'rush' || b.kind === 'avant_apres') ? (CADRE[b.cadre] ? b.cadre : 'paysage') : null;
     const forceB = blocks.some(b => cadre(b) === 'portrait' || cadre(b) === 'carre');
-    const forceA = blocks.some(b => cadre(b) === 'paysage' || ['cartes', 'fenetre', 'chrono', 'mot'].includes(b.kind));
+    const forceA = blocks.some(b => cadre(b) === 'paysage' || ['cartes', 'fenetre', 'chrono', 'mot', 'prompt', 'reponse'].includes(b.kind));
     let cb = blocks.length ? hb + 48 + col.offsetHeight : hb;
     let mode = 'A';
     if (forceB || (blocks.length && !forceA && FEET - cb - 26 < 470)) {

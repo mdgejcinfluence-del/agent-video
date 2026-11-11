@@ -6,6 +6,7 @@
   python3 run.py demo              rend toutes les vidéos de réserve (aucune clé nécessaire, rien n'est publié)
   python3 run.py bilan             fait le bilan maintenant (mesures, classement, nouveaux poids, state/BILAN.md)
   python3 run.py sujets            la banque d'idées, les poids des familles, les suites promises
+  python3 run.py bibliotheque      la bibliothèque de prompts (chaque instruction montrée, son statut, ses vidéos)
   python3 run.py rushs "mots"      cherche une séquence filmée comme le ferait l'agent (essai des banques d'images)
   python3 run.py veille            rouvre les pages officielles et reconfirme les faits
   python3 run.py stats             relève les mesures et recalcule les notes
@@ -39,7 +40,8 @@ ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "out"                      # vidéos, couvertures et fiches de production
 sys.path.insert(0, str(ROOT))
 
-from studio import bilan, config, fiche, llm, mediahost, notify, porte, produce, rushs, scout, stats, strategist, writer  # noqa: E402
+from studio import bibliotheque, bilan, config, fiche, llm, mediahost, notify, porte, produce, rushs, scout, stats, strategist, writer  # noqa: E402
+from studio import essai as verification  # noqa: E402
 from studio.config import secret  # noqa: E402
 from studio.publish import caption_for, publish_all  # noqa: E402
 from studio.state import State, now  # noqa: E402
@@ -109,7 +111,9 @@ def ecrire(state: State, cfg: dict, choix: dict, faits: dict, brain, essai: bool
     if brain.available():
         try:
             recents = [p.get("title", "") for p in state.posts[-12:]]
-            st = writer.write(brain, {**idee, "famille": choix["famille"], "hook_type": choix.get("hook_type") or "resultat"}, faits, cfg,
+            suivante = strategist.prochaine(ROOT, state, cfg, faits, random.Random(int(time.time())), True,
+                                            [r["_reserve"] for r in writer.reserves(cfg)], exclure={str(idee.get("id"))})
+            st = writer.write(brain, {**idee, "famille": choix["famille"], "hook_type": choix.get("hook_type") or "resultat", "prochaine": suivante}, faits, cfg,
                               strategist.memo(state), log, recents)
             return st, f"modèle {brain.used[-1] if brain.used else '?'}"
         except Exception as e:  # noqa: BLE001 — pas de modèle disponible, ou réponses toutes refusées : réserve
@@ -141,7 +145,7 @@ def make_one(state: State, cfg: dict, slot: str, story: dict | None = None, publ
             choix = strategist.choisir(ROOT, state, cfg, faits, rng, essai, brain.available(), [r for r in reserves if r not in ecartes])
             if choix is None:
                 log("stratège : rien à produire — toutes les idées disponibles ont été traitées récemment"
-                    + ("" if brain.available() else " et aucune clé GEMINI_API_KEY ne permet d'en écrire de nouvelles (il ne reste que les 6 réserves)"))
+                    + ("" if brain.available() else " et aucune clé GEMINI_API_KEY ne permet d'en écrire de nouvelles (il ne reste que les vidéos de réserve)"))
                 state.log("rien")
                 return None
             i = choix["idee"]
@@ -153,6 +157,7 @@ def make_one(state: State, cfg: dict, slot: str, story: dict | None = None, publ
             try:
                 stamp = when.strftime("%Y%m%d-%H%M")
                 story, _ = writer.controler(story, cfg, faits, strict=True)
+                story = verification.tester(story, cfg, brain, faits, log)          # chaque instruction est vérifiée avant d'être montrée
                 pid = post_id or f"{stamp}-{story['keyword'].lower()}"
                 res = produce.make_video(story, cfg, OUT, pid, log, faits=faits, state=state, brain=brain)
                 post_id = pid
@@ -170,12 +175,15 @@ def make_one(state: State, cfg: dict, slot: str, story: dict | None = None, publ
     else:
         stamp = when.strftime("%Y%m%d-%H%M")
         story, _ = writer.controler(story, cfg, faits, strict=True)
+        story = verification.tester(story, cfg, brain, faits, log)
         post_id = post_id or f"{stamp}-{story['keyword'].lower()}"
         res = produce.make_video(story, cfg, OUT, post_id, log, faits=faits, state=state, brain=brain)
     story = res["story"]
     reserve = story.get("_reserve")
     credit = rushs.ligne_credit(res["rushs"])
     blocs = porte.bloquants(cfg, story, res["qa"], faits)
+    familles = strategist.banque(ROOT)["familles"]
+    fiches_ids = bibliotheque.enregistrer(state, story, post_id, cfg, qualite_ok=bool(res["qa"]["ok"]) and not blocs, publiee=False, familles=familles, log=log)
     brief = {"idee": ((choix or {}).get("idee") or {}).get("id") or story.get("idee"), "famille": story.get("famille"), "hook_type": story.get("hook_type"),
              "slot": strategist.slot_bucket(slot), "slot_exact": slot, "origine": origine.split(" ")[0], **({"reserve": reserve} if reserve else {}),
              **({"suite_de": choix["suite_de"]} if (choix or {}).get("suite_de") else {})}
@@ -184,7 +192,7 @@ def make_one(state: State, cfg: dict, slot: str, story: dict | None = None, publ
     post = {"id": post_id, "created": now().isoformat(timespec="seconds"), "slot": slot, "brief": brief, "title": story["title"],
             "keyword": story["keyword"], "duration": round(res["duration"], 1), "words": res["words"], "thumb_ms": res["thumb_ms"],
             "llm": brain.used[-1:] or ["aucun"], "why": (choix or {}).get("pourquoi", ""), "faits": story.get("faits") or [],
-            "rushs": [c["id"] for c in res["rushs"].values()],
+            "rushs": [c["id"] for c in res["rushs"].values()], "prompts": fiches_ids,
             "qa": {"ok": res["qa"]["ok"], "problems": res["qa"]["problems"], "warnings": res["qa"]["warnings"]}, "published": {}, "stats": {}}
     if essai:
         log("porte de publication : " + ("rien ne bloque" if not blocs else "la vidéo serait RETENUE — " + " ; ".join(blocs)))
@@ -206,6 +214,7 @@ def make_one(state: State, cfg: dict, slot: str, story: dict | None = None, publ
         detail = " ; ".join(f"{n} : {v.get('error') or v.get('status')}" for n, v in post["published"].items()) or "aucun réseau dans publish.networks"
         raise RuntimeError(f"aucun réseau n'a reçu la vidéo ({detail[:220]})")
     state.add_post(post)
+    bibliotheque.enregistrer(state, story, post_id, cfg, qualite_ok=True, publiee=True, familles=familles, log=lambda *_: None)
     rushs.noter_usage(state, post["rushs"])
     strategist.noter_suite(state, post, story)
     if (choix or {}).get("suite_de"):
@@ -331,15 +340,24 @@ def cmd_sujets(args, cfg, state) -> int:
     print("Familles (poids actuels) :")
     for k, f in sorted(bq["familles"].items(), key=lambda x: -w.get(x[0], 0)):
         print(f"  {w.get(k, 0):5.0%}  {f.get('nom')}")
+    for k, f in (bq.get("en_attente") or {}).items():
+        print(f"  en attente  {f.get('nom')} — {f.get('attente') or 'famille désactivée (actif: false)'}")
     print("\nIdées :")
     for i in strategist.idees(ROOT, state):
         manque = [f for f in (i.get("faits") or []) if f not in faits]
         etat = "déjà traitée" if i["id"] in used else ("fait non confirmé : " + ", ".join(manque)) if manque else "disponible"
-        print(f"  [{i['famille']:11s}] {i['sujet'][:86]} — {etat}" + (f" (réserve {i['reserve']})" if i.get("reserve") else ""))
+        print(f"  [{i['famille']:9s}] {'★ ' if i.get('pilote') else '  '}{i['sujet'][:84]} — {etat}" + (f" (réserve {i['reserve']})" if i.get("reserve") else ""))
     q = [s for s in state.load("suites", []) if not s.get("faite")]
     print(f"\nSuites promises à produire : {len(q)}")
     for s in q:
         print(f"  « {s.get('promesse')} » (mot {s.get('keyword')}, annoncée par {s.get('de')})")
+    return 0
+
+
+def cmd_bibliotheque(args, cfg, state) -> int:
+    lib = bibliotheque.charger(state)
+    bibliotheque.ecrire_catalogue(state, lib)
+    print(bibliotheque.catalogue(lib))
     return 0
 
 
@@ -428,7 +446,7 @@ def cmd_doctor(args, cfg, state) -> int:
     print("Cerveau (Gemini)")
     brain = llm.Brain(cfg, state, lambda *_: None)
     if not brain.key():
-        line(None, "GEMINI_API_KEY", "absente : l'agent n'a que ses 6 réserves, il n'écrit rien de nouveau et ne regarde pas les images")
+        line(None, "GEMINI_API_KEY", "absente : l'agent n'a que ses vidéos de réserve, il n'écrit rien de nouveau, ne teste aucun prompt (donc ne publie aucun prompt) et ne regarde pas les images")
     else:
         line(True, "GEMINI_API_KEY", f"{state.quota_used('llm:gemini')} appel(s) aujourd'hui")
         if args.live:
@@ -454,7 +472,9 @@ def cmd_doctor(args, cfg, state) -> int:
     print("Publication")
     essai = config.essai(cfg)
     line(None if essai else True, "mode", "ESSAI : rien n'est publié (aucune clé de publication, ou dry_run: true)" if essai else "PUBLICATION RÉELLE, sans validation humaine")
-    line(True if writer.promo_active(cfg) else None, "formation annoncée à la fin", "oui" if writer.promo_active(cfg) else "non (offer.promo.confirmee + offer.lien_bio) : l'écran de fin annonce seulement la suite")
+    line(True if writer.ebook_actif(cfg) else None, "e-book annoncé à la fin", "oui" if writer.ebook_actif(cfg) else "non (offer.ebook.en_vente + offer.lien_bio) : l'écran de fin annonce seulement la suite")
+    lib_p = bibliotheque.resume(bibliotheque.charger(state))
+    line(True, "bibliothèque de prompts", ", ".join(f"{n} {k}" for k, n in lib_p.items()))
     pcfg = cfg.get("publish") or {}
     if secret("BUFFER_API_KEY"):
         try:
@@ -484,13 +504,14 @@ def main() -> int:
     t = sub.add_parser("tick"); t.add_argument("--force", action="store_true", help="produit une vidéo maintenant, même hors créneau")
     m = sub.add_parser("make"); m.add_argument("--story"); m.add_argument("--reserve"); m.add_argument("--no-publish", action="store_true")
     r = sub.add_parser("rushs"); r.add_argument("mots"); r.add_argument("--voir", default=""); r.add_argument("--cadre", default="portrait", choices=["portrait", "paysage", "carre"])
-    for name in ("demo", "bilan", "sujets", "veille", "stats", "plan"):
+    for name in ("demo", "bilan", "sujets", "veille", "stats", "plan", "bibliotheque"):
         sub.add_parser(name)
     d = sub.add_parser("doctor"); d.add_argument("--live", action="store_true", help="teste réellement les clés et rouvre les pages officielles")
     args = ap.parse_args()
     cfg = config.load()
     state = State(ROOT)
     return {"tick": cmd_tick, "make": cmd_make, "demo": cmd_demo, "bilan": cmd_bilan, "sujets": cmd_sujets, "rushs": cmd_rushs, "veille": cmd_veille,
+            "bibliotheque": cmd_bibliotheque,
             "stats": cmd_stats, "plan": cmd_plan, "doctor": cmd_doctor}[args.cmd](args, cfg, state)
 
 

@@ -1,51 +1,77 @@
 # =====================================================================
-#  BANQUE D'IDÉES — ce dont le compte parle.
+#  BANQUE DE SUJETS — prompts, commandes et techniques d'intelligence artificielle
+#  (ligne éditoriale du 11 novembre 2026 ; l'ancienne banque « tournage et montage » est retirée)
 #
-#  familles : les grands types de vidéo. « poids » = part de départ ; le bilan (tous les 3 jours) le corrige
+#  familles : la répartition de départ demandée. « poids » = part visée ; le bilan (tous les 3 jours) la corrige
 #             d'après les mesures, sans jamais descendre sous « plancher » (chaque famille garde une chance).
-#  idees    : sujets de départ. Quand ils sont tous traités, le modèle en propose de nouveaux dans les
-#             familles qui marchent (state/idees.json). « faits » = faits vérifiés indispensables au sujet.
-#  Une idée n'est jamais une promesse de résultat : c'est un geste, une méthode, une erreur à éviter.
+#             actif: false = la famille attend un moyen technique ; ses sujets ne sont pas produits et sa part
+#             est répartie sur les autres.
+#  idees    : les 20 premiers sujets prioritaires. « pilote: true » = les six de la première série ; ils passent
+#             avant les autres. « faits » = pages officielles indispensables au sujet (data/faits.yaml).
+#             « reserve » = un storyboard écrit à l'avance existe (examples/reserve/).
+#  Quand la banque est épuisée, chaque vidéo annonce la suivante, et le bilan propose de nouveaux sujets dans
+#  les familles qui marchent (state/idees.json).
+#
+#  Un sujet doit passer ces 7 questions (elles sont aussi données au modèle qui écrit) :
+#   1. Peut-il réellement intéresser un jeune ?            5. Le résultat donne-t-il envie de tester ?
+#   2. Le spectateur découvre-t-il quelque chose d'utile ? 6. A-t-il sa place dans la future bibliothèque ?
+#   3. Y a-t-il un prompt ou une commande à montrer ?      7. Une vidéo trop proche existe-t-elle déjà ?
+#   4. La démonstration se comprend-elle vite ?
 # =====================================================================
-plancher: 0.06
+plancher: 0.03
 familles:
-  - {id: methode,     nom: "La méthode en étapes",        poids: 0.22, titre: "N étapes / N réglages pour…",       tuile: "ÉTAPE"}
-  - {id: liste,       nom: "La liste utile",              poids: 0.18, titre: "N plans / N idées / N outils pour…", tuile: "NUMÉRO"}
-  - {id: erreurs,     nom: "Les erreurs à éviter",        poids: 0.18, titre: "N erreurs qui…",                    tuile: "ERREUR"}
-  - {id: avant_apres, nom: "L'avant / après",             poids: 0.16, titre: "De ça à ça : …",                    tuile: "EFFET"}
-  - {id: coulisses,   nom: "Les coulisses",               poids: 0.12, titre: "Comment cette vidéo est faite",     tuile: "ÉTAPE"}
-  - {id: outil,       nom: "L'outil expliqué",            poids: 0.08, titre: "À quoi sert … (et ses limites)",    tuile: "NUMÉRO"}
-  - {id: alerte,      nom: "L'alerte",                    poids: 0.06, titre: "Attention à …",                     tuile: "PIÈGE"}
+  - {id: prompts,   nom: "Prompts ChatGPT, Gemini et Claude",       poids: 0.25, tuile: "PROMPT"}
+  - {id: commandes, nom: "Commandes et fonctions méconnues",        poids: 0.15, tuile: "COMMANDE"}     # un fait vérifié (page officielle) est obligatoire
+  - {id: business,  nom: "Business et entrepreneuriat",             poids: 0.15, tuile: "ÉTAPE"}
+  - {id: images,    nom: "Images et création graphique",            poids: 0.15, tuile: "PROMPT", actif: false,
+     attente: "il faut montrer la photo de départ et l'image obtenue : cela demande une clé payante de création d'images (l'offre gratuite de l'API Gemini n'en crée pas)"}
+  - {id: video,     nom: "Vidéo et création audiovisuelle",         poids: 0.10, tuile: "ÉTAPE"}
+  - {id: etudes,    nom: "Études et productivité",                  poids: 0.10, tuile: "ÉTAPE"}
+  - {id: hashtags,  nom: "Hashtags et réseaux sociaux",             poids: 0.05, tuile: "ÉTAPE"}
+  - {id: outils,    nom: "Autres outils et découvertes",            poids: 0.05, tuile: "OUTIL"}        # un fait vérifié est obligatoire
 
 idees:
-  # --- méthode
-  - {id: m01, famille: methode, sujet: "4 réglages à faire sur son téléphone avant de filmer", reserve: r6_telephone}
-  - {id: m02, famille: methode, sujet: "Écrire une accroche : la première phrase qui retient", angle: "trois formes d'accroche (résultat, problème, question), avec un exemple de chacune"}
-  - {id: m03, famille: methode, sujet: "Écrire le script d'une vidéo de 45 secondes en 4 parties", angle: "accroche, promesse, points, consigne finale"}
-  - {id: m04, famille: methode, sujet: "Filmer un produit près d'une fenêtre : placer la lumière", angle: "de face, de côté, jamais dans le dos"}
-  - {id: m05, famille: methode, sujet: "Enregistrer une voix claire avec son téléphone", angle: "pièce calme, téléphone proche de la bouche, tissu autour pour couper l'écho"}
-  - {id: m06, famille: methode, sujet: "Préparer une semaine de vidéos en une seule séance", angle: "une idée par jour, mêmes réglages, tourner à la suite"}
-  # --- liste
-  - {id: l01, famille: liste, sujet: "5 plans à filmer pour vendre un produit", reserve: r5_plans}
-  - {id: l02, famille: liste, sujet: "5 idées de vidéos quand on ne veut pas montrer son visage", angle: "mains, produit, écran, coulisses, avant/après"}
-  - {id: l03, famille: liste, sujet: "4 fonds simples pour filmer un produit à la maison", angle: "tissu uni, table en bois, mur clair, feuille de papier"}
-  - {id: l04, famille: liste, sujet: "5 phrases de fin qui disent clairement quoi faire", angle: "une consigne à la fois"}
-  - {id: l05, famille: liste, sujet: "4 moments de la journée d'un commerce à filmer", angle: "l'ouverture, la préparation, l'emballage, la remise au client (sans montrer le client)"}
-  # --- erreurs
-  - {id: e01, famille: erreurs, sujet: "3 erreurs qui font zapper une vidéo dès le début", reserve: r2_zapper}
-  - {id: e02, famille: erreurs, sujet: "3 erreurs de texte à l'écran", angle: "trop petit, trop long, collé aux bords où les boutons le cachent"}
-  - {id: e03, famille: erreurs, sujet: "3 erreurs quand on filme un produit", angle: "fond chargé, produit trop loin, lumière dans le dos"}
-  - {id: e04, famille: erreurs, sujet: "3 erreurs dans une légende de vidéo", angle: "pas d'accroche, pas d'étapes, pas de consigne"}
-  # --- avant / après
-  - {id: a01, famille: avant_apres, sujet: "1 rush, 5 effets : avant et après le montage", reserve: r4_effets}
-  - {id: a02, famille: avant_apres, sujet: "Le même rush avec et sans sous-titres", angle: "ce qu'on comprend sans le son"}
-  - {id: a03, famille: avant_apres, sujet: "Recadrer un rush : montrer le produit, pas le décor", angle: "le zoom qui guide l'œil"}
-  # --- coulisses
-  - {id: c01, famille: coulisses, sujet: "Cette vidéo n'a pas de monteur : comment elle est fabriquée", reserve: r1_monteur}
-  - {id: c02, famille: coulisses, sujet: "Comment le programme choisit ses images", angle: "recherche, contrôle du format, contrôle de la netteté, contrôle du sujet"}
-  - {id: c03, famille: coulisses, sujet: "Pourquoi ce compte ne donne jamais de chiffre sans source", angle: "chaque chiffre vient d'une page officielle, sinon il n'est pas dit"}
-  # --- outil (un fait vérifié est indispensable)
-  - {id: o01, famille: outil, sujet: "Où trouver des vidéos libres de droits quand on n'a pas de caméra", faits: [pexels-licence, pixabay-licence], reserve: r3_rushs}
-  - {id: o02, famille: outil, sujet: "Les règles à respecter avec une vidéo de banque d'images", faits: [pexels-licence, pixabay-licence], angle: "pas de revente telle quelle, respect des personnes, pas de fausse recommandation"}
-  # --- alerte
-  - {id: x01, famille: alerte, sujet: "Une vidéo de banque d'images n'est pas un témoignage client", angle: "ce qui est honnête et ce qui trompe le public"}
+  # --- prompts (25 %)
+  - {id: s01, pilote: true, famille: prompts, outil: ChatGPT, sujet: "Le prompt qui oblige l'IA à trouver les faiblesses de ton projet",
+     angle: "l'IA joue un investisseur sceptique : cinq failles classées de la plus grave à la moins grave, et pour chacune la question à se poser"}
+  - {id: s02, famille: prompts, outil: ChatGPT, sujet: "Le prompt qui fait poser cinq questions à l'IA avant qu'elle réponde",
+     angle: "la réponse devient précise parce que l'IA demande d'abord ce qui lui manque"}
+  - {id: s03, famille: prompts, outil: Claude, sujet: "Le prompt qui transforme un message brouillon en document professionnel",
+     angle: "un message écrit vite devient une lettre claire, dans le ton choisi, sans rien inventer"}
+  - {id: s04, famille: prompts, outil: Gemini, sujet: "Le prompt « assistant personnel » pour organiser ta semaine",
+     angle: "tu donnes tes tâches en vrac, l'IA rend un planning jour par jour et dit ce qu'il faut reporter"}
+  - {id: s05, famille: prompts, outil: ChatGPT, sujet: "Le prompt pour apprendre une compétence étape par étape, en trente jours",
+     angle: "un programme jour par jour, un exercice par jour, un contrôle chaque semaine"}
+  # --- commandes et fonctions méconnues (15 %) — chaque sujet s'appuie sur une page officielle
+  - {id: s06, pilote: true, famille: commandes, outil: ChatGPT, sujet: "ChatGPT : écris tes consignes une seule fois (les instructions personnalisées)",
+     faits: [chatgpt-instructions], reserve: p2_consignes}
+  - {id: s07, famille: commandes, outil: ChatGPT, sujet: "ChatGPT sur ordinateur : tape une barre oblique dans la zone de message",
+     faits: [chatgpt-commandes-bureau], angle: "ranger ses discussions avec /rename, /pin et /archive, ouvrir une discussion à côté avec /side ; dire que la liste dépend de l'application et de l'offre"}
+  - {id: s08, famille: commandes, outil: "Claude Code", sujet: "Claude Code : trois commandes à connaître en premier",
+     faits: [claude-code-commandes], angle: "/init, /compact et /clear ; dire clairement que ce sont des commandes de Claude Code (l'outil pour programmer), pas de l'application Claude"}
+  - {id: s09, famille: commandes, outil: Claude, sujet: "Claude : range ton travail dans un Projet, avec ses propres consignes",
+     faits: [claude-projets], angle: "créer un projet, y déposer ses documents, écrire les consignes du projet une fois"}
+  # --- business et entrepreneuriat (15 %)
+  - {id: s10, pilote: true, famille: business, outil: ChatGPT, sujet: "Le prompt pour trouver une idée de business avec ton budget", reserve: p1_business}
+  - {id: s11, famille: business, outil: ChatGPT, sujet: "Le prompt pour rédiger une annonce qui attire des clients",
+     angle: "le produit, le client visé, trois versions de l'annonce : courte pour un statut, détaillée pour Facebook, directe pour un message"}
+  - {id: s12, famille: business, outil: Gemini, sujet: "Le prompt pour fixer le prix d'un produit",
+     angle: "le coût de revient, les prix des concurrents, trois prix possibles et le risque de chacun — sans promettre de gain"}
+  - {id: s13, famille: business, outil: ChatGPT, sujet: "Le prompt pour comprendre tes concurrents du quartier",
+     angle: "tu décris trois concurrents, l'IA rend un tableau : ce qu'ils font bien, ce qui manque, où te placer"}
+  # --- images et création graphique (15 %, en attente : voir la famille)
+  - {id: s14, famille: images, outil: Gemini, sujet: "Le prompt pour transformer une photo ordinaire en portrait de studio"}
+  - {id: s15, famille: images, outil: ChatGPT, sujet: "Le prompt pour une affiche publicitaire de ton produit"}
+  # --- vidéo et création audiovisuelle (10 %)
+  - {id: s16, pilote: true, famille: video, outil: ChatGPT, sujet: "Le prompt pour écrire le scénario d'une publicité courte",
+     angle: "une accroche, trois plans, une phrase de fin : le texte dit, ce qu'on voit, la durée de chaque plan"}
+  - {id: s17, famille: video, outil: Claude, sujet: "Le prompt pour transformer une idée en storyboard, plan par plan",
+     angle: "un tableau : numéro du plan, ce qu'on voit, ce qu'on entend, l'objet à préparer"}
+  # --- études et productivité (10 %)
+  - {id: s18, pilote: true, famille: etudes, outil: ChatGPT, sujet: "Le prompt qui transforme ChatGPT en professeur particulier",
+     angle: "l'IA explique simplement, donne un exemple de la vie courante, puis pose ses questions une à une sans donner la réponse tout de suite"}
+  - {id: s19, famille: etudes, outil: Gemini, sujet: "Le prompt pour transformer un chapitre en fiche de révision",
+     angle: "les idées à retenir, les définitions, cinq questions d'entraînement avec leurs réponses cachées à la fin"}
+  # --- hashtags et réseaux sociaux (5 %)
+  - {id: s20, pilote: true, famille: hashtags, outil: ChatGPT, sujet: "Le prompt pour trouver les hashtags de ta page Facebook",
+     angle: "quinze hashtags classés : larges, de niche, locaux ; rappeler qu'un hashtag classe une publication et n'est pas une commande donnée à l'IA"}

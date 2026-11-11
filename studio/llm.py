@@ -166,7 +166,8 @@ class Brain:
             self.state.quota_add("llm:gemini")
             self.state.quota_add(f"llm:{model}")
 
-    def _gemini(self, system: str, turns: list[dict], images: list[bytes] | None, niveau: str, temperature: float, max_tokens: int, errors: list[str]) -> str | None:
+    def _gemini(self, system: str, turns: list[dict], images: list[bytes] | None, niveau: str, temperature: float, max_tokens: int, errors: list[str],
+                texte_libre: bool = False) -> str | None:
         key = self.key()
         if not key:
             return None
@@ -180,8 +181,11 @@ class Brain:
                 parts += [{"inlineData": {"mimeType": "image/jpeg", "data": base64.b64encode(b).decode()}} for b in images]
             contents.append({"role": t["role"], "parts": parts})
         for model in self.modeles(niveau)[:4]:
-            body = {"systemInstruction": {"parts": [{"text": system}]}, "contents": contents,
-                    "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens, "responseMimeType": "application/json"}}
+            body = {"contents": contents, "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens}}
+            if system:
+                body["systemInstruction"] = {"parts": [{"text": system}]}
+            if not texte_libre:
+                body["generationConfig"]["responseMimeType"] = "application/json"
             for attempt in range(3):
                 try:
                     r = self.http.post(f"{self.base}/models/{model}:generateContent", headers={"x-goog-api-key": key, "Content-Type": "application/json"},
@@ -280,6 +284,17 @@ class Brain:
         if text is None:
             raise LLMError("aucun modèle n'a répondu" + (" — " + " | ".join(errors[-5:]) if errors else " (aucune clé GEMINI_API_KEY)"))
         return text
+
+    def repondre(self, instruction: str, temperature: float = 0.7, max_tokens: int = 2048) -> tuple[str, str]:
+        """L'essai réel d'une instruction : elle est envoyée à Gemini telle qu'un utilisateur la saisirait (aucune consigne ajoutée,
+        réponse en texte libre). Renvoie (réponse, modèle qui a répondu). Jamais de modèle de secours : la vidéo dit quel outil a répondu."""
+        if self.calls >= self.budget:
+            raise LLMError(f"budget d'appels atteint ({self.budget} par vidéo)")
+        errors: list[str] = []
+        text = self._gemini("", [{"role": "user", "text": instruction}], None, "ecriture", temperature, max_tokens, errors, texte_libre=True)
+        if text is None:
+            raise LLMError("essai de l'instruction impossible" + (" — " + " | ".join(errors[-4:]) if errors else " (aucune clé GEMINI_API_KEY)"))
+        return text, (self.used[-1] if self.used else "gemini")
 
     def ask_json(self, system: str, user: str, images: list[bytes] | None = None, niveau: str = "ecriture", validate=None,
                  retries: int = 2, temperature: float | None = None, max_tokens: int = 8192, purpose: str = ""):

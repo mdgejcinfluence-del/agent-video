@@ -69,6 +69,16 @@ em { font-style: normal; background: var(--mark); padding: 0 .16em; margin: 0 -.
 .fen .q { align-self: flex-end; background: var(--ink); color: #fff; box-shadow: 7px 7px 0 var(--mark); }
 .fen .r { align-self: flex-start; background: var(--card); border: 5px solid var(--ink); }
 .fen .caret { display: inline-block; width: 4px; height: 1em; background: currentColor; vertical-align: -0.12em; margin-left: 3px; }
+/* l'instruction à copier et l'extrait de réponse : la même fenêtre, en pleine largeur */
+.fen .tb span { flex: 1 1 auto; white-space: nowrap; overflow: hidden; }
+.fen .tb small { flex: 0 0 auto; font-size: 22px; font-weight: 800; letter-spacing: .08em; background: var(--mark); color: var(--ink); padding: 5px 12px; }
+.fen.pr .bd, .fen.rp .bd { min-height: 0; padding: 26px 30px 30px; gap: 16px; }
+.fen .pt { font-size: 38px; font-weight: 600; line-height: 1.34; text-transform: none; color: var(--ink); overflow: hidden; word-break: normal; overflow-wrap: anywhere; }
+.fen .pt mark { background: var(--mark); color: var(--ink); padding: 0 5px; font-weight: 800; }
+.fen .rt { font-size: 36px; font-weight: 900; line-height: 1.15; text-transform: none; color: var(--ink); white-space: nowrap; padding-bottom: 4px; }
+.fen .rl { font-size: 33px; font-weight: 700; line-height: 1.2; text-transform: none; color: var(--ink); background: var(--paper, #F5F1E8); border-left: 9px solid var(--mark); padding: 14px 18px; white-space: nowrap; overflow: hidden; }
+.fen .rl em, .fen .rt em { font-style: normal; background: var(--mark); padding: 0 6px; }
+.fen .src { font-size: 23px; font-weight: 700; letter-spacing: .03em; text-transform: none; color: var(--ink); opacity: .72; white-space: nowrap; padding-top: 4px; }
 
 .check { width: 100%; display: flex; flex-direction: column; gap: 20px; }
 .check .row { height: 92px; background: var(--card); border: 6px solid var(--ink); box-shadow: 8px 8px 0 var(--ink); display: flex; align-items: center; gap: 22px; padding: 0 22px; white-space: nowrap; overflow: hidden; }

@@ -1,0 +1,145 @@
+{
+ "title": "ChatGPT : écris tes consignes une seule fois",
+ "famille": "commandes",
+ "hook_type": "probleme",
+ "couverture": [
+  "TES CONSIGNES",
+  "*UNE SEULE*",
+  "FOIS"
+ ],
+ "keyword": "CONSIGNES",
+ "promesse": "la suite : ChatGPT en prof particulier",
+ "suite": {
+  "sujet": "Le prompt qui transforme ChatGPT en professeur particulier",
+  "idee": "s18"
+ },
+ "prompts": [
+  {
+   "titre": "Tes consignes permanentes pour ChatGPT",
+   "outil": "ChatGPT",
+   "type": "reglage",
+   "fonction": "Texte à coller une fois dans les instructions personnalisées : ChatGPT en tient compte dans toutes les discussions",
+   "texte": "Je m'appelle [prénom] et je vis à [ville]. Je suis [métier]. Réponds-moi toujours en français simple, avec des phrases courtes. Donne-moi des étapes numérotées et un exemple concret. Si ma demande n'est pas claire, pose-moi une question avant de répondre.",
+   "exemple": {
+    "prénom": "Awa",
+    "ville": "Cotonou",
+    "métier": "vendeuse de tissus en ligne"
+   },
+   "resultat_attendu": "ChatGPT applique ces consignes à toutes les discussions, sans que tu les répètes.",
+   "personnalisation": "Remplace [prénom], [ville] et [métier], puis ajoute tes préférences : le ton, la longueur des réponses, la langue."
+  }
+ ],
+ "legende": {
+  "accroche": "Tu répètes les mêmes consignes à ChatGPT à chaque discussion ? Écris-les une seule fois 👇",
+  "points": [
+   "Paramètres, puis Personnaliser ChatGPT (sur ordinateur : Personnalisation)",
+   "Active la personnalisation",
+   "Colle le texte dans « Instructions personnalisées » et remplace les crochets"
+  ],
+  "limite": "Les noms des menus viennent de l'aide officielle d'OpenAI ; ils peuvent changer selon la version de l'appli. Offres Free et Go : 1 500 caractères au plus."
+ },
+ "hashtags": [
+  "ChatGPT",
+  "IA",
+  "IntelligenceArtificielle",
+  "AstuceIA",
+  "PromptIA",
+  "Productivité"
+ ],
+ "faits": [
+  "chatgpt-instructions"
+ ],
+ "outils": [
+  "ChatGPT"
+ ],
+ "scenes": [
+  {
+   "title": "Arrête de *répéter* tes consignes",
+   "pose": "stop",
+   "say": "Tu répètes les mêmes consignes à ChatGPT à chaque discussion ? [a]Écris-les une seule fois : il les appliquera partout.",
+   "blocks": [
+    {
+     "kind": "rush",
+     "q": "hands typing laptop keyboard",
+     "voir": "des mains qui tapent sur le clavier d'un ordinateur portable",
+     "cadre": "portrait"
+    }
+   ]
+  },
+  {
+   "title": "Ouvre les *paramètres*",
+   "tuile": {
+    "label": "ÉTAPE",
+    "n": 1
+   },
+   "pose": "telephone",
+   "say": "Étape un : dans l'application ChatGPT, [a1]ouvre les Paramètres, [a2]touche Personnaliser ChatGPT, [a3]puis active la personnalisation. Sur ordinateur, le menu s'appelle Personnalisation.",
+   "blocks": [
+    {
+     "kind": "liste",
+     "items": [
+      "Paramètres",
+      "Personnaliser ChatGPT",
+      "Activer la personnalisation"
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Colle ce *texte*",
+   "tuile": {
+    "label": "ÉTAPE",
+    "n": 2
+   },
+   "pose": "pointe",
+   "say": "Étape deux : dans le champ Instructions personnalisées, [a]colle ce texte. Tu dis qui tu es, où tu vis, ton métier, et comment tu veux qu'il réponde : en français simple, avec des étapes numérotées et un exemple.",
+   "blocks": [
+    {
+     "kind": "prompt",
+     "n": 1
+    }
+   ]
+  },
+  {
+   "title": "Remplace les *crochets*",
+   "tuile": {
+    "label": "ÉTAPE",
+    "n": 3
+   },
+   "pose": "presente",
+   "say": "Étape trois : remplace les crochets. [a1]Ton prénom, [a2]ta ville, [a3]ton activité. Ajoute aussi tes préférences : le ton et la longueur des réponses.",
+   "blocks": [
+    {
+     "kind": "check",
+     "items": [
+      "[prénom] : ton prénom",
+      "[ville] : ta ville",
+      "[métier] : ton activité"
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Ce que ça *change*",
+   "pose": "victoire",
+   "say": "Résultat : [a1]avant, tu répétais tout. [a2]Maintenant, tes consignes s'appliquent à toutes tes discussions. La fonction existe dans toutes les offres ; avec l'offre gratuite, tu as mille cinq cents caractères.",
+   "blocks": [
+    {
+     "kind": "cartes",
+     "cards": [
+      {
+       "tag": "Avant",
+       "text": "Tu répètes tout",
+       "ton": "non"
+      },
+      {
+       "tag": "Après",
+       "text": "Appliqué partout",
+       "ton": "oui"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -12,20 +12,25 @@ NETWORKS = {"tiktok": "TikTok", "instagram": "Instagram Reels", "youtube": "YouT
 
 
 def legende(story: dict, cfg: dict, credit: str = "") -> str:
-    """La légende, toujours bâtie de la même façon : accroche, étapes, limite honnête, consigne, suite, hashtags, crédit des images."""
+    """La légende, toujours bâtie de la même façon : accroche, étapes, l'instruction à copier, limite honnête, consigne, suite, hashtags, crédit des images."""
     from .. import schema, writer
     leg = story.get("legende") or {}
     chiffres = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
     lignes = [str(leg.get("accroche") or story.get("title") or "").strip()]
     lignes += [f"{chiffres[i]} {p}" for i, p in enumerate((leg.get("points") or [])[:5])]
+    fiches = [f for f in (story.get("prompts") or []) if f.get("texte")]
+    for i, f in enumerate(fiches[:3]):                             # le texte exact, pour que le spectateur le copie sans mettre la vidéo en pause
+        nom = {"commande": "La commande", "reglage": "Le texte à coller"}.get(f.get("type"), "Le prompt à copier")
+        lignes.append(f"📋 {nom}" + (f" n° {i + 1}" if len(fiches) > 1 else "") + f" ({f.get('outil')}) :\n{f['texte']}")
     if leg.get("limite"):
         lignes.append(f"⚠️ {leg['limite']}")
     kw = str(story.get("keyword") or "").upper()
     prom = schema.visible(story.get("promesse") or "la suite")
     lignes.append(f"💬 Commente {kw} si tu veux {prom}")
     lignes.append("🔔 Abonne-toi pour ne rien rater")
-    if writer.promo_active(cfg):
-        lignes.append("🎓 La formation complète est en promo : lien en bio")
+    if writer.ebook_actif(cfg):
+        e = (cfg.get("offer") or {}).get("ebook") or {}
+        lignes.append(f"📘 {e.get('titre') or 'Notre e-book complet'} : {e.get('prix')} — lien en bio")
     return "\n".join(l for l in lignes if l)
 
 

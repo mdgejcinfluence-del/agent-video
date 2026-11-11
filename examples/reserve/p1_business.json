@@ -1,0 +1,146 @@
+{
+ "title": "Le prompt pour trouver une idée de business avec ton budget",
+ "famille": "business",
+ "hook_type": "question",
+ "couverture": [
+  "UN BUSINESS",
+  "AVEC",
+  "*TON BUDGET*"
+ ],
+ "keyword": "BUSINESS",
+ "promesse": "la suite : le prompt pour tes clients",
+ "suite": {
+  "sujet": "Le prompt pour rédiger une annonce qui attire des clients",
+  "idee": "s11"
+ },
+ "prompts": [
+  {
+   "titre": "Cinq idées de business adaptées à ton budget",
+   "outil": "ChatGPT",
+   "type": "prompt",
+   "fonction": "Obtenir cinq activités possibles avec un petit capital : investissement, clients, risques, prix, premières étapes",
+   "texte": "Agis comme un consultant spécialisé dans la création de petites entreprises en Afrique de l'Ouest. Je vis à [ville] et je dispose d'un capital de [montant]. Propose-moi 5 activités adaptées à mon budget et à mon environnement. Pour chacune, détaille les investissements nécessaires, les clients potentiels, les risques, les prix possibles et les premières étapes pour démarrer. Ne propose pas de revenus garantis.",
+   "exemple": {
+    "ville": "Cotonou",
+    "montant": "50 000 FCFA"
+   },
+   "resultat_attendu": "Une liste de cinq activités, chacune détaillée : investissement, clients, risques, prix possibles, premières étapes.",
+   "personnalisation": "Remplace [ville] et [montant]. Tu peux ajouter ce que tu sais faire, le temps dont tu disposes et ce que tu ne veux pas vendre.",
+   "resultat_exemple": "Avec 50 000 FCFA à Cotonou, vise une activité qui démarre petit, tourne vite et se teste en une semaine. Voici 5 pistes. Les montants sont des estimations : vérifie les prix au marché avant d'acheter. Aucune ne garantit un gain.\n\n1. Jus naturels en bouteille (bissap, gingembre, baobab)\n- Investissement : 25 000 à 35 000 FCFA (ingrédients, bouteilles, étiquettes, glacière d'occasion).\n- Clients : bureaux, écoles, salons de coiffure, fêtes de quartier.\n- Risques : la conservation au frais, l'hygiène, les invendus.\n- Prix possibles : 200 à 500 FCFA la bouteille selon la taille.\n- Premières étapes : teste 2 recettes sur 20 bouteilles, fais goûter, note ce qui part le plus vite.\n\n2. Beignets et bouillie du matin\n- Investissement : 20 000 à 30 000 FCFA (farine, huile, sucre, marmite, emballages).\n- Clients : élèves, conducteurs de taxi-moto, employés qui partent tôt.\n- Risques : le prix de l'huile, la concurrence du quartier, la régularité (il faut être là chaque matin).\n- Prix possibles : 25 à 100 FCFA la pièce.\n- Premières étapes : choisis un emplacement passant, commence 3 matins par semaine, compte tes invendus.\n\n3. Savon liquide fait maison\n- Investissement : 20 000 à 30 000 FCFA (matières premières, bidons, bouteilles récupérées, étiquettes).\n- Clients : ménages, petits restaurants, laveries, écoles.\n- Risques : une mauvaise formule (savon trop liquide ou irritant), des produits à manipuler avec des gants.\n- Prix possibles : 500 à 1 000 FCFA le litre.\n- Premières étapes : apprends une formule fiable, fabrique 20 litres, fais tester 5 voisines avant de vendre.\n\n4. Friperie triée, vendue sur WhatsApp\n- Investissement : 30 000 à 45 000 FCFA (un petit lot choisi pièce par pièce, lessive, cintres).\n- Clients : étudiantes, jeunes actifs, tes contacts WhatsApp et Facebook.\n- Risques : des pièces invendables dans le lot, la mode qui change, les impayés si tu fais crédit.\n- Prix possibles : 1 000 à 3 500 FCFA la pièce.\n- Premières étapes : achète 15 pièces d'un seul style, photographie-les à la lumière du jour, publie en statut.\n\n5. Visuels pour les petites boutiques\n- Investissement : 5 000 à 10 000 FCFA (forfait internet) ; ton téléphone suffit, avec une application de création.\n- Clients : salons de coiffure, restaurants, boutiques qui publient sur WhatsApp et Facebook.\n- Risques : des clients qui négocient beaucoup, des retards de paiement.\n- Prix possibles : 1 000 à 3 000 FCFA le visuel.\n- Premières étapes : crée 3 exemples pour des commerces de ton quartier, montre-les, propose un premier visuel à prix réduit.\n\nAvant de choisir : laquelle de ces activités peux-tu tester cette semaine avec moins de la moitié de ton capital ? Garde le reste pour corriger après le premier essai."
+  }
+ ],
+ "legende": {
+  "accroche": "Tu veux lancer un business mais tu ne sais pas quoi vendre ? Copie ce prompt dans ChatGPT 👇",
+  "points": [
+   "Ouvre ChatGPT (le prompt se colle aussi dans Gemini ou Claude)",
+   "Colle le prompt et remplace [ville] et [montant]",
+   "Lis les cinq idées, puis demande le détail de celle qui te plaît"
+  ],
+  "limite": "L'IA ne connaît pas ton quartier : ses chiffres sont des estimations. Vérifie les prix près de chez toi avant de dépenser."
+ },
+ "hashtags": [
+  "ChatGPT",
+  "PromptIA",
+  "IA",
+  "IntelligenceArtificielle",
+  "Business",
+  "Entrepreneuriat",
+  "AstuceIA",
+  "Afrique"
+ ],
+ "faits": [],
+ "outils": [
+  "ChatGPT"
+ ],
+ "scenes": [
+  {
+   "title": "Un business avec *ton budget* ?",
+   "pose": "reflechit",
+   "say": "Tu veux lancer un business, mais tu ne sais pas quoi vendre ? [a]Copie ce prompt dans ChatGPT : il te propose cinq activités adaptées à ton budget.",
+   "blocks": [
+    {
+     "kind": "rush",
+     "q": "seller shop business package",
+     "voir": "un vendeur dans sa boutique ou son atelier, avec un colis",
+     "cadre": "portrait",
+     "label": "Petit commerce"
+    }
+   ]
+  },
+  {
+   "title": "Copie ce *prompt*",
+   "tuile": {
+    "label": "ÉTAPE",
+    "n": 1
+   },
+   "pose": "pointe",
+   "say": "Étape un : ouvre ChatGPT et [a]écris ceci. Agis comme un consultant en petites entreprises en Afrique de l'Ouest. Je vis à Cotonou et j'ai cinquante mille francs. Propose-moi cinq activités, avec pour chacune l'investissement, les clients, les risques, les prix et les premières étapes.",
+   "blocks": [
+    {
+     "kind": "prompt",
+     "n": 1
+    }
+   ]
+  },
+  {
+   "title": "Remplace les *crochets*",
+   "tuile": {
+    "label": "ÉTAPE",
+    "n": 2
+   },
+   "pose": "presente",
+   "say": "Étape deux : remplace ce qui est entre crochets. [a1]Ta ville. [a2]Ton budget réel. [a3]Et garde la dernière phrase : elle interdit à l'IA de te promettre un gain.",
+   "blocks": [
+    {
+     "kind": "check",
+     "items": [
+      "[ville] : ta ville",
+      "[montant] : ton budget",
+      "Garde la dernière phrase"
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Lis la *réponse*",
+   "tuile": {
+    "label": "ÉTAPE",
+    "n": 3
+   },
+   "pose": "surpris",
+   "say": "Étape trois : envoie, et lis. [a]Voici un exemple de réponse : [a1]des jus naturels, [a2]des beignets le matin, [a3]du savon liquide, [a4]de la friperie triée, [a5]et des visuels pour les boutiques.",
+   "blocks": [
+    {
+     "kind": "reponse",
+     "n": 1,
+     "titre": "5 idées avec 50 000 FCFA",
+     "lignes": [
+      "1. Jus naturels en bouteille",
+      "2. Beignets et bouillie du matin",
+      "3. Savon liquide fait maison",
+      "4. Friperie triée, vendue sur WhatsApp",
+      "5. Visuels pour les petites boutiques"
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Vérifie les *chiffres*",
+   "pose": "stop",
+   "say": "Pour chaque idée, l'IA détaille [a1]l'investissement, [a2]les clients, [a3]le risque [a4]et la première étape. Attention : ses chiffres sont des estimations. Vérifie les prix au marché avant de dépenser.",
+   "blocks": [
+    {
+     "kind": "reponse",
+     "n": 1,
+     "titre": "Idée 1 : jus naturels",
+     "lignes": [
+      "Investissement : 25 000 à 35 000 FCFA",
+      "Clients : bureaux, écoles, fêtes de quartier",
+      "Risques : la conservation au frais",
+      "Départ : teste 2 recettes sur 20 bouteilles"
+     ]
+    }
+   ]
+  }
+ ]
+}

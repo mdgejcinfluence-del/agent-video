@@ -3,28 +3,30 @@
 # vidéo -> publication), enregistre sa mémoire dans le dépôt, puis la machine s'éteint.
 #
 # Aucune clé n'est écrite dans le code : elles sont lues dans Settings > Secrets and variables > Actions.
-#   GEMINI_API_KEY                    le cerveau : écrit les scénarios, regarde les rushs, rédige le bilan
+#   GEMINI_API_KEY                    le cerveau : écrit les scénarios, essaie chaque prompt, regarde les rushs, rédige le bilan
 #   PEXELS_API_KEY, PIXABAY_API_KEY   la recherche de séquences filmées libres de droits
 #   BUFFER_API_KEY                    la publication (Facebook, Instagram, TikTok) et les statistiques
 # Tant qu'aucune clé de publication n'existe, chaque réveil est un essai : rien n'est publié.
 # Le jour où elle est ajoutée, l'agent publie, sans validation et sans autre réglage.
 # Pour tout arrêter : « dry_run: true » dans config.yaml, ou désactiver cette tâche (bouton « … » en haut à droite).
 #
-# Les heures sont en UTC. Cotonou = UTC+1 : 08:40 UTC = 09:40 chez toi, soit 20 minutes avant le créneau de 10:00.
+# Les heures sont en UTC. Cotonou = UTC+1 : 08:37 UTC = 09:37 chez toi, soit une vingtaine de minutes avant le créneau de 10:00.
+# Le 11/11/2026, jour de création du dépôt, GitHub n'a déclenché AUCUN de ces réveils (voir README, § 7 et § 10).
 # Si tu changes schedule.slots dans config.yaml, change aussi les lignes « cron ».
 name: Agent vidéo
 
 on:
   schedule:
-    - cron: "40 8 * * *"      # créneau 10:00 (heure de Cotonou)
-    - cron: "40 11 * * *"     # créneau 13:00
-    - cron: "40 16 * * *"     # créneau 18:00
-    - cron: "10 19 * * *"     # créneau 20:30
-    - cron: "40 5,22 * * *"   # relevé des statistiques, bilan, veille, rattrapage d'un créneau manqué
+    - cron: "37 8 * * *"      # créneau 10:00 (heure de Cotonou)
+    - cron: "37 11 * * *"     # créneau 13:00
+    - cron: "37 16 * * *"     # créneau 18:00
+    - cron: "7 19 * * *"      # créneau 20:30
+    - cron: "37 5,22 * * *"   # relevé des statistiques, bilan, veille, rattrapage d'un créneau manqué
+    - cron: "17 14,20 * * *"  # deux réveils de secours : un créneau reste rattrapable 4 heures (schedule.grace_hours)
   workflow_dispatch:
     inputs:
       commande:
-        description: "tick (réveil normal) | demo (les 6 vidéos de réserve) | bilan | doctor | plan | sujets | veille | rushs"
+        description: "tick (réveil normal) | demo (les vidéos de réserve) | bilan | doctor | plan | sujets | bibliotheque | veille | rushs"
         default: "tick"
       mots:
         description: "Pour « rushs » : la recherche à essayer, en anglais (ex. hands packing box)"
@@ -104,6 +106,7 @@ jobs:
             doctor)  python run.py doctor --live ;;
             plan)    python run.py plan ;;
             sujets)  python run.py sujets ;;
+            bibliotheque) python run.py bibliotheque ;;
             veille)  python run.py veille ;;
             rushs)   python run.py rushs "${MOTS:-hands typing laptop}" ;;
             *)       echo "commande inconnue : $COMMANDE" && exit 2 ;;

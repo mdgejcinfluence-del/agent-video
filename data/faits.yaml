@@ -5,7 +5,10 @@
 #                               « doit_contenir » y figure encore. Phrase disparue = fait suspendu.
 #  verification: manuelle    -> la page refuse les robots : elle a été lue à la main le « verifie_le ».
 #                               Le fait reste utilisable « valable_jours » jours, puis il faut le relire.
-#  outils   : les outils dont ce fait permet de parler (un outil nommé sans fait est refusé).
+#  outils   : les outils dont ce fait permet de décrire une fonction. (ChatGPT, Gemini et Claude peuvent être nommés sans fait
+#             comme l'endroit où coller une instruction ; toute fonction, tout menu, toute limite demande un fait.)
+#  commandes: les commandes (/mot) que ce fait permet de montrer. Une commande absente de tous les faits cités est refusée.
+#  menus    : les noms de menus relevés sur la page (pour que la vidéo dise les bons mots).
 #  nombres  : les chiffres que ce fait permet de citer avec une unité.
 #  gratuit  : true si ce fait permet d'écrire « gratuit » (la limite doit alors être dite).
 #  Avec une clé Gemini, l'agent ajoute lui-même des faits (state/faits_auto.json) : il ne garde que ceux
@@ -160,4 +163,76 @@ faits:
     outils: ["Pixabay"]
     gratuit: false
     nombres: []
+
+  # ------------------------------------------------------------------ outils d'IA (ligne éditoriale du 11 novembre 2026)
+  - id: chatgpt-instructions
+    affirmation: "ChatGPT : les instructions personnalisées s'appliquent à toutes les discussions ; elles existent dans toutes les offres (Web, bureau, iOS, Android) ; offres Free et Go : 1 500 caractères au plus."
+    organisme: "OpenAI (centre d'aide officiel)"
+    titre: "ChatGPT Custom Instructions"
+    url: "https://help.openai.com/en/articles/8096356-custom-instructions-for-chatgpt"
+    doit_contenir: ["Custom instructions are available on all plans on Web, Desktop, iOS, and Android", "Free and Go users can save up to 1,500 characters"]
+    verification: manuelle          # help.openai.com refuse les robots (HTTP 403) : page lue le 11/11/2026, en anglais et dans sa version française
+    valable_jours: 90
+    publie_le: ""
+    verifie_le: "2026-11-11"
+    territoire: "international"
+    limite: "Les noms des menus viennent de la version française de la page, traduite automatiquement : ils peuvent différer dans l'application. Les offres Plus et au-dessus acceptent 5 000 caractères."
+    affichage: "help.openai.com — ChatGPT Custom Instructions"
+    outils: ["ChatGPT", "OpenAI"]
+    gratuit: true
+    nombres: ["1500", "5000"]
+    commandes: []
+    menus: ["Paramètres", "Personnaliser ChatGPT", "Personnalisation", "Activer la personnalisation", "Instructions personnalisées"]
+
+  - id: chatgpt-commandes-bureau
+    affirmation: "Application ChatGPT pour ordinateur : taper / dans la zone de message ouvre la liste des commandes ; la liste dépend de l'environnement et de l'accès."
+    organisme: "OpenAI (documentation officielle ChatGPT Learn)"
+    titre: "Slash commands"
+    url: "https://learn.chatgpt.com/docs/reference/slash-commands.md"
+    doit_contenir: ["In the chat composer, type", "commands vary based on your environment and access", "/rename", "/archive", "/side"]
+    verification: automatique
+    publie_le: ""
+    verifie_le: "2026-11-11"
+    territoire: "international"
+    limite: "Ces commandes sont celles de l'application ChatGPT pour ordinateur. ChatGPT sur le Web a son propre menu ; rien n'indique que ces commandes existent dans l'application du téléphone."
+    affichage: "learn.chatgpt.com/docs/reference/slash-commands"
+    outils: ["ChatGPT", "OpenAI"]
+    gratuit: false
+    nombres: []
+    commandes: ["/archive", "/compact", "/goal", "/model", "/new", "/pin", "/plan", "/project", "/reasoning", "/rename", "/side", "/status", "/usage", "/feedback", "/fork", "/memories"]
+
+  - id: claude-code-commandes
+    affirmation: "Claude Code : taper / montre les commandes disponibles ; /init crée un fichier CLAUDE.md de départ, /compact résume la conversation pour libérer de la place, /clear repart de zéro sur une nouvelle tâche."
+    organisme: "Anthropic (documentation officielle de Claude Code)"
+    titre: "Commands"
+    url: "https://code.claude.com/docs/en/commands.md"
+    doit_contenir: ["to see the commands available to you", "/init", "/compact", "/clear"]
+    verification: automatique
+    publie_le: ""
+    verifie_le: "2026-11-11"
+    territoire: "international"
+    limite: "Ce sont des commandes de Claude Code, l'outil de programmation : elles ne sont pas des commandes de l'application Claude. Toutes n'apparaissent pas pour tout le monde (plateforme, offre, environnement)."
+    affichage: "code.claude.com/docs/en/commands"
+    outils: ["Claude Code", "Claude"]
+    gratuit: false
+    nombres: []
+    commandes: ["/init", "/memory", "/compact", "/clear", "/context", "/plan", "/model", "/rewind", "/diff", "/doctor", "/resume", "/help", "/code-review", "/review", "/status", "/usage"]
+
+  - id: claude-projets
+    affirmation: "Claude : les Projets existent pour tous, y compris avec un compte gratuit, qui peut en créer 5 au plus ; un projet garde des documents et des consignes."
+    organisme: "Anthropic (centre d'aide officiel de Claude)"
+    titre: "How can I create and manage projects?"
+    url: "https://support.claude.com/en/articles/9519177-how-can-i-create-and-manage-projects"
+    doit_contenir: ["Projects are available to all users, including those with free Claude accounts", "Free users can create a maximum of five projects"]
+    verification: automatique
+    publie_le: ""
+    verifie_le: "2026-11-11"
+    territoire: "international"
+    limite: "Le contenu d'une discussion n'est pas partagé avec les autres discussions du projet, sauf s'il est ajouté aux documents du projet."
+    affichage: "support.claude.com — create and manage projects"
+    outils: ["Claude"]
+    gratuit: true
+    nombres: ["5"]
+    commandes: []
+    menus: ["Projects", "New Project", "Set project instructions"]
 

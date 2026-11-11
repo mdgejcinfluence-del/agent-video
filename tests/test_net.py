@@ -150,18 +150,70 @@ class Net(unittest.TestCase):
 
     def test_storyboard_ecrit_par_le_modele_refuse_puis_accepte(self):
         """Le modèle promet un revenu : refus renvoyé ; il corrige : accepté, avec l'écran de fin ajouté par l'agent."""
-        bon = json.loads((ROOT / "examples" / "reserve" / "r2_zapper.json").read_text(encoding="utf-8"))
-        bon["suite"] = {"sujet": "Filmer sans rater l'image : 4 réglages"}
+        bon = json.loads((ROOT / "examples" / "reserve" / "p1_business.json").read_text(encoding="utf-8"))
+        bon["suite"] = {"sujet": "Le prompt pour rédiger une annonce qui attire des clients"}
         mauvais = json.loads(json.dumps(bon))
         mauvais["scenes"][1]["say"] += " Avec ça, tu vas gagner de l'argent."
         SCRIPT["gemini-3.8-flash"] = [(200, json.dumps(mauvais)), (200, json.dumps(bon))]
         faits = scout.faits_confirmes(ROOT, self.state, today="2026-11-11")
-        st = writer.write(self.brain(), {"id": "e01", "famille": "erreurs", "hook_type": "probleme", "sujet": "3 erreurs qui font zapper"}, faits, self.cfg, "", lambda *_: None)
+        st = writer.write(self.brain(), {"id": "s10", "famille": "business", "hook_type": "question", "sujet": "Le prompt pour trouver une idée de business", "outil": "ChatGPT",
+                                         "prochaine": {"id": "s11", "sujet": "Le prompt pour rédiger une annonce qui attire des clients"}}, faits, self.cfg, "", lambda *_: None)
         self.assertEqual(st["scenes"][-1]["type"], "fin")
-        self.assertEqual(st["idee"], "e01")
+        self.assertEqual(st["idee"], "s10")
+        self.assertEqual(st["suite"]["idee"], "s11", "la suite annoncée est le sujet déjà choisi dans la banque")
+        self.assertEqual(st["prompts"][0]["outil"], "ChatGPT")
         posts = [s for s in SEEN if "generateContent" in s["path"]]
         self.assertIn("promesse de revenu", posts[1]["body"]["contents"][2]["parts"][0]["text"])
-        self.assertIn("RÈGLES DE VÉRITÉ", posts[0]["body"]["systemInstruction"]["parts"][0]["text"])
+        consigne = posts[0]["body"]["systemInstruction"]["parts"][0]["text"]
+        for frag in ("RÈGLES DE VÉRITÉ", "PROMPTS, les COMMANDES et les TECHNIQUES", "Copie exactement cette instruction", "N'invente jamais une commande"):
+            self.assertIn(frag, consigne)
+        self.assertIn("LA VIDÉO SUIVANTE du compte sera", posts[0]["body"]["contents"][0]["parts"][0]["text"])
+
+    def test_essai_reel_du_prompt_sur_gemini(self):
+        """Le prompt est envoyé tel quel (aucune consigne, texte libre) ; l'écran « réponse » montre un extrait de la VRAIE réponse."""
+        from studio import essai, porte
+        faits = scout.faits_confirmes(ROOT, self.state, today="2026-11-11")
+        st, _ = writer.controler(json.loads((ROOT / "examples" / "reserve" / "p1_business.json").read_text(encoding="utf-8")), self.cfg, faits)
+        vraie = ("Voici 5 pistes pour Cotonou avec 50 000 FCFA.\n\n1. Vente d'ananas découpés\n- Investissement : 15 000 FCFA\n2. Recharge de crédit téléphonique\n"
+                 "3. Couture de masques et sacs en pagne\n4. Lavage de motos à domicile\n5. Revente de poissons fumés\n\nPour les ananas : clients = bureaux et écoles ; "
+                 "risque = les fruits abîmés ; premier pas = tester sur 10 ananas.")
+        SCRIPT["gemini-3.8-flash"] = [(200, vraie)]
+        infidele = {"titre": "5 idées pour Cotonou", "lignes": ["1. Ananas découpés", "2. Crédit téléphonique", "3. Masques et sacs en pagne", "4. Lavage de motos", "5. Élevage d'escargots géants"],
+                    "dit": "[a]Voici la réponse : [a1]des ananas, [a2]du crédit, [a3]des sacs en pagne, [a4]le lavage de motos [a5]et des escargots. Vérifie toujours les prix."}
+        fidele = json.loads(json.dumps(infidele)); fidele["lignes"][4] = "5. Revente de poissons fumés"
+        fidele["dit"] = infidele["dit"].replace("des escargots", "du poisson fumé")
+        detail = {"titre": "Idée 1 : ananas découpés", "lignes": ["Investissement : 15 000 FCFA", "Clients : bureaux et écoles", "Risque : les fruits abîmés", "Premier pas : tester sur 10 ananas"],
+                  "dit": "Pour chaque idée, l'IA détaille [a1]l'investissement, [a2]les clients, [a3]le risque [a4]et le premier pas. Ses chiffres sont des estimations : vérifie les prix."}
+        SCRIPT["gemini-3.5-flash-lite"] = [(200, json.dumps(infidele)), (200, json.dumps(fidele)), (200, json.dumps(detail))]
+        out = essai.tester(st, self.cfg, self.brain(), faits, lambda *_: None, today="2026-11-11")
+        f = out["prompts"][0]
+        self.assertEqual((f["statut"], f["verification"]), ("testé", "essai réel"))
+        self.assertIn("Gemini", f["teste_sur"]); self.assertIn("ananas", f["resultat_exemple"])
+        posts = [x for x in SEEN if "generateContent" in x["path"]]
+        envoi = posts[0]["body"]
+        self.assertNotIn("systemInstruction", envoi, "l'instruction est envoyée seule, comme le ferait un utilisateur")
+        self.assertNotIn("responseMimeType", envoi["generationConfig"])
+        self.assertTrue(envoi["contents"][0]["parts"][0]["text"].startswith("Agis comme un consultant"))
+        self.assertIn("Je vis à Cotonou et je dispose d'un capital de 50 000 FCFA", envoi["contents"][0]["parts"][0]["text"], "les [champs] sont remplis par l'exemple")
+        self.assertIn("ligne infidèle", posts[2]["body"]["contents"][2]["parts"][0]["text"], "une ligne absente de la vraie réponse est refusée et renvoyée au modèle")
+        blocs = [b for sc in out["scenes"] for b in sc.get("blocks") or [] if b.get("kind") == "reponse"]
+        self.assertEqual(blocs[0]["lignes"][4], "5. Revente de poissons fumés")
+        self.assertEqual(blocs[1]["titre"], "Idée 1 : ananas découpés")
+        self.assertTrue(all(b["source"] == "Réponse de Gemini · testée le 11/11/2026" for b in blocs))
+        self.assertIn("poisson fumé", out["scenes"][3]["say"], "la voix suit les vraies lignes")
+        st2, pb = writer.controler(out, self.cfg, faits, strict=False)
+        self.assertEqual(pb, [], "le storyboard mis à jour repasse tous les contrôles")
+        self.assertEqual(porte.bloquants(self.cfg, st2, {"ok": True}, faits), [], "un prompt testé le jour même peut partir")
+
+    def test_essai_impossible_le_prompt_est_rejete_et_la_video_retenue(self):
+        from studio import essai, porte
+        faits = scout.faits_confirmes(ROOT, self.state, today="2026-11-11")
+        st, _ = writer.controler(json.loads((ROOT / "examples" / "reserve" / "p1_business.json").read_text(encoding="utf-8")), self.cfg, faits)
+        SCRIPT["gemini-3.8-flash"] = [(400, "requête refusée")]
+        SCRIPT["gemini-3.5-flash-lite"] = [(400, "requête refusée")]
+        out = essai.tester(st, self.cfg, self.brain(), faits, lambda *_: None)
+        self.assertEqual(out["prompts"][0]["statut"], "rejeté")
+        self.assertTrue(any("instruction non vérifiée" in b for b in porte.bloquants(self.cfg, out, {"ok": True}, faits)))
 
     # ------------------------------------------------------------------ banques de rushs
     def test_pexels_et_pixabay_lus_selon_leur_documentation(self):
@@ -235,7 +287,7 @@ class Net(unittest.TestCase):
         import studio.publish as P
         P.time.sleep = lambda *_: None
         cfg = {"publish": {"dry_run": False, "via": "buffer", "networks": ["tiktok", "instagram", "facebook"], "ai_label": True, "hashtags": 3}, "offer": {}}
-        st, _ = writer.controler(json.loads((ROOT / "examples" / "reserve" / "r1_monteur.json").read_text(encoding="utf-8")), self.cfg, {})
+        st, _ = writer.controler(json.loads((ROOT / "examples" / "reserve" / "p1_business.json").read_text(encoding="utf-8")), self.cfg, {})
         out = publish_all("/tmp/x.mp4", st, 2400, "https://moi.github.io/agent/v/x.mp4", cfg, self.state, lambda *_: None, "Images : Pexels")
         self.assertEqual(out["tiktok"]["status"], "sent"); self.assertEqual(out["tiktok"]["id"], "post_tt")
         self.assertEqual(out["instagram"]["status"], "sent")
@@ -244,7 +296,7 @@ class Net(unittest.TestCase):
         self.assertEqual(len(creates), 2)
         tt = next(q for q in creates if "c_tt" in q)
         for frag in ('schedulingType: automatic', 'mode: shareNow', 'url: "https://moi.github.io/agent/v/x.mp4"', 'thumbnailOffset: 2400',
-                     'tiktok: {isAiGenerated: true}', '#montagevideo #ia #motiondesign', 'Commente MONTAGE', 'Images : Pexels'):
+                     'tiktok: {isAiGenerated: true}', '#ChatGPT #PromptIA #IA', 'Commente BUSINESS', 'Le prompt à copier (ChatGPT)', 'Images : Pexels'):
             self.assertIn(frag, tt)
         self.assertIn("instagram: {type: reel, shouldShareToFeed: true, isAiGenerated: true}", next(q for q in creates if "c_ig" in q))
         m = Buffer("bk", self.state).metrics("post_tt")
@@ -256,7 +308,7 @@ class Net(unittest.TestCase):
         cfg = {"stats": {"check_after_hours": [24, 72, 168]}}
         for i, hours in enumerate([25, 26, 30, 2]):
             at = (now() - dt.timedelta(hours=hours)).isoformat(timespec="seconds")
-            self.state.add_post({"id": f"p{i}", "created": at, "title": f"vidéo {i}", "brief": {"famille": "methode"}, "duration": 40,
+            self.state.add_post({"id": f"p{i}", "created": at, "title": f"vidéo {i}", "brief": {"famille": "prompts"}, "duration": 40,
                                  "published": {"tiktok": {"via": "buffer", "id": f"post_{i}", "status": "sent", "at": at},
                                                "facebook": {"status": "skipped"}}, "stats": {}})
         n = stats.collect(self.state, cfg, lambda *_: None)
@@ -268,7 +320,7 @@ class Net(unittest.TestCase):
 
     def test_mode_essai_ne_publie_rien(self):
         cfg = {"publish": {"dry_run": True, "via": "buffer", "networks": ["tiktok"]}, "offer": {}}
-        st, _ = writer.controler(json.loads((ROOT / "examples" / "reserve" / "r1_monteur.json").read_text(encoding="utf-8")), self.cfg, {})
+        st, _ = writer.controler(json.loads((ROOT / "examples" / "reserve" / "p1_business.json").read_text(encoding="utf-8")), self.cfg, {})
         out = publish_all("/tmp/x.mp4", st, 0, None, cfg, self.state, lambda *_: None)
         self.assertEqual(out["tiktok"]["status"], "dry_run")
         self.assertEqual(SEEN, [])

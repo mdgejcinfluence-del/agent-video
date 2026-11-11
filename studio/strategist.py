@@ -36,8 +36,11 @@ def duree_bucket(sec: float) -> str:
 # --------------------------------------------------------------------------- banque
 def banque(root: str | Path) -> dict:
     d = yaml.safe_load((Path(root) / "data" / "sujets.yaml").read_text(encoding="utf-8")) or {}
-    fam = {f["id"]: dict(f) for f in d.get("familles") or []}
-    return {"familles": fam, "idees": [dict(i) for i in d.get("idees") or []], "plancher": float(d.get("plancher", 0.06))}
+    toutes = {f["id"]: dict(f) for f in d.get("familles") or []}
+    fam = {k: f for k, f in toutes.items() if f.get("actif", True)}           # une famille « actif: false » attend un moyen technique (ex. images)
+    return {"familles": fam, "en_attente": {k: f for k, f in toutes.items() if k not in fam},
+            "idees": [dict(i) for i in d.get("idees") or [] if i.get("famille") in fam and not i.get("a_verifier")],
+            "plancher": float(d.get("plancher", 0.03))}
 
 
 def idees(root: str | Path, state: State) -> list[dict]:
@@ -115,7 +118,7 @@ def hook_stats(state: State) -> dict[str, list[float]]:
 
 
 def choisir(root: str | Path, state: State, cfg: dict, faits_ok: dict[str, dict], rng: random.Random, essai: bool = False,
-            avec_modele: bool = False, reserves: list[str] | None = None) -> dict | None:
+            avec_modele: bool = False, reserves: list[str] | None = None, exclure: set[str] | None = None, sans_suite: bool = False) -> dict | None:
     """La prochaine vidéo : {idee, famille, hook_type, pourquoi, reserve?, suite_de?} — ou None s'il n'y a rien à produire."""
     scfg = cfg.get("strategy") or {}
     bq = banque(root)
@@ -123,7 +126,7 @@ def choisir(root: str | Path, state: State, cfg: dict, faits_ok: dict[str, dict]
     reserves = list(reserves or [])
     if essai:
         # les réserves tournent, dans l'ordre ; rien n'est compté
-        pool = [i for i in allid if i.get("reserve") in reserves] or [{"id": r, "famille": "methode", "sujet": r, "reserve": r} for r in reserves]
+        pool = [i for i in allid if i.get("reserve") in reserves] or [{"id": r, "famille": "prompts", "sujet": r, "reserve": r} for r in reserves]
         if not pool:
             return None
         k = int(state.load("essais", {"n": 0}).get("n", 0))
@@ -135,11 +138,15 @@ def choisir(root: str | Path, state: State, cfg: dict, faits_ok: dict[str, dict]
     faites = {(p.get("brief") or {}).get("idee") for p in used}
     res_recentes = {(p.get("brief") or {}).get("reserve") for p in used if (p.get("brief") or {}).get("reserve")}
     # 1. la suite promise
-    due = suite_due(state, cfg, avec_modele, res_recentes)
+    due = None if sans_suite else suite_due(state, cfg, avec_modele, res_recentes)
     if due:
         s = due["suite"]
-        idee = {"id": f"suite-{due['de']}", "famille": due.get("famille") or "methode", "sujet": s.get("sujet") or due.get("promesse"),
+        idee = {"id": f"suite-{due['de']}", "famille": due.get("famille") if due.get("famille") in bq["familles"] else "prompts", "sujet": s.get("sujet") or due.get("promesse"),
                 "suite_de": {"id": due["de"], "title": due.get("title"), "keyword": due.get("keyword")}}
+        prevue = next((i for i in allid if s.get("idee") and i["id"] == s["idee"]), None)
+        if prevue is not None and all(f in faits_ok for f in (prevue.get("faits") or [])):
+            # la vidéo précédente a annoncé CE sujet de la banque : il garde sa famille, son outil, son angle
+            idee = {**prevue, "suite_de": idee["suite_de"]}
         if s.get("reserve") and (not avec_modele or not s.get("sujet")):
             idee["reserve"] = s["reserve"]
             match = next((i for i in allid if i.get("reserve") == s["reserve"]), None)
@@ -150,7 +157,7 @@ def choisir(root: str | Path, state: State, cfg: dict, faits_ok: dict[str, dict]
                 "pourquoi": f"suite promise par « {due.get('title')} » (mot {due.get('keyword')})"}
 
     def possible(i: dict) -> bool:
-        if i["id"] in faites:
+        if i["id"] in faites or (exclure and i["id"] in exclure):
             return False
         if any(f not in faits_ok for f in (i.get("faits") or [])):
             return False
@@ -160,6 +167,8 @@ def choisir(root: str | Path, state: State, cfg: dict, faits_ok: dict[str, dict]
     dispo = [i for i in allid if possible(i)]
     if not dispo:
         return None
+    if scfg.get("pilotes_d_abord", True) and any(i.get("pilote") for i in dispo):
+        dispo = [i for i in dispo if i.get("pilote")]              # la série pilote d'abord ; la famille est tirée parmi ses sujets
     w = poids(root, state)
     fams = sorted({i["famille"] for i in dispo})
     explore = float(scfg.get("explore", 0.25))
@@ -181,6 +190,14 @@ def choisir(root: str | Path, state: State, cfg: dict, faits_ok: dict[str, dict]
     i = cands[0]
     return {"idee": i, "famille": fam, "hook_type": None if (not avec_modele and i.get("reserve")) else _hook(state, scfg, rng),
             "reserve": i.get("reserve") if not avec_modele else None, "pourquoi": why}
+
+
+def prochaine(root: str | Path, state: State, cfg: dict, faits_ok: dict[str, dict], rng: random.Random, avec_modele: bool,
+              reserves: list[str] | None, exclure: set[str]) -> dict | None:
+    """Le sujet de la vidéo SUIVANTE, choisi dès maintenant selon la répartition des familles : la vidéo en cours l'annonce
+    dans sa phrase de fin, et l'agent le produit ensuite. Ainsi chaque promesse est tenue ET la répartition est respectée."""
+    c = choisir(root, state, cfg, faits_ok, rng, False, avec_modele, reserves, exclure=exclure, sans_suite=True)
+    return (c or {}).get("idee")
 
 
 def _hook(state: State, scfg: dict, rng: random.Random) -> str:

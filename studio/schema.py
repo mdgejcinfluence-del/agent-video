@@ -2,7 +2,10 @@
 
 Un storyboard est une suite de 4 à 7 ÉCRANS, suivis de l'écran de fin que l'agent ajoute lui-même.
 Chaque écran : un titre court, une tuile numérotée facultative, une pose du personnage, le texte dit par
-la voix (« say ») et au plus deux blocs. Dans « say », un repère [a] fait apparaître le premier bloc au
+la voix (« say ») et au plus deux blocs.
+Depuis la spécialisation « prompts et commandes d'IA », chaque vidéo porte au moins UNE instruction à copier
+(« prompts » : la fiche complète de chaque prompt ou commande), affichée par un bloc « prompt », et, quand
+l'instruction produit une réponse, un bloc « reponse » qui montre un extrait d'une vraie réponse. Dans « say », un repère [a] fait apparaître le premier bloc au
 mot qui suit, [a1] [a2]… ses éléments ; [b], [b1]… pour le second bloc.
 
 `normaliser()` range le storyboard et renvoie la liste de TOUT ce qui ne va pas, en français : c'est ce
@@ -18,12 +21,17 @@ from . import align
 POSES = ("presente", "pointe", "bras_croises", "mains_hanches", "reflechit", "surpris", "ordi", "pouce", "victoire", "stop", "telephone")
 ICONES = ("video", "voix", "image", "texte", "lien", "telephone", "ordi", "horloge", "cadenas", "loupe", "argent", "message", "coche", "croix",
           "etoile", "panier", "photo", "musique", "robot", "ciseaux", "idee", "cible", "fleche", "dossier", "oeil")
-TUILES = ("ÉTAPE", "NUMÉRO", "ERREUR", "OUTIL", "RÈGLE", "PLAN", "ASTUCE", "RÉGLAGE", "EFFET", "PIÈGE")
-FAMILLES = ("methode", "liste", "erreurs", "avant_apres", "coulisses", "alerte", "outil")
+TUILES = ("ÉTAPE", "NUMÉRO", "ERREUR", "OUTIL", "RÈGLE", "PLAN", "ASTUCE", "RÉGLAGE", "EFFET", "PIÈGE", "PROMPT", "COMMANDE")
+FAMILLES = ("prompts", "commandes", "business", "images", "video", "etudes", "hashtags", "outils")
+FAMILLES_HISTORIQUE = ("methode", "liste", "erreurs", "avant_apres", "coulisses", "alerte", "outil")   # les six premières vidéos (conservées, plus produites)
 HOOKS = ("resultat", "probleme", "contraste", "question")
 EFFETS = ("couleurs", "zoom", "titre", "sous_titres", "barre")
 CADRES = ("portrait", "paysage", "carre")
-KINDS = ("liste", "check", "cartes", "icones", "chrono", "fenetre", "mot", "etiquette", "tuiles_video", "rush", "avant_apres")
+KINDS = ("liste", "check", "cartes", "icones", "chrono", "fenetre", "mot", "etiquette", "tuiles_video", "rush", "avant_apres", "prompt", "reponse")
+PROMPT_MAX = 560           # caractères d'une instruction affichée (au-delà, elle ne se lit plus sur un téléphone)
+LIGNES_REPONSE = (2, 5)
+LIGNE_MAX = 48
+STATUTS = ("à vérifier", "testé", "validé", "rejeté")
 MOTS = (100, 215)          # mots prononcés, hors écran de fin
 ECRANS = (4, 7)
 MARK = re.compile(r"\[([a-z]\d?|promo)\]")
@@ -45,6 +53,8 @@ def sub_cues(b: dict) -> int:
         return 2 if b.get("reponse") else 1
     if k == "avant_apres":
         return 1 + len(b.get("effets") or [])
+    if k == "reponse":
+        return len(b.get("lignes") or [])
     if k == "mot":
         return 1 if b.get("sous") else 0
     return 0
@@ -66,6 +76,10 @@ def hauteur(b: dict) -> int:
         return 190
     if k == "fenetre":
         return 430 if b.get("reponse") else 370
+    if k == "prompt":                                            # barre de titre + marges + lignes de texte (36 caractères par ligne environ)
+        return 136 + min(700, 52 * max(1, -(-len(visible(b.get("texte") or "")) // 36)))
+    if k == "reponse":
+        return 136 + 58 + 82 * len(b.get("lignes") or []) + 44
     if k == "mot":
         return 220 if b.get("sous") else 150
     if k == "etiquette":
@@ -152,6 +166,23 @@ def _bloc(pb: list[str], where: str, b: dict) -> dict:
         o["text"] = _txt(pb, where, b.get("text"), 2, 26, "étiquette")
     elif k == "tuiles_video":
         o["n"] = max(2, min(4, int(b.get("n") or 4)))
+    elif k == "prompt":
+        # l'instruction à copier : son texte vient TOUJOURS de la fiche « prompts[n] » du storyboard (rangé par normaliser)
+        o["n"] = int(b.get("n") or 1) if str(b.get("n") or 1).isdigit() else 1
+        o["outil"] = str(b.get("outil") or "").strip()
+        o["texte"] = re.sub(r"\s+", " ", str(b.get("texte") or "")).strip()
+    elif k == "reponse":
+        o["n"] = int(b.get("n") or 1) if str(b.get("n") or 1).isdigit() else 1
+        o["titre"] = _txt(pb, where, b.get("titre") or "Réponse", 2, 40, "titre de la réponse")
+        lignes = [re.sub(r"\s+", " ", str(x)).strip() for x in (b.get("lignes") or []) if str(x).strip()]
+        if not LIGNES_REPONSE[0] <= len(lignes) <= LIGNES_REPONSE[1]:
+            pb.append(f"{where} : « reponse » demande {LIGNES_REPONSE[0]} à {LIGNES_REPONSE[1]} lignes, il y en a {len(lignes)}")
+        for x in lignes:
+            if len(visible(x)) > LIGNE_MAX:
+                pb.append(f"{where} : ligne de réponse trop longue ({len(visible(x))} caractères, maximum {LIGNE_MAX}) : « {visible(x)} »")
+        o["lignes"] = lignes[:LIGNES_REPONSE[1]]
+        if b.get("source"):
+            o["source"] = str(b["source"])[:70]
     else:  # rush, avant_apres
         o["q"] = _txt(pb, where, b.get("q"), 4, 60, "q (recherche en anglais)")
         if re.search(r"[àâçéèêëîïôùûü]", o["q"].lower()):
@@ -185,7 +216,7 @@ def normaliser(story: dict) -> tuple[dict, list[str]]:
     if not isinstance(story, dict):
         return {}, ["le storyboard doit être un objet JSON"]
     s = copy.deepcopy(story)
-    out: dict = {k: s[k] for k in ("sujet", "idee", "_reserve", "suite_de", "suite") if k in s}
+    out: dict = {k: s[k] for k in ("sujet", "idee", "_reserve", "suite_de", "suite", "essai") if k in s}
     out["title"] = _txt(pb, "storyboard", s.get("title"), 12, 80, "title")
     out["famille"] = s.get("famille") if s.get("famille") in FAMILLES else None
     if out["famille"] is None:
@@ -227,12 +258,14 @@ def normaliser(story: dict) -> tuple[dict, list[str]]:
     out["hashtags"] = tags[:9]
     out["faits"] = [str(x) for x in (s.get("faits") or [])]
     out["outils"] = [str(x) for x in (s.get("outils") or [])]
+    out["prompts"] = _fiches(pb, s.get("prompts"))
 
     scenes = [sc for sc in (s.get("scenes") or []) if isinstance(sc, dict) and sc.get("type") != "fin"]
     if not ECRANS[0] <= len(scenes) <= ECRANS[1]:
         pb.append(f"storyboard : {ECRANS[0]} à {ECRANS[1]} écrans attendus (sans l'écran de fin), il y en a {len(scenes)}")
     out["scenes"] = []
     total, rushs = 0, 0
+    montres: set[int] = set()
     for i, sc in enumerate(scenes):
         w = f"écran {i + 1}"
         o: dict = {"type": "ecran", "title": _txt(pb, w, sc.get("title"), 3, 36, "title")}
@@ -271,6 +304,13 @@ def normaliser(story: dict) -> tuple[dict, list[str]]:
             if ob["kind"] in ("rush", "avant_apres"):
                 rushs += 1
                 ob.setdefault("ref", f"r{i + 1}{ob['id']}")
+            if ob["kind"] in ("prompt", "reponse"):
+                fiche = out["prompts"][ob["n"] - 1] if 1 <= ob["n"] <= len(out["prompts"]) else None
+                if fiche is None:
+                    pb.append(f"{w} : le bloc « {ob['kind']} » renvoie à la fiche n° {ob['n']}, qui n'existe pas dans « prompts »")
+                elif ob["kind"] == "prompt":
+                    ob["texte"], ob["outil"] = fiche["texte"], fiche["outil"]          # ce qui s'affiche est exactement ce qui est archivé
+                    montres.add(ob["n"])
             o["blocks"].append(ob)
         inconnus = [c for c in cues if c not in permis]
         if inconnus:
@@ -287,7 +327,49 @@ def normaliser(story: dict) -> tuple[dict, list[str]]:
         pb.append(f"storyboard : {total} mots prononcés au total, il en faut entre {MOTS[0]} et {MOTS[1]} (hors phrase de fin)")
     if scenes and not 1 <= rushs <= 3:
         pb.append(f"storyboard : il faut 1 à 3 séquences filmées (blocs « rush » ou « avant_apres »), il y en a {rushs}")
+    if scenes and out["prompts"] and not montres:
+        pb.append("storyboard : aucune instruction n'est montrée — ajoute un bloc {\"kind\":\"prompt\",\"n\":1} : la vidéo doit afficher le texte exact à copier")
+    for n_ in range(1, len(out["prompts"]) + 1):
+        if scenes and n_ not in montres:
+            pb.append(f"storyboard : la fiche de prompt n° {n_} n'est affichée par aucun bloc « prompt » (retire la fiche, ou montre-la)")
     return out, pb
+
+
+def _fiches(pb: list[str], fiches) -> list[dict]:
+    """Les fiches « prompts » : une par instruction à copier (prompt, commande, texte à coller dans un réglage)."""
+    out = []
+    if not isinstance(fiches, list) or not 1 <= len(fiches) <= 5:
+        pb.append("storyboard : « prompts » doit contenir 1 à 5 fiches {titre, outil, fonction, texte, exemple, resultat_attendu, personnalisation} — "
+                  "chaque vidéo enseigne au moins une instruction que le spectateur peut copier")
+        fiches = fiches if isinstance(fiches, list) else []
+    for i, f in enumerate(fiches[:5]):
+        w = f"fiche de prompt n° {i + 1}"
+        f = f if isinstance(f, dict) else {}
+        texte = re.sub(r"\s+", " ", str(f.get("texte") or "")).strip()
+        if not 2 <= len(texte) <= PROMPT_MAX:
+            pb.append(f"{w} : « texte » (l'instruction exacte à copier) fait {len(texte)} caractères — il en faut entre 2 et {PROMPT_MAX}")
+        o = {"titre": _txt(pb, w, f.get("titre"), 6, 80, "titre"), "outil": _txt(pb, w, f.get("outil"), 2, 22, "outil (un seul outil par fiche)"),
+             "fonction": _txt(pb, w, f.get("fonction"), 6, 120, "fonction (à quoi sert cette instruction)"), "texte": texte,
+             "resultat_attendu": _txt(pb, w, f.get("resultat_attendu"), 10, 200, "resultat_attendu"),
+             "personnalisation": _txt(pb, w, f.get("personnalisation"), 10, 200, "personnalisation (ce que le spectateur doit remplacer ou adapter)")}
+        ex = f.get("exemple")
+        if isinstance(ex, dict):
+            o["exemple"] = {str(k).strip(): str(v).strip() for k, v in ex.items() if str(k).strip() and str(v).strip()}
+        elif ex:
+            o["exemple"] = {"exemple": str(ex).strip()}
+        else:
+            o["exemple"] = {}
+        variables = re.findall(r"\[([^\[\]]{1,40})\]", texte)
+        manquantes = [v for v in variables if v not in o["exemple"]]
+        if manquantes:
+            pb.append(f"{w} : le texte contient {', '.join('[' + v + ']' for v in manquantes)} mais « exemple » ne donne pas de valeur pour "
+                      "ces champs (il faut une valeur d'exemple par champ entre crochets, pour pouvoir tester l'instruction)")
+        o["type"] = f.get("type") if f.get("type") in ("prompt", "commande", "reglage") else "prompt"
+        for k in ("resultat_exemple", "id", "statut", "teste_sur", "teste_le", "verification"):
+            if f.get(k):
+                o[k] = f[k] if k != "resultat_exemple" else str(f[k])[:6000]
+        out.append(o)
+    return out
 
 
 def refs_in(story: dict) -> list[str]:
@@ -300,6 +382,8 @@ def textes_ecran(story: dict) -> list[str]:
     for sc in story.get("scenes") or []:
         out.append(sc.get("title", ""))
         for b in sc.get("blocks") or []:
+            if b.get("kind") in ("prompt", "reponse"):
+                continue                                         # l'instruction et la réponse de l'IA sont contrôlées à part (textes_ia)
             for k in ("text", "sous", "titre", "question", "reponse", "label", "valeur", "unite", "sous_titre"):
                 if b.get(k):
                     out.append(str(b[k]))
@@ -312,3 +396,19 @@ def textes_ecran(story: dict) -> list[str]:
 
 def textes_dits(story: dict) -> list[str]:
     return [align.parse_say(sc.get("say") or "")[0] for sc in story.get("scenes") or []]
+
+
+def textes_ia(story: dict) -> dict[str, list[str]]:
+    """Ce qui vient d'une IA ou lui est destiné : les instructions à copier, et les extraits de réponse affichés."""
+    prompts = [f.get("texte", "") for f in story.get("prompts") or []]
+    reponses = []
+    for sc in story.get("scenes") or []:
+        for b in sc.get("blocks") or []:
+            if b.get("kind") == "reponse":
+                reponses += [str(b.get("titre") or "")] + [str(x) for x in b.get("lignes") or []]
+    return {"prompts": [p for p in prompts if p], "reponses": [r for r in reponses if r]}
+
+
+def remplir(texte: str, exemple: dict) -> str:
+    """L'instruction telle qu'elle est réellement envoyée pour le test : chaque [champ] remplacé par sa valeur d'exemple."""
+    return re.sub(r"\[([^\[\]]{1,40})\]", lambda m: str((exemple or {}).get(m.group(1), m.group(0))), texte)

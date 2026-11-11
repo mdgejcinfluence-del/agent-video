@@ -14,7 +14,7 @@ from . import rushs, writer
 from .align import MARK
 from .publish import NETWORKS, packs
 
-BLOC = {"liste": "liste numérotée", "check": "liste à cocher", "cartes": "deux cartes qui s'opposent", "icones": "pictogrammes", "chrono": "chrono",
+BLOC = {"prompt": "l'instruction à copier, tapée dans la fenêtre de l'outil", "reponse": "extrait de la réponse de l'IA", "liste": "liste numérotée", "check": "liste à cocher", "cartes": "deux cartes qui s'opposent", "icones": "pictogrammes", "chrono": "chrono",
         "fenetre": "fenêtre de discussion", "mot": "mot en grand", "etiquette": "étiquette", "tuiles_video": "tuiles vidéo",
         "rush": "séquence filmée", "avant_apres": "séquence filmée : brute, puis montée"}
 
@@ -39,7 +39,21 @@ def ecrire(path: str | Path, story: dict, cfg: dict, res: dict, choix: dict | No
           f"- Pourquoi ce sujet maintenant : {(choix or {}).get('pourquoi') or 'storyboard fourni à la main'}",
           f"- Mot à commenter : **{story.get('keyword')}** · suite annoncée : {_plain(story.get('promesse'))}",
           f"- Texte de la miniature : {' / '.join(_plain(x) for x in story.get('couverture') or [])}", ""]
-    L += ["## 2. Faits et sources", ""]
+    L += ["## 2. Instructions montrées (bibliothèque de prompts)", ""]
+    fiches = story.get("prompts") or []
+    if fiches:
+        L += ["| Titre | Outil | Type | Statut | Vérification | Testé sur | Date |", "|---|---|---|---|---|---|---|"]
+        for f in fiches:
+            L.append(f"| {_plain(f.get('titre'))} | {_plain(f.get('outil'))} | {f.get('type') or 'prompt'} | {f.get('statut') or 'à vérifier'} | "
+                     f"{_plain(f.get('verification') or 'non vérifié')} | {_plain(f.get('teste_sur') or '—')} | {f.get('teste_le') or '—'} |")
+        for f in fiches:
+            L += ["", f"**{_plain(f.get('titre'))}** — {_plain(f.get('fonction'))}", "", "```", str(f.get("texte") or ""), "```", "",
+                  f"- Exemple utilisé : {', '.join(f'[{k}] = {v}' for k, v in (f.get('exemple') or {}).items()) or 'aucun champ à remplacer'}",
+                  f"- Résultat attendu : {_plain(f.get('resultat_attendu'))}",
+                  f"- Personnalisation : {_plain(f.get('personnalisation'))}"]
+    else:
+        L.append("Aucune instruction (vidéo de l'ancienne ligne éditoriale).")
+    L += ["", "## 2 bis. Faits et sources", ""]
     cites = [(f, faits_ok.get(f)) for f in story.get("faits") or []]
     if cites:
         L += ["| Fait | Affirmation | Source | Vérifié le | Limite |", "|---|---|---|---|---|"]
@@ -50,7 +64,8 @@ def ecrire(path: str | Path, story: dict, cfg: dict, res: dict, choix: dict | No
             else:
                 L.append(f"| {fid} | — | — | NON CONFIRMÉ | — |")
     else:
-        L.append("Aucun outil nommé, aucun chiffre avec unité : cette vidéo ne s'appuie sur aucun fait extérieur (conseils de méthode).")
+        L.append("Aucune fonction d'outil décrite, aucun chiffre avancé par le compte : cette vidéo ne s'appuie sur aucun fait extérieur. "
+                 "Les chiffres affichés dans l'écran « réponse » sont ceux de l'IA, pas des faits vérifiés.")
     L += ["", "## 3. Séquences filmées et droits", ""]
     rs = res.get("rushs") or {}
     if rs:
@@ -85,12 +100,14 @@ def ecrire(path: str | Path, story: dict, cfg: dict, res: dict, choix: dict | No
     qa = res.get("qa") or {}
     a = res.get("audio") or {}
     L += ["## 6. Contrôle avant publication", "",
-          "- ✅ **Forme et garde-fous** — aucune promesse, aucun chiffre sans source, aucun outil sans fait vérifié (contrôle automatique).",
+          "- ✅ **Forme et garde-fous** — aucune promesse, aucun chiffre sans source, aucune commande ni fonction d'outil sans page officielle (contrôle automatique).",
+          f"- {'✅' if all((f.get('statut') in ('testé', 'validé')) for f in fiches) and fiches else '⛔'} **Instructions vérifiées** — "
+          + ("; ".join(f"{_plain(f.get('titre'))} : {f.get('statut') or 'à vérifier'} ({_plain(f.get('verification') or 'non vérifié')})" for f in fiches) or "aucune instruction") + ".",
           f"- {'✅' if rs else '⛔'} **Séquences filmées** — {len(rs)} séquence(s), chacune contrôlée (format, netteté, mouvement, cohérence avec la phrase).",
           f"- {'✅' if not (res.get('layout') or {}).get('warnings') else '⛔'} **Lisibilité** — " + ("aucun débordement, tout le texte est au-dessus de la zone couverte par les boutons." if not (res.get('layout') or {}).get('warnings') else "; ".join(res['layout']['warnings'])),
           f"- ✅ **Son** — niveau {a.get('lufs')} LUFS, voix {a.get('clarte_db')} dB au-dessus du fond, sous-titres synchronisés mot à mot. Personne n'a écouté la vidéo.",
           f"- {'✅' if qa.get('ok') else '⛔'} **Contrôle qualité** — " + ("réussi" if qa.get("ok") else "; ".join(qa.get("problems") or [])) + ("" if not qa.get("warnings") else " ; à noter : " + "; ".join(qa["warnings"])),
-          f"- {'✅' if writer.promo_active(cfg) else 'ℹ️'} **Écran de fin** — " + ("la formation en promo est annoncée (promo confirmée, lien en bio renseigné)." if writer.promo_active(cfg) else "la formation n'est pas annoncée (offer.promo et offer.lien_bio non renseignés) : l'écran de fin annonce seulement la suite."),
+          f"- {'✅' if writer.ebook_actif(cfg) else 'ℹ️'} **Écran de fin** — " + ("l'e-book est annoncé (offer.ebook.en_vente à true, lien en bio renseigné)." if writer.ebook_actif(cfg) else "l'e-book n'est pas annoncé (il n'est pas encore en vente : offer.ebook.en_vente à false) ; l'écran de fin annonce seulement la suite."),
           ""]
     L.append("**Publication : " + ("RETENUE** — " + " ; ".join(bloquants) if bloquants else "rien ne bloque.**"))
     path.write_text("\n".join(L) + "\n", encoding="utf-8")

@@ -4,10 +4,14 @@ L'agent publie sans validation humaine. Il ne publie donc QUE ce que ses contrô
   1. le storyboard respecte la forme et les garde-fous (aucune promesse, aucun chiffre sans source, aucun outil sans fait vérifié) ;
   2. chaque séquence filmée a passé ses contrôles (format, netteté, cohérence avec la phrase, droits) ;
   3. le contrôle qualité de la vidéo est réussi (format, durée, son, mise en page, sous-titres) ;
-  4. si un fait vérifié cité a été suspendu par la veille entre l'écriture et la publication, la vidéo est retenue.
+  4. si un fait vérifié cité a été suspendu par la veille entre l'écriture et la publication, la vidéo est retenue ;
+  5. chaque instruction montrée a été vérifiée le jour même : essai réel sur Gemini pour un prompt, page officielle relue
+     pour une commande ou un réglage. Une instruction « à vérifier » ou « rejetée » retient la vidéo.
 Pour tout arrêter : publish.dry_run: true dans config.yaml, ou désactiver la tâche dans l'onglet Actions.
 """
 from __future__ import annotations
+
+from . import essai
 
 
 def bloquants(cfg: dict, story: dict, qa: dict | None, faits_ok: dict | None = None) -> list[str]:
@@ -17,4 +21,7 @@ def bloquants(cfg: dict, story: dict, qa: dict | None, faits_ok: dict | None = N
     for fid in story.get("faits") or []:
         if faits_ok is not None and fid not in faits_ok:
             out.append(f"le fait « {fid} » n'est plus confirmé par la veille")
+    non = essai.verifie(story)
+    if non:
+        out.append("instruction non vérifiée : " + " ; ".join(non))
     return out

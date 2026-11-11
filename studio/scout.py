@@ -264,13 +264,26 @@ def faits_confirmes(root: str | Path, state, today: str | None = None) -> dict[s
 
 
 # --------------------------------------------------------------------------- nouveaux faits, trouvés par l'agent
-PROPOSER = """Tu aides un compte de vidéos courtes (astuces pour filmer, monter et publier des vidéos avec un téléphone et l'IA) à ne dire que des choses vraies.
-Propose des FAITS vérifiables sur des outils utiles à ce public (montage, sous-titres, images, voix, publication).
-Chaque fait doit pouvoir être relu sur une page OFFICIELLE de l'outil (son site, sa documentation, sa page de tarifs ou de licence), accessible sans compte.
+PROPOSER = """Tu aides un compte de vidéos courtes spécialisé dans les prompts, les commandes et les techniques d'utilisation des intelligences artificielles à ne dire que des choses vraies.
+Propose des FAITS vérifiables sur des FONCTIONS d'outils d'IA utiles à des débutants : ChatGPT, Gemini, Claude, Claude Code, Perplexity, Microsoft Copilot, NotebookLM, DeepSeek,
+Canva, Gamma, Suno, ElevenLabs, Runway, Kling, Veo, Leonardo, Ideogram, Midjourney, Cursor. Un fait = un réglage, un menu, une commande officielle (/mot), une fonction, une limite d'offre.
+Chaque fait doit pouvoir être relu sur une page OFFICIELLE de l'outil (son site, son centre d'aide, sa documentation, sa page de tarifs), accessible sans compte.
 Réponds par un objet JSON : {"faits": [{"id": "outil-sujet" en minuscules, "outil": nom de l'outil, "affirmation": le fait en français, 160 caractères au plus,
 "url": adresse https de la page officielle, "citation": une phrase EXACTE de cette page (4 à 16 mots, dans la langue de la page) qui prouve le fait,
-"gratuit": true seulement si la citation dit que c'est gratuit, "nombres": les chiffres cités, "limite": ce que le fait ne dit pas ou la condition à connaître}]}
-L'affirmation traduit fidèlement la citation, rien de plus. Aucun chiffre qui n'est pas dans la citation. Si tu n'es pas sûr de la phrase exacte, ne propose pas le fait."""
+"commandes": les commandes (/mot) qui figurent mot pour mot dans la citation, sinon [],
+"gratuit": true seulement si la citation dit que c'est gratuit, "nombres": les chiffres cités, "limite": la condition à connaître (offre, pays, version, application)}]}
+L'affirmation traduit fidèlement la citation, rien de plus. Aucun chiffre ni aucune commande qui n'est pas dans la citation. N'invente jamais une commande, un raccourci ou une fonction secrète.
+Si tu n'es pas sûr de la phrase exacte, ne propose pas le fait."""
+
+
+# sites officiels des outils dont le nom ne figure pas dans l'adresse (centre d'aide d'OpenAI pour ChatGPT, pages Google pour Gemini…)
+OFFICIELS = {
+    "chatgpt": ("openai.com", "chatgpt.com"), "gpt": ("openai.com", "chatgpt.com"), "sora": ("openai.com",),
+    "gemini": ("google.com", "gemini.google", "ai.google.dev", "blog.google"), "notebooklm": ("google.com", "notebooklm.google"), "veo": ("google.com", "deepmind.google"),
+    "claude": ("claude.com", "claude.ai", "anthropic.com"), "copilot": ("microsoft.com",), "perplexity": ("perplexity.ai",), "deepseek": ("deepseek.com",),
+    "canva": ("canva.com",), "leonardo": ("leonardo.ai",), "midjourney": ("midjourney.com",), "ideogram": ("ideogram.ai",), "suno": ("suno.com",),
+    "elevenlabs": ("elevenlabs.io",), "runway": ("runwayml.com",), "kling": ("klingai.com", "kuaishou.com"), "gamma": ("gamma.app",), "cursor": ("cursor.com",),
+}
 
 
 def _domaine_officiel(url: str, outil: str) -> bool:
@@ -279,6 +292,9 @@ def _domaine_officiel(url: str, outil: str) -> bool:
         return False
     host = m.group(1).lower()
     cle = re.sub(r"[^a-z0-9]", "", outil.lower())
+    for nom, domaines in OFFICIELS.items():
+        if nom in cle and any(host == d or host.endswith("." + d) for d in domaines):
+            return True
     return bool(cle) and len(cle) >= 3 and cle in re.sub(r"[^a-z0-9]", "", host)
 
 
@@ -325,7 +341,8 @@ def proposer_faits(brain, root: str | Path, state, cfg: dict, log=print, fetch=_
         mem["faits"][fid] = {"id": fid, "affirmation": aff, "organisme": f"{outil} (site officiel)", "titre": "", "url": url, "doit_contenir": [cit],
                              "verification": "automatique", "publie_le": "", "verifie_le": today, "territoire": "international",
                              "limite": str(f.get("limite") or "")[:200], "affichage": re.sub(r"^https://(www\.)?", "", url)[:60], "outils": [outil],
-                             "gratuit": gratuit, "nombres": [str(n) for n in (f.get("nombres") or []) if str(n) in cit], "origine": "modele"}
+                             "gratuit": gratuit, "nombres": [str(n) for n in (f.get("nombres") or []) if str(n) in cit],
+                             "commandes": [str(c) for c in (f.get("commandes") or []) if re.fullmatch(r"/[a-zA-Z][\w:\-]{1,30}", str(c)) and str(c) in cit], "origine": "modele"}
         gardes += 1
         log(f"veille : nouveau fait vérifié « {fid} » — {aff[:90]} ({url[:60]})")
     state.save("faits_auto", mem)
