@@ -1,0 +1,42 @@
+{
+ "date": "2026-11-11",
+ "faits": {
+  "remotion-principe": {
+   "ok": true,
+   "le": "2026-11-11",
+   "http": 200,
+   "manque": []
+  },
+  "remotion-claude-code": {
+   "ok": true,
+   "le": "2026-11-11",
+   "http": 200,
+   "manque": []
+  },
+  "remotion-licence-gratuite": {
+   "ok": true,
+   "le": "2026-11-11",
+   "http": 200,
+   "manque": []
+  },
+  "remotion-licence-createurs": {
+   "ok": true,
+   "le": "2026-11-11",
+   "http": 200,
+   "manque": []
+  },
+  "remotion-licence-automatisation": {
+   "ok": true,
+   "le": "2026-11-11",
+   "http": 200,
+   "manque": []
+  },
+  "remotion-licence-seuil": {
+   "ok": true,
+   "le": "2026-11-11",
+   "http": 200,
+   "manque": []
+  }
+ },
+ "changements": []
+}

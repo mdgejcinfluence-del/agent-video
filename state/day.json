@@ -1,9 +1,13 @@
 {
  "2026-11-11": {
   "slots": [
-   "07:30",
+   "12:30",
    "20:30"
   ],
+  "segments": {
+   "12:30": "createur_freelance",
+   "20:30": "commercant"
+  },
   "done": {
    "manuel-11:09": {
     "tries": 1,
@@ -39,6 +43,11 @@
     "tries": 1,
     "ok": true,
     "post": "20261111-1135-motion"
+   },
+   "manuel-13:49": {
+    "tries": 1,
+    "ok": true,
+    "post": "20261111-1349-photo"
    }
   }
  }
