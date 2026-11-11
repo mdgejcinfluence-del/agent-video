@@ -1,0 +1,50 @@
+{
+ "fait_le": "2026-11-11T15:28:18+00:00",
+ "videos_publiees": 0,
+ "videos_mesurees": 0,
+ "poids_avant": {
+  "methode": 0.22,
+  "liste": 0.18,
+  "erreurs": 0.18,
+  "avant_apres": 0.16,
+  "coulisses": 0.12,
+  "outil": 0.08,
+  "alerte": 0.06
+ },
+ "poids": {
+  "methode": 0.22,
+  "liste": 0.18,
+  "erreurs": 0.18,
+  "avant_apres": 0.16,
+  "coulisses": 0.12,
+  "outil": 0.08,
+  "alerte": 0.06
+ },
+ "tableau": {
+  "famille": [],
+  "hook_type": [],
+  "slot": [],
+  "duree": []
+ },
+ "constats": [
+  "0 vidéo(s) mesurée(s) sur 0 publiée(s) : il en faut 4 pour tirer une conclusion. Rien n'est changé."
+ ],
+ "decisions": [],
+ "diagnostic": "",
+ "prochain": "2026-11-14",
+ "historique": [
+  {
+   "le": "2026-11-11",
+   "mesurees": 0,
+   "poids": {
+    "methode": 0.22,
+    "liste": 0.18,
+    "erreurs": 0.18,
+    "avant_apres": 0.16,
+    "coulisses": 0.12,
+    "outil": 0.08,
+    "alerte": 0.06
+   }
+  }
+ ]
+}
