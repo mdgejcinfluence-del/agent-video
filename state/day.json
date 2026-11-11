@@ -58,6 +58,11 @@
     "tries": 1,
     "ok": true,
     "post": "20261111-1356-visuel"
+   },
+   "manuel-13:59": {
+    "tries": 1,
+    "ok": true,
+    "post": "20261111-1359-charte"
    }
   }
  }
