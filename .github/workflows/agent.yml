@@ -57,13 +57,14 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Cache du navigateur de rendu et des voix
+      - name: Cache du navigateur de rendu, de ffmpeg et des voix
         uses: actions/cache@v6
         with:
           path: |
             ~/.cache/ms-playwright
+            ~/.cache/agent-video
             .voices
-          key: outils-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+          key: outils-v3-${{ runner.os }}-${{ hashFiles('requirements.txt', 'setup.sh') }}
 
       - name: Installation
         timeout-minutes: 15          # un miroir de paquets en panne ne doit pas bloquer la file d'attente

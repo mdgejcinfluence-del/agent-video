@@ -28,6 +28,11 @@ import sys
 import time
 import traceback
 from pathlib import Path
+
+# ffmpeg et ffprobe « autonomes » posés par setup.sh quand le système n'en fournit pas (voir setup.sh)
+_OUTILS = Path.home() / ".cache" / "agent-video" / "bin"
+if _OUTILS.is_dir():
+    os.environ["PATH"] = f"{_OUTILS}{os.pathsep}{os.environ.get('PATH', '')}"
 from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent
@@ -393,7 +398,7 @@ def cmd_doctor(args, cfg, state) -> int:
         ok = ok and (good is not False)
         print(f"  {'✅' if good else ('⚠️ ' if good is None else '❌')} {label}{(' — ' + detail) if detail else ''}")
     print("Outils")
-    line(bool(shutil.which("ffmpeg")), "ffmpeg")
+    line(bool(shutil.which("ffmpeg")) and bool(shutil.which("ffprobe")), f"ffmpeg et ffprobe — {shutil.which('ffmpeg') or 'introuvable'}")
     try:
         from playwright.sync_api import sync_playwright
         with sync_playwright() as p:
