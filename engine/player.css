@@ -115,6 +115,7 @@ body { font-family: "Inter Tight", system-ui, sans-serif; color: var(--ink); -we
   background: linear-gradient(180deg, var(--accent2), var(--accent));
   box-shadow: 0 16px 30px rgba(150, 60, 25, .36), inset 0 -6px 10px rgba(0,0,0,.16), inset 0 3px 0 rgba(255,255,255,.28);
   white-space: nowrap; }
+.kw .caret { display: inline-block; width: 9px; height: 0.82em; margin: 0 5px 0 8px; border-radius: 4px; background: #fff; transform: skewX(-9deg); opacity: 0; }
 .cta .sub { position: absolute; left: 60px; right: 60px; top: 1010px; text-align: center; font-family: "Caveat", cursive;
   font-size: 66px; color: var(--accent); transform: rotate(-3deg); white-space: nowrap; }
 .cta .line { position: absolute; left: 0; right: 0; top: 1130px; display: flex; justify-content: center; gap: 26px; }

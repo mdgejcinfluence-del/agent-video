@@ -67,7 +67,7 @@ Le code est dans le dépôt, la tâche planifiée est dans `.github/workflows/ag
 3. **Regarder un essai.** Onglet *Actions* → « Agent vidéo » → ouvre la dernière exécution. Le
    résumé montre le journal (sujet choisi, durée, contrôle qualité, légende prévue). La vidéo est
    en bas de page, dans *Artifacts*. Pour en lancer un tout de suite : *Run workflow* → commande
-   `tick`, case « forcer » cochée. Pour vérifier les clés : commande `doctor`.
+   `tick`, case « forcer » cochée. Pour vérifier les clés et l'hébergement des vidéos : commande `doctor`.
 4. **Lancer.** Quand l'essai te convient, que la clé Buffer est en place et que la page de vente
    de la formation est en ligne avec son lien dans ta bio : dans `config.yaml`, passe
    `publish.dry_run` à `false` (icône crayon sur GitHub). À partir de là, l'agent publie
@@ -132,7 +132,7 @@ python3 run.py make --story examples/demo_storyboard.json --no-publish   # à pa
 python3 run.py demo            # la vidéo d'exemple
 python3 run.py plan            # plan du jour + ce que le stratège a appris
 python3 run.py stats           # relève les statistiques maintenant
-python3 run.py doctor --live   # vérifie outils et clés (1 appel d'essai par clé)
+python3 run.py doctor --live   # vérifie outils, clés (1 appel d'essai par clé) et hébergement des vidéos
 ```
 
 ## Ce qu'il faut savoir avant de publier
@@ -158,7 +158,7 @@ python3 run.py doctor --live   # vérifie outils et clés (1 appel d'essai par c
 |---|---|
 | « écriture par le LLM impossible » | Clé absente ou quota du jour atteint : l'agent prend un scénario de réserve. Vérifie avec la commande `doctor`. |
 | « aucun réseau n'a reçu la vidéo » | Clé Buffer absente, canal déconnecté dans Buffer, ou vidéo refusée : le détail est dans le journal de l'exécution. |
-| « pas d'adresse publique pour la vidéo » | GitHub Pages ne sert pas la branche `studio-media`. |
+| « pas d'adresse publique pour la vidéo » | GitHub Pages ne sert pas la branche `studio-media`. Lance la commande `doctor` : elle envoie un fichier d'essai sur cette branche et te dit si l'adresse publique répond. |
 | Les réveils GitHub s'arrêtent | GitHub suspend les tâches planifiées d'un dépôt public resté 60 jours sans activité. L'agent enregistre sa mémoire dans le dépôt à chaque réveil, ce qui devrait compter comme activité (non vérifié sur la durée). Si cela arrive : onglet *Actions* → « Agent vidéo » → *Enable workflow*. |
 
 ## Variante : sur un serveur à toi

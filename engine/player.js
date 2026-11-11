@@ -246,15 +246,21 @@
 
       else if (sc.type === 'cta') {
         if (tl.avatar) { const a = el('div', 'avatar'); a.style.backgroundImage = `url("${tl.avatar}")`; root.appendChild(a); pop(a, t0 + 0.12, 0.45); }
-        const card = el('div', 'ctacard', `<div class="cta-word">${rich(sc.verb || 'Commente')}</div><div class="kw">“<span class="kwt"></span>”</div>`);
+        const card = el('div', 'ctacard', `<div class="cta-word">${rich(sc.verb || 'Commente')}</div><div class="kw">“<span class="kwt"></span><span class="caret"></span>”</div>`);
         root.appendChild(card);
         tw(card, t0 + 0.04, 0.5, { o: [0, 1], y: [80, 0], r: [-10, -3], b: [10, 0], s: [0.9, 1] }, 'back');
         const kwt = $('.kwt', card), kw = String(sc.keyword || ''), k0 = sc.kwAt != null ? sc.kwAt : t0 + 1.0, kd = Math.max(0.2, 0.055 * kw.length);
         cueTimes.push(k0);
         const pill = $('.kw', card);
         tw(pill, k0 + kd, 0.14, { s: [1, 1.07] }, 'out'); tw(pill, k0 + kd + 0.14, 0.3, { s: [1.07, 1] }, 'back');
-        TICK.push(t => { const n = Math.round(clamp((t - k0) / kd) * kw.length); const cur = kw.slice(0, n); if (kwt.textContent !== cur) kwt.textContent = cur; });
-        kwt.textContent = kw; fitWidth(pill, 720, 0.45); kwt.textContent = '';
+        // tant que le mot-clé n'est pas prononcé, un curseur clignote dans la pastille (elle n'a jamais l'air vide) ; il disparaît une fois le mot écrit
+        const caret = $('.caret', card);
+        TICK.push(t => {
+          const n = Math.round(clamp((t - k0) / kd) * kw.length); const cur = kw.slice(0, n); if (kwt.textContent !== cur) kwt.textContent = cur;
+          const typing = t < k0 + kd, lit = t >= k0 || Math.floor(Math.max(0, t - t0) / 0.4) % 2 === 0;
+          caret.style.display = typing ? '' : 'none'; caret.style.opacity = typing && lit ? '1' : '0';
+        });
+        kwt.textContent = kw; caret.style.display = 'none'; fitWidth(pill, 720, 0.45); kwt.textContent = ''; caret.style.display = '';
         if (sc.sub) {
           const s = el('div', 'sub', esc(sc.sub)); root.appendChild(s); fitWidth(s, 960, 0.5);
           const st = sc.subAt != null ? sc.subAt : k0 + kd + 0.35;

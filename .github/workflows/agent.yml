@@ -21,7 +21,7 @@ on:
   workflow_dispatch:
     inputs:
       commande:
-        description: "tick (réveil normal) | demo (vidéo d'exemple) | doctor (vérification des clés) | plan (ce que l'agent a appris)"
+        description: "tick (réveil normal) | demo (vidéo d'exemple) | doctor (vérification des clés et de l'hébergement des vidéos) | plan (ce que l'agent a appris)"
         default: "tick"
       forcer:
         description: "Fabriquer une vidéo tout de suite, même hors créneau"
