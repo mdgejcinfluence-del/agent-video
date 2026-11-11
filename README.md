@@ -40,7 +40,8 @@ de la chaîne. Détail des services gratuits, de leurs quotas et de leurs condit
 | Veille GitHub filtrée sur la ligne du compte | **A tourné.** |
 | Chaîne complète en mode essai, sans aucune clé | **A tourné** : `python3 run.py tick --force` va du réveil à la vidéo en un peu plus de 2 minutes (scénario de réserve). |
 | Logique interne (repères voix/image, réparation du scénario, fin imposée, mode essai, apprentissage du stratège, quotas, mesure du son) | **32 tests automatiques passent** (`python3 -m unittest discover -s tests`). |
-| Tâche GitHub Actions | Voir l'onglet *Actions* du dépôt. |
+| Tâche GitHub Actions | **A tourné** le 11/11/2026, sans aucune clé : installation, 32 tests, veille, voix, rendu d'une vidéo de réserve de 40,8 s, contrôle qualité, mémoire enregistrée dans le dépôt. 3 minutes en tout. La voix edge répond depuis les machines de GitHub. |
+| GitHub Pages (là où Buffer vient chercher la vidéo) | **A tourné** : une vidéo de 8 Mo envoyée sur la branche `studio-media` répondait à son adresse publique 24 s plus tard (bon type, bonne taille). Le fichier d'essai a été retiré. |
 | Écriture du scénario par NVIDIA / Groq | **Pas encore testée avec un vrai modèle** (aucune clé en place). Le dialogue avec le modèle est testé contre un faux serveur ; la qualité des scénarios se jugera sur les premiers essais. |
 | Publication et statistiques par Buffer | **Jamais envoyé au vrai Buffer.** Requêtes écrites d'après sa documentation et testées contre un faux serveur. |
 | Publication native Meta et TikTok, Cloudinary, voix Gemini | Écrites d'après les documentations, **non testées**. |
@@ -72,8 +73,9 @@ Le code est dans le dépôt, la tâche planifiée est dans `.github/workflows/ag
    `publish.dry_run` à `false` (icône crayon sur GitHub). À partir de là, l'agent publie
    2 vidéos par jour sans toi.
 
-GitHub Pages doit servir la branche `studio-media` (*Settings → Pages → Deploy from a branch* →
-`studio-media`, dossier `/ (root)`) : c'est là que Buffer vient chercher chaque vidéo.
+GitHub Pages sert la branche `studio-media` : c'est là que Buffer vient chercher chaque vidéo.
+Le réglage est déjà fait sur ce dépôt. Si tu le recrées ailleurs : *Settings → Pages → Deploy from
+a branch* → `studio-media`, dossier `/ (root)`.
 
 ### Mode essai et publication réelle
 
