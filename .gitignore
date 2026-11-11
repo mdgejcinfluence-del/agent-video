@@ -4,6 +4,8 @@
 out/
 .voices/
 .media_work/
+.cache/
+node_modules/
 __pycache__/
 *.pyc
 state/*.tmp

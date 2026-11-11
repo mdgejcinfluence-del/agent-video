@@ -1,0 +1,20 @@
+{
+  "name": "preuves-remotion",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Projet Remotion des preuves montrées dans les vidéos (intro de série, publicité produit).",
+  "scripts": {
+    "apercu": "remotion studio src/index.ts",
+    "rendu": "remotion render src/index.ts"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.542",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "4.0.542"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "typescript": "^5.0.0"
+  }
+}

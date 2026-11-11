@@ -1,0 +1,91 @@
+# =====================================================================
+#  FAITS VÉRIFIÉS — les seuls chiffres, prix, licences et fonctionnalités d'outils qu'une vidéo peut citer.
+#
+#  Chaque jour, la veille rouvre « url » et vérifie que chaque phrase de « doit_contenir » y figure encore.
+#    - phrase retrouvée  -> le fait est confirmé pour le cycle du jour ;
+#    - phrase disparue   -> CHANGEMENT : le fait est suspendu, les vidéos qui le citent ne sont pas publiées,
+#                           et tu es prévenu. À toi de relire la page et de corriger ce fichier.
+#  « mots » : formulations sensibles que ce fait autorise, à condition que la même phrase contienne la précision.
+#             Exemple : « gratuit » n'est accepté que dans une phrase qui dit aussi « 3 personnes ».
+#  Première vérification : 11 novembre 2026, en lisant directement les pages officielles.
+# =====================================================================
+fraicheur_jours: 3          # un fait non reconfirmé depuis plus de N jours ne peut plus être publié
+
+faits:
+  - id: remotion-principe
+    affirmation: "Remotion fabrique une vidéo à partir de code : chaque image est calculée à partir de son numéro, avec React."
+    organisme: "Remotion (documentation officielle)"
+    titre: "The fundamentals"
+    url: "https://www.remotion.dev/docs/the-fundamentals"
+    doit_contenir: ["give you a frame number and a blank canvas"]
+    publie_le: ""                       # date de publication non indiquée sur la page
+    verifie_le: "2026-11-11"
+    territoire: "international"
+    limite: "Décrit le principe du rendu ; ne dit rien du temps de calcul ni du matériel nécessaire."
+    affichage: "remotion.dev/docs/the-fundamentals"
+    mots: {}
+
+  - id: remotion-claude-code
+    affirmation: "Remotion documente son usage avec des agents de code comme Claude Code ; il faut un agent de code et Node.js."
+    organisme: "Remotion (documentation officielle)"
+    titre: "Prompting videos with Claude Code"
+    url: "https://www.remotion.dev/docs/ai/claude-code"
+    doit_contenir: ["Claude Code", "Node.js"]
+    publie_le: ""
+    verifie_le: "2026-11-11"
+    territoire: "international"
+    limite: "Les commandes d'installation changent d'une version à l'autre : les relire avant de les montrer."
+    affichage: "remotion.dev/docs/ai/claude-code"
+    mots: {}
+
+  - id: remotion-licence-gratuite
+    affirmation: "Remotion : licence gratuite pour les particuliers et les organisations jusqu'à 3 personnes."
+    organisme: "Remotion (page officielle licence et tarifs)"
+    titre: "License & Pricing"
+    url: "https://www.remotion.dev/docs/license/pricing"
+    doit_contenir: ["For individuals and companies of up to 3 people"]
+    publie_le: ""
+    verifie_le: "2026-11-11"
+    territoire: "international"
+    limite: "Ne couvre ni l'accès à Claude Code, ni le calcul, ni la voix, ni les images. Au-delà de 3 personnes, la licence est payante."
+    affichage: "remotion.dev/docs/license"
+    mots: {gratuit: ["3 personnes"]}
+
+  - id: remotion-licence-createurs
+    affirmation: "Remotion for Creators : 25 dollars par mois et par poste, pour les organisations qui n'ont pas droit à la licence gratuite."
+    organisme: "Remotion (page officielle licence et tarifs)"
+    titre: "License & Pricing"
+    url: "https://www.remotion.dev/docs/license/pricing"
+    doit_contenir: ["$25/mo per seat"]
+    publie_le: ""
+    verifie_le: "2026-11-11"
+    territoire: "international ; prix en dollars américains"
+    limite: "Un poste par personne ; conditions exactes à relire au moment de la souscription."
+    affichage: "remotion.dev/docs/license"
+    mots: {}
+
+  - id: remotion-licence-automatisation
+    affirmation: "Remotion for Automators : 0,01 dollar par rendu, avec un minimum de 100 dollars par mois."
+    organisme: "Remotion (page officielle licence et tarifs)"
+    titre: "License & Pricing"
+    url: "https://www.remotion.dev/docs/license/pricing"
+    doit_contenir: ["$0.01 per render, $100/mo minimum"]
+    publie_le: ""
+    verifie_le: "2026-11-11"
+    territoire: "international ; prix en dollars américains"
+    limite: "Concerne la création automatisée pour une organisation non éligible à la licence gratuite."
+    affichage: "remotion.dev/docs/license"
+    mots: {}
+
+  - id: remotion-licence-seuil
+    affirmation: "Selon les conditions de Remotion, une licence d'entreprise devient nécessaire à partir de 4 personnes ; Remotion n'est pas un logiciel open source."
+    organisme: "Remotion (conditions officielles)"
+    titre: "Terms and Conditions"
+    url: "https://www.remotion.dev/docs/terms"
+    doit_contenir: ["is 4 or more", "not open-source software"]
+    publie_le: ""
+    verifie_le: "2026-11-11"
+    territoire: "international"
+    limite: "Texte juridique en anglais ; en cas de doute, c'est la page officielle qui fait foi."
+    affichage: "remotion.dev/docs/terms"
+    mots: {"open source": ["pas open source", "pas un logiciel open source", "n'est pas open source"]}

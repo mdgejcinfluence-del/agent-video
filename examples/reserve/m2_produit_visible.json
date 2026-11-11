@@ -1,0 +1,111 @@
+{
+ "segment": "commercant",
+ "sujet": 6,
+ "preuve": "commerce-karite-exemple",
+ "hook_type": "probleme",
+ "hooks": [
+  {
+   "type": "resultat",
+   "text": "Voici la même pub avant et après une correction."
+  },
+  {
+   "type": "probleme",
+   "text": "Sur le premier essai, le texte cachait le produit."
+  },
+  {
+   "type": "contraste",
+   "text": "Une pub jolie ne sert à rien si on ne voit plus le produit."
+  }
+ ],
+ "hook_pourquoi": "Le défaut se voit en une seconde et touche à la confiance : c'est le problème que ce public veut éviter.",
+ "title": "Visuel promo : garder le produit visible et fidèle",
+ "couverture": "Ton produit doit se voir",
+ "keyword": "VISUEL",
+ "caption": "Premier essai : le texte passe devant le produit. Une correction écrite en une phrase, puis un second rendu où tout se voit. Exemple fictif.",
+ "hashtags": [
+  "commerce",
+  "visuelpromo",
+  "photoproduit",
+  "petiteentreprise"
+ ],
+ "faits": [],
+ "scenes": [
+  {
+   "type": "resultat",
+   "title": "Ton produit doit rester *visible*",
+   "public": "Si tu fais tes visuels promo",
+   "visuel": {
+    "avant": {
+     "ref": "v1",
+     "label": "1er essai"
+    },
+    "apres": {
+     "ref": "v2",
+     "label": "Corrigé"
+    }
+   },
+   "say": "Sur le premier essai, le texte cachait le produit. [public]Si tu fais tes visuels promo, voici comment le repérer et le corriger, sur un exemple."
+  },
+  {
+   "type": "etape",
+   "title": "Repère *le défaut*",
+   "blocks": [
+    {
+     "id": "a",
+     "kind": "erreur",
+     "ref": "v1",
+     "label": "produit caché"
+    }
+   ],
+   "say": "[a]D'abord, regarde le premier rendu en entier. [a1]Ici, le bandeau de commande passe devant le bas du pot."
+  },
+  {
+   "type": "etape",
+   "title": "Demande *la correction*",
+   "blocks": [
+    {
+     "id": "a",
+     "kind": "brief",
+     "source": "correction",
+     "text": "Remonte-le avec le reste du texte : rien ne doit cacher le produit.",
+     "hl": [
+      "rien ne doit cacher le produit"
+     ]
+    }
+   ],
+   "say": "[a]Ensuite, écris la correction en une phrase claire : [a1]rien ne doit cacher le produit."
+  },
+  {
+   "type": "etape",
+   "title": "Compare *avant, après*",
+   "blocks": [
+    {
+     "id": "a",
+     "kind": "avant_apres",
+     "avant": {
+      "ref": "v1",
+      "label": "Avant"
+     },
+     "apres": {
+      "ref": "v2",
+      "label": "Après"
+     }
+    }
+   ],
+   "say": "[a]Puis compare les deux rendus. [a1]Le texte est remonté, le pot est entièrement visible, et la photo n'a pas changé."
+  },
+  {
+   "type": "verif",
+   "title": "Ce que j'ai *vérifié*",
+   "visuel": {
+    "ref": "rendu"
+   },
+   "rows": [
+    "Le pot est entièrement visible",
+    "Même photo, même prix, même consigne"
+   ],
+   "limite": "C'est à toi de relire le prix et la consigne avant de publier.",
+   "say": "[r1]Le produit est visible, [r2]l'offre n'a pas bougé. [limite]Et avant de publier, c'est à toi de relire le prix et la consigne."
+  }
+ ]
+}

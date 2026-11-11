@@ -1,0 +1,110 @@
+{
+ "segment": "commercant",
+ "sujet": 12,
+ "preuve": "commerce-karite-exemple",
+ "hook_type": "contraste",
+ "hooks": [
+  {
+   "type": "resultat",
+   "text": "Voici une pub obtenue à partir de trois lignes écrites."
+  },
+  {
+   "type": "probleme",
+   "text": "Tu ne sais pas quoi écrire pour obtenir une bonne pub ?"
+  },
+  {
+   "type": "contraste",
+   "text": "Cette pub tient en 3 détails écrits à l'avance."
+  }
+ ],
+ "hook_pourquoi": "On croit que tout dépend de l'outil ; montrer que trois lignes écrites suffisent à cadrer la pub corrige cette idée.",
+ "title": "Les 3 détails à écrire avant de demander une pub pour ta boutique",
+ "couverture": "3 détails avant ta pub",
+ "keyword": "OFFRE",
+ "caption": "Le produit et son format, le prix exact, ce que le client doit faire : trois lignes à écrire avant de demander quoi que ce soit. Exemple fictif.",
+ "hashtags": [
+  "commerce",
+  "boutique",
+  "publicite",
+  "petiteentreprise"
+ ],
+ "faits": [],
+ "scenes": [
+  {
+   "type": "resultat",
+   "title": "3 détails avant *ta pub*",
+   "public": "Si tu as une boutique",
+   "visuel": {
+    "ref": "rendu"
+   },
+   "say": "Cette pub tient en 3 détails écrits à l'avance. [public]Si tu as une boutique, note-les avant de demander quoi que ce soit."
+  },
+  {
+   "type": "etape",
+   "title": "Le produit et *son format*",
+   "blocks": [
+    {
+     "id": "a",
+     "kind": "brief",
+     "source": "demande",
+     "text": "Produit : beurre de karité fouetté, pot de 200 g.",
+     "hl": [
+      "pot de 200 g"
+     ]
+    }
+   ],
+   "say": "[a]Un : le produit, avec [a1]son format exact. Ici, un pot de 200 grammes."
+  },
+  {
+   "type": "etape",
+   "title": "Le prix *exact*",
+   "blocks": [
+    {
+     "id": "a",
+     "kind": "brief",
+     "source": "demande",
+     "text": "Prix : 3 500 FCFA. N'invente rien d'autre.",
+     "hl": [
+      "3 500 FCFA"
+     ]
+    }
+   ],
+   "say": "[a]Deux : le prix exact, [a1]3 500 francs CFA. Et tu précises : n'invente rien d'autre."
+  },
+  {
+   "type": "etape",
+   "title": "Ce que le client *doit faire*",
+   "blocks": [
+    {
+     "id": "a",
+     "kind": "brief",
+     "source": "demande",
+     "text": "Fin : « Commande par message ».",
+     "hl": [
+      "Commande par message"
+     ]
+    },
+    {
+     "id": "b",
+     "kind": "media",
+     "ref": "rendu",
+     "label": "Le résultat"
+    }
+   ],
+   "say": "[a]Trois : ce que le client doit faire. [a1]Ici, commander par message. [b]Et voilà le rendu."
+  },
+  {
+   "type": "verif",
+   "title": "Ce que j'ai *vérifié*",
+   "visuel": {
+    "ref": "v2"
+   },
+   "rows": [
+    "Les 3 détails sont à l'écran",
+    "Rien n'a été ajouté sur le produit"
+   ],
+   "limite": "Exemple fictif : aucune vente n'est montrée ici.",
+   "say": "[r1]Les 3 détails sont à l'écran, [r2]et rien n'a été ajouté. [limite]C'est un exemple : aucune vente n'est montrée ici."
+  }
+ ]
+}

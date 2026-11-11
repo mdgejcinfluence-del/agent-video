@@ -1,4 +1,12 @@
-"""Veille : trouve des sujets frais et FACTUELS, à partir de sources gratuites et sans clé.
+"""Veille quotidienne, à partir de sources publiques, gratuites et sans clé.
+
+Deux rôles :
+  1. FAITS VÉRIFIÉS (data/faits.yaml) : chaque jour, l'agent rouvre la page officielle de chaque chiffre, prix ou
+     licence qu'une vidéo peut citer, et vérifie que la phrase attendue y figure encore. Un fait non reconfirmé
+     n'est plus publiable, et tout changement est signalé (voir verifier_faits).
+  2. ACTUALITÉ DES OUTILS : dépôts récents liés aux sujets, pour noter la fraîcheur d'un sujet.
+
+Seules des pages publiques sont lues, sans compte ni contournement. Détail de l'actualité des outils :
 
   * GitHub (API de recherche)  -> dépôts populaires/récents liés à la niche, avec leurs chiffres réels
   * Hacker News (API Algolia)  -> ce dont on parle cette semaine (désactivé par défaut : actualité souvent polémique)
@@ -14,10 +22,12 @@ que ces faits : c'est ce qui empêche le modèle d'inventer des chiffres.
 from __future__ import annotations
 
 import datetime as dt
+import html
 import os
 import re
 import time
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 import requests
 
@@ -161,4 +171,83 @@ def gather(cfg: dict, log=print) -> list[dict]:
     out += rss(rc.get("rss") or [], log=log)
     log(f"veille : {len(out)} candidats ({sum(c['source'] == 'github' for c in out)} GitHub, "
         f"{sum(c['source'] == 'hackernews' for c in out)} Hacker News, {sum(c['source'] == 'rss' for c in out)} RSS)")
+    return out
+
+
+# --------------------------------------------------------------------------- faits vérifiés (pages officielles)
+def _texte_page(url: str) -> tuple[int, str]:
+    r = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; veille-editoriale/1.0)", "Accept": "text/html"}, timeout=25)
+    t = re.sub(r"<script\b.*?</script>|<style\b.*?</style>", " ", r.text, flags=re.S | re.I)
+    return r.status_code, re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", t)))
+
+
+def charger_faits(root: str | Path) -> dict:
+    import yaml
+    p = Path(root) / "data" / "faits.yaml"
+    d = (yaml.safe_load(p.read_text(encoding="utf-8")) if p.exists() else {}) or {}
+    return {"fraicheur_jours": int(d.get("fraicheur_jours", 3)), "faits": {str(f["id"]): f for f in d.get("faits") or [] if f.get("id")}}
+
+
+def verifier_faits(root: str | Path, state, log=print, force: bool = False, fetch=_texte_page) -> dict:
+    """Rouvre chaque page officielle (une fois par jour) et note si la phrase attendue y figure encore.
+
+    Mémoire : state/veille.json = {"date", "faits": {id: {"ok", "le", "http", "manque"}}, "changements": [...]}.
+    """
+    base = charger_faits(root)
+    mem = state.load("veille", {"date": "", "faits": {}, "changements": []})
+    today = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
+    if mem.get("date") == today and not force:
+        return mem
+    pages: dict[str, tuple[int, str] | None] = {}
+    for fid, f in base["faits"].items():
+        url = str(f.get("url") or "")
+        if url not in pages:
+            try:
+                pages[url] = fetch(url)
+            except Exception as e:  # noqa: BLE001 — page injoignable : le fait garde son dernier état, sans nouvelle date
+                pages[url] = None
+                log(f"veille : {url} injoignable ({type(e).__name__}) — les faits de cette page ne sont pas reconfirmés aujourd'hui")
+        page = pages[url]
+        if page is None:
+            continue
+        code, text = page
+        low = text.lower()
+        manque = [s for s in (f.get("doit_contenir") or []) if str(s).lower() not in low]
+        ok = code == 200 and not manque
+        prev = mem["faits"].get(fid)
+        was = True if prev is None else bool(prev.get("ok"))          # l'état initial est celui du fichier (vérifié à la main)
+        mem["faits"][fid] = {"ok": ok, "le": today, "http": code, "manque": manque}
+        if was and not ok:
+            msg = f"CHANGEMENT sur {url} : « {'» , « '.join(map(str, manque)) or 'page en erreur ' + str(code)} » introuvable — fait « {fid} » suspendu"
+            mem.setdefault("changements", []).append({"le": today, "fait": fid, "detail": msg})
+            log("veille : " + msg)
+        elif not was and ok:
+            mem.setdefault("changements", []).append({"le": today, "fait": fid, "detail": "de nouveau confirmé"})
+            log(f"veille : fait « {fid} » de nouveau confirmé sur la page officielle")
+    mem["changements"] = mem.get("changements", [])[-60:]
+    if any(p is not None for p in pages.values()):
+        mem["date"] = today
+    state.save("veille", mem)
+    n_ok = sum(1 for fid in base["faits"] if (mem["faits"].get(fid) or {}).get("ok") and mem["faits"][fid].get("le") == today)
+    log(f"veille : {n_ok}/{len(base['faits'])} faits reconfirmés aujourd'hui sur {len([p for p in pages.values() if p])} page(s) officielle(s)")
+    return mem
+
+
+def faits_confirmes(root: str | Path, state, today: str | None = None) -> dict[str, dict]:
+    """{id: fait} pour les faits utilisables aujourd'hui (dernier contrôle réussi et assez récent)."""
+    base = charger_faits(root)
+    mem = state.load("veille", {"date": "", "faits": {}, "changements": []})
+    now_ = dt.date.fromisoformat(today) if today else dt.datetime.now(dt.timezone.utc).date()
+    out = {}
+    for fid, f in base["faits"].items():
+        chk = mem["faits"].get(fid)
+        if chk is not None and not chk.get("ok"):
+            continue
+        last = str((chk or {}).get("le") or f.get("verifie_le") or "")
+        try:
+            age = (now_ - dt.date.fromisoformat(last)).days
+        except ValueError:
+            continue
+        if age <= base["fraicheur_jours"]:
+            out[fid] = {**f, "verifie_le": last}
     return out

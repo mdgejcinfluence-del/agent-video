@@ -1,0 +1,106 @@
+{
+ "segment": "commercant",
+ "sujet": 5,
+ "preuve": "commerce-karite-exemple",
+ "hook_type": "resultat",
+ "hooks": [
+  {
+   "type": "resultat",
+   "text": "Cette photo devient une pub de 6 secondes."
+  },
+  {
+   "type": "probleme",
+   "text": "Tu as de belles photos de tes produits, mais aucune vidéo ?"
+  },
+  {
+   "type": "contraste",
+   "text": "Pour une pub animée, il ne faut pas filmer : une photo suffit."
+  }
+ ],
+ "hook_pourquoi": "Pour un commerçant, voir la photo et la pub côte à côte dit tout de suite ce qu'il peut obtenir avec ce qu'il a déjà.",
+ "title": "Transformer une photo de produit en publicité animée",
+ "couverture": "Une photo devient une pub",
+ "keyword": "PHOTO",
+ "caption": "Une seule photo, une offre écrite noir sur blanc, et un contrôle avant de publier : la méthode montrée sur un exemple fictif de beurre de karité.",
+ "hashtags": [
+  "commerce",
+  "publicite",
+  "photoproduit",
+  "petiteentreprise"
+ ],
+ "faits": [],
+ "scenes": [
+  {
+   "type": "resultat",
+   "title": "Cette photo devient *une pub*",
+   "public": "Si tu vends tes produits",
+   "visuel": {
+    "avant": {
+     "ref": "photo",
+     "label": "Ta photo"
+    },
+    "apres": {
+     "ref": "rendu",
+     "label": "La pub"
+    }
+   },
+   "say": "Cette photo devient une pub de 6 secondes. [public]Si tu vends tes produits, voici la méthode, sur un exemple."
+  },
+  {
+   "type": "etape",
+   "title": "Pars de *ta photo*",
+   "blocks": [
+    {
+     "id": "a",
+     "kind": "media",
+     "ref": "photo",
+     "label": "Photo de départ"
+    }
+   ],
+   "say": "[a]D'abord, une seule photo de ton produit, nette et bien éclairée. Elle ne sera pas retouchée."
+  },
+  {
+   "type": "etape",
+   "title": "Écris *ton offre*",
+   "blocks": [
+    {
+     "id": "a",
+     "kind": "brief",
+     "source": "demande",
+     "text": "Produit : beurre de karité fouetté, pot de 200 g. Prix : 3 500 FCFA. N'invente rien d'autre.",
+     "hl": [
+      "3 500 FCFA",
+      "N'invente rien d'autre."
+     ]
+    }
+   ],
+   "say": "[a]Ensuite, tu écris ton offre : le produit, [a1]le prix exact, [a2]et une règle : n'invente rien d'autre."
+  },
+  {
+   "type": "etape",
+   "title": "Contrôle *le rendu*",
+   "blocks": [
+    {
+     "id": "a",
+     "kind": "media",
+     "ref": "rendu",
+     "label": "La pub"
+    }
+   ],
+   "say": "[a]Puis tu regardes le rendu : le nom, le prix et la consigne sont lisibles, et rien ne cache le produit."
+  },
+  {
+   "type": "verif",
+   "title": "Ce que j'ai *vérifié*",
+   "visuel": {
+    "ref": "v2"
+   },
+   "rows": [
+    "Prix affiché : 3 500 FCFA, comme écrit",
+    "La photo n'est pas retouchée"
+   ],
+   "limite": "Il faut un ordinateur : ce rendu n'a pas été fait sur téléphone.",
+   "say": "[r1]Le prix affiché est celui de la demande, [r2]la photo est intacte. [limite]À savoir : il faut un ordinateur, pas seulement un téléphone."
+  }
+ ]
+}

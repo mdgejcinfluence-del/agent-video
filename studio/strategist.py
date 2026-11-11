@@ -1,49 +1,35 @@
-"""Le stratège : lit les statistiques, note chaque vidéo, et décide de la suivante.
+"""Le stratège : choisit le public, le sujet, la preuve et l'accroche de la prochaine vidéo, et lit les mesures.
 
-Deux étages :
-  1. un calcul simple et vérifiable (bandit de Thompson) choisit le FORMAT, le type d'accroche,
-     la longueur et les créneaux horaires : il favorise ce qui a marché, tout en gardant une
-     part d'essais (sinon il ne découvrirait jamais mieux) ;
-  2. le LLM choisit le SUJET et l'angle parmi les candidats de la veille, en lisant un mémo des
-     meilleures et des pires vidéos. S'il est indisponible, un classement déterministe prend le relais.
+Trois règles, tirées de l'étude de marché du 11 novembre 2026 :
+  1. PAS DE PREUVE, PAS DE VIDÉO : un sujet n'est retenu que si un dossier preuves/<id>/ le couvre pour ce public.
+  2. UN SEUL PUBLIC PAR VIDÉO, et les deux séries alternent : chaque jour de publication sert les deux publics.
+  3. ON NE CHANGE QU'UN FACTEUR À LA FOIS : quand un sujet revient, c'est avec la même preuve et une autre accroche.
 
-Les « a priori » de départ viennent de l'observation de comptes de la même niche (petit
-échantillon) : ils sont volontairement faibles et sont écrasés par tes propres statistiques.
+Chaque sujet reçoit une note de 0 à 5 (fiche sujet). C'est un outil de tri interne, pas une probabilité de succès :
+    problème pour le public 30 % · preuve visuelle réelle 25 % · signal de demande vérifiable 20 %
+    adéquation à la formation 15 % · fraîcheur vérifiée 10 %
+
+Les mesures ne désignent jamais une « gagnante » sur les seules vues : la note de qualité d'une vidéo compare la part
+regardée, les partages, les enregistrements et les commentaires à ceux des vidéos du MÊME public sur le MÊME réseau.
+Les clics et les ventes ne sont pas visibles par l'agent : tant que tu ne les saisis pas, il le dit.
 """
 from __future__ import annotations
 
 import datetime as dt
 import math
 import random
-import re
 import statistics as st
+from pathlib import Path
 
+import yaml
+
+from . import preuves
 from .state import State, now
 
-FORMATS = {
-    "liste": "liste chiffrée d'outils/ressources (« 5 skills pour… ») : une section par élément",
-    "transforme": "transformation (« Transforme X en Y ») : un seul outil, bénéfice concret, étapes",
-    "tuto": "mini-tutoriel en 3 étapes : résultat promis au début, puis les étapes",
-    "mythe": "idée reçue ou piège (« X est nul en Y ? ») : on démonte, puis on donne la bonne méthode",
-    "comparatif": "deux options comparées, verdict net",
-    "offre": "présentation directe de la formation : pour qui, ce qu'on y apprend, comment y accéder",
-}
-HOOKS = {
-    "chiffre": "accroche par un chiffre précis (« 5 outils », « 40 requêtes par minute »)",
-    "promesse": "accroche par le résultat (« Tu peux… sans… »)",
-    "question": "accroche par une question que la cible se pose",
-    "alerte": "accroche par une erreur ou un piège à éviter",
-}
-LENGTHS = {"court": (26, 36), "moyen": (36, 48)}
-
-# a priori (en « points de score », 0 = vidéo médiane) : hypothèses de départ, corrigées par tes statistiques
-PRIOR = {
-    "format": {"liste": 0.25, "transforme": 0.35, "tuto": 0.0, "mythe": 0.0, "comparatif": -0.1},
-    "hook": {"chiffre": 0.2, "promesse": 0.15, "question": 0.0, "alerte": 0.0},
-    "length": {"court": 0.2, "moyen": 0.0},
-    "slot": {"soir": 0.15},
-}
-N0 = 2.0     # poids de l'a priori, en « nombre de vidéos »
+SEGMENTS = ("commercant", "createur_freelance")
+HOOKS = ("resultat", "probleme", "contraste")
+POIDS = {"probleme": 30, "preuve": 25, "demande": 20, "formation": 15, "fraicheur": 10}
+N0 = 2.0     # poids de l'a priori (neutre), en « nombre de vidéos »
 
 
 def slot_bucket(hhmm: str) -> str:
@@ -51,254 +37,322 @@ def slot_bucket(hhmm: str) -> str:
     return "matin" if h < 11 else "midi" if h < 16 else "soir"
 
 
-# --------------------------------------------------------------------------- notation
-def _latest(snaps: list[dict], min_h: float = 20) -> dict | None:
-    ok = [s for s in snaps or [] if s.get("h", 0) >= min_h and s.get("views") is not None]
-    return max(ok, key=lambda s: s["h"]) if ok else None
+# --------------------------------------------------------------------------- banque de sujets
+def banque(root: str | Path) -> dict:
+    d = yaml.safe_load((Path(root) / "data" / "sujets.yaml").read_text(encoding="utf-8")) or {}
+    poids = {**POIDS, **(d.get("poids") or {})}
+    tot = sum(poids.values()) or 1
+    return {"poids": {k: v / tot for k, v in poids.items()}, "themes": list(d.get("themes") or ["motion", "visuels", "sites", "contenus"]),
+            "sujets": {int(s["n"]): s for s in d.get("sujets") or []}}
 
 
-def score_posts(state: State, cfg: dict) -> None:
-    """Calcule post['score'] : 0 = médiane du compte, +1 = deux fois mieux, -1 = deux fois moins bien."""
-    w = (cfg.get("stats") or {}).get("weights") or {"views": 0.5, "comments": 0.2, "shares": 0.15, "saves": 0.15}
-    posts = state.posts
-    per_net: dict[str, list[tuple[dict, dict]]] = {}
-    for p in posts:
-        for net, snaps in (p.get("stats") or {}).items():
-            s = _latest(snaps)
-            if s:
-                per_net.setdefault(net, []).append((p, s))
-    parts: dict[str, list[float]] = {}
-    for net, rows in per_net.items():
-        if len(rows) < 3:
+def references(root: str | Path, segment: str, n: int) -> list[dict]:
+    p = Path(root) / "data" / "references.yaml"
+    d = (yaml.safe_load(p.read_text(encoding="utf-8")) if p.exists() else {}) or {}
+    rows = [dict(r, observe_le=d.get("observe_le"), origine=d.get("source")) for r in d.get("references") or []]
+    exact = [r for r in rows if n in (r.get("sujets") or [])]
+    return (exact + [r for r in rows if r not in exact and r.get("segment") == segment])[:3]
+
+
+def _clamp5(x) -> float:
+    try:
+        return max(0.0, min(5.0, float(x)))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def fiche(sujet: dict, packs: dict[str, dict], state: State, bq: dict, faits_ok: dict[str, dict], veille_items: list[dict] | None = None) -> dict:
+    """Fiche sujet : les cinq critères, la note pondérée, et ce qu'on sait ou non (niveau de confiance)."""
+    n, seg = int(sujet["n"]), sujet["segment"]
+    dispo = preuves.pour_sujet(packs, n, seg)
+    pack = dispo[0] if dispo else None
+    notes = sujet.get("notes") or {}
+    c: dict[str, float] = {"probleme": _clamp5(notes.get("probleme")), "formation": _clamp5(notes.get("formation")),
+                           "preuve": float(preuves.note(pack))}
+    conf = []
+    # demande : tes mesures d'abord (vidéos déjà publiées sur ce sujet), sinon ce que tu as saisi, sinon « inconnu »
+    own = [p["score"] for p in state.posts if (p.get("brief") or {}).get("sujet") == n and p.get("score") is not None]
+    if own:
+        c["demande"] = _clamp5(2.5 + 1.25 * (sum(own) / len(own)))
+        conf.append(f"demande : mesurée sur {len(own)} vidéo(s) de ce compte")
+    elif sujet.get("demande") not in (None, ""):
+        c["demande"] = _clamp5(sujet["demande"])
+        conf.append(f"demande : saisie à la main ({sujet.get('demande_source') or 'source non précisée'})")
+    else:
+        c["demande"] = 0.0
+        conf.append("demande : inconnue (aucune recherche, question ou mesure enregistrée) — comptée 0")
+    # fraîcheur : faits liés reconfirmés par la veille, actualité récente des outils cités
+    lies = [f for f in (sujet.get("faits") or [])]
+    ok = [f for f in lies if f in faits_ok]
+    kws = [str(k).lower() for k in (sujet.get("veille") or [])]
+    recent = 0
+    limit = (now() - dt.timedelta(days=14)).strftime("%Y-%m-%d")
+    for it in veille_items or []:
+        blob = (it.get("title", "") + " " + " ".join(it.get("facts", []))).lower()
+        if kws and any(k in blob for k in kws) and str(it.get("date", ""))[:10] >= limit:
+            recent += 1
+    c["fraicheur"] = (3.0 if lies and len(ok) == len(lies) else 0.0) + (2.0 if recent else 0.0)
+    if lies and len(ok) < len(lies):
+        conf.append("fraîcheur : " + ", ".join(f for f in lies if f not in ok) + " non reconfirmé(s) par la veille")
+    elif lies:
+        conf.append(f"fraîcheur : {len(ok)} fait(s) reconfirmé(s) sur les pages officielles")
+    else:
+        conf.append("fraîcheur : aucun fait d'outil à vérifier pour ce sujet")
+    if recent:
+        conf.append(f"{recent} actualité(s) d'outil de moins de 14 jours sur ce thème")
+    conf.append({0: "preuve : aucun dossier", 2: "preuve : exemple fictif seulement", 4: "preuve : dossier réel, non signé",
+                 5: "preuve : dossier réel et signé"}[int(c["preuve"])])
+    conf.append("problème et adéquation : estimation éditoriale de départ (data/sujets.yaml)")
+    total = sum(bq["poids"][k] * c[k] for k in bq["poids"])
+    return {"n": n, "segment": seg, "theme": sujet.get("theme"), "sujet": sujet["sujet"], "hook": sujet.get("hook", ""),
+            "preuve_a_montrer": sujet.get("preuve", ""), "formation": sujet.get("formation", ""), "faits": lies,
+            "criteres": {k: round(v, 2) for k, v in c.items()}, "note": round(total, 2), "confiance": conf,
+            "preuve": pack["id"] if pack else None, "preuves": [p["id"] for p in dispo]}
+
+
+def fiches(root: str | Path, state: State, faits_ok: dict[str, dict], veille_items: list[dict] | None = None) -> list[dict]:
+    bq = banque(root)
+    packs = preuves.tous(root)
+    return [fiche(s, packs, state, bq, faits_ok, veille_items) for _, s in sorted(bq["sujets"].items())]
+
+
+# --------------------------------------------------------------------------- choix de la prochaine vidéo
+def _used(state: State, days: int) -> list[dict]:
+    """Vidéos publiées (ou en attente de validation) récemment : ce qu'il ne faut pas refaire à l'identique."""
+    limit = now() - dt.timedelta(days=days)
+    out = []
+    for p in state.posts + state.load("attente", []):
+        try:
+            if dt.datetime.fromisoformat(p["created"]) >= limit:
+                out.append(p.get("brief") or {})
+        except (KeyError, ValueError):
             continue
-
-        def rate(s, k):
-            return (s.get(k) or 0) / max(1, s.get("views") or 0)
-        med = {"views": st.median([s["views"] for _, s in rows]) or 1}
-        for k in ("comments", "shares", "saves"):
-            vals = [rate(s, k) for _, s in rows if s.get(k) is not None]
-            med[k] = (st.median(vals) if vals else 0) or 1e-4
-        for p, s in rows:
-            tot, wsum = 0.0, 0.0
-            for k, wk in w.items():
-                if k == "views":
-                    r = max(1, s["views"]) / med["views"]
-                elif s.get(k) is None:
-                    continue
-                else:
-                    # taux « lissé » : avec peu de vues, un taux est très bruité, on le rapproche de la médiane
-                    m = med["views"]
-                    r = ((s.get(k) or 0) + m * med[k]) / ((s.get("views") or 0) + m) / med[k]
-                tot += wk * max(-3.0, min(3.0, math.log2(r))); wsum += wk
-            if wsum:
-                parts.setdefault(p["id"], []).append(tot / wsum)
-    for p in posts:
-        if p["id"] in parts:
-            p["score"] = round(sum(parts[p["id"]]) / len(parts[p["id"]]), 3)
-            p["score_at"] = now().isoformat(timespec="seconds")
-    state.save_posts()
+    return out
 
 
-# --------------------------------------------------------------------------- bandit
-def arm_stats(state: State, dim: str) -> dict[str, list[float]]:
-    out: dict[str, list[float]] = {}
+def themes_ouverts(all_fiches: list[dict], segment: str, done: set, themes: list[str]) -> list[str]:
+    """Ordre de lancement, par public : motion design d'abord, puis visuels, sites, contenus.
+    Un thème s'ouvre quand tous les sujets PRODUISIBLES des thèmes précédents ont été traités une fois pour ce public."""
+    out = []
+    for th in themes:
+        out.append(th)
+        if any(f["theme"] == th and f["segment"] == segment and f["preuve"] and f["n"] not in done for f in all_fiches):
+            break
+    return out
+
+
+def segment_du_creneau(date: str, slots: list[str], slot: str) -> str:
+    """Les deux séries alternent : un jour le commerçant ouvre, le lendemain le créateur."""
+    try:
+        day = dt.date.fromisoformat(date).toordinal()
+    except ValueError:
+        day = 0
+    i = slots.index(slot) if slot in slots else 0
+    return SEGMENTS[(day + i) % 2]
+
+
+def hook_stats(state: State, segment: str) -> dict[str, list[float]]:
+    out: dict[str, list[float]] = {h: [] for h in HOOKS}
     for p in state.posts:
-        if p.get("score") is None:
-            continue
-        v = (p.get("brief") or {}).get(dim)
-        if v:
-            out.setdefault(v, []).append(p["score"])
+        b = p.get("brief") or {}
+        if b.get("segment") == segment and b.get("hook_type") in out and p.get("score") is not None:
+            out[b["hook_type"]].append(p["score"])
     return out
 
 
-def length_bucket(seconds: float) -> str:
-    """Catégorie de longueur réellement obtenue : c'est elle qui sert à l'apprentissage, pas celle qui était demandée."""
-    for name, (_lo, hi) in LENGTHS.items():
-        if seconds < hi:
-            return name
-    return list(LENGTHS)[-1]
+def _candidats(allf: list[dict], segment: str, themes: list[str], done_topics: set, done_pairs: set, order: list[str]) -> list[tuple[dict, str, str]]:
+    ouverts = themes_ouverts(allf, segment, done_topics, themes)
+    mine = [f for f in allf if f["segment"] == segment and f["preuve"] and f["theme"] in ouverts]
+    out: list[tuple[dict, str, str]] = []
+    for f in sorted([f for f in mine if f["n"] not in done_topics], key=lambda f: (themes.index(f["theme"]) if f["theme"] in themes else 99, -f["note"], f["n"])):
+        ht = next((h for h in order if (f["n"], h) not in done_pairs), None)
+        if ht:
+            out.append((f, ht, f"sujet jamais traité, note {f['note']}/5"))
+    # un sujet qui revient : d'abord celui qui a été le moins traité, pour que la série ne tourne pas sur un seul sujet
+    fois = {n: sum(1 for (m, _h) in done_pairs if m == n) for n in done_topics}
+    for f in sorted([f for f in mine if f["n"] in done_topics], key=lambda f: (fois.get(f["n"], 0), -f["note"], f["n"])):
+        ht = next((h for h in order if (f["n"], h) not in done_pairs), None)
+        if ht:
+            out.append((f, ht, "sujet déjà traité : même preuve, nouvelle accroche (un seul facteur change)"))
+    return out
 
 
+def choisir(root: str | Path, state: State, cfg: dict, segment: str, faits_ok: dict[str, dict], rng: random.Random,
+            veille_items: list[dict] | None = None, essai: bool = False) -> dict | None:
+    """La prochaine vidéo de ce public : {fiche, hook_type, pourquoi, suite, themes} — ou None s'il n'y a rien d'honnête à produire.
+
+    Priorité : 1) un sujet jamais traité, dans l'ordre de lancement des thèmes puis par note ;
+               2) un sujet déjà traité, avec la MÊME preuve et une accroche pas encore essayée (un seul facteur change).
+    « suite » est la vidéo qui viendrait ensuite dans la même série : c'est elle qui rend vraie la phrase « si tu veux la suite ».
+    En mode essai, rien n'est compté comme traité : les sujets tournent pour que tu voies chaque format.
+    """
+    scfg = cfg.get("strategy") or {}
+    bq = banque(root)
+    allf = fiches(root, state, faits_ok, veille_items)
+    if essai:
+        order_f = sorted([f for f in allf if f["segment"] == segment and f["preuve"]], key=lambda f: f["n"])
+        if not order_f:
+            return None
+        k = int(state.load("essais", {"n": 0}).get("n", 0)) // 2            # deux essais par tour : un par public
+        f = order_f[k % len(order_f)]
+        ht = HOOKS[(k // len(order_f)) % len(HOOKS)]
+        nxt = order_f[(k + 1) % len(order_f)]
+        return {"fiche": dict(f, hook_type=ht), "hook_type": ht, "pourquoi": "mode essai : les sujets tournent pour te montrer chaque format",
+                "suite": None if len(order_f) < 2 else {"n": nxt["n"], "sujet": nxt["sujet"]}, "themes": bq["themes"]}
+    used = _used(state, int(scfg.get("repeat_days", 21)))
+    done_pairs = {(b.get("sujet"), b.get("hook_type")) for b in used}
+    done_topics = {(p.get("brief") or {}).get("sujet") for p in state.posts + state.load("attente", [])}
+    explore = float(scfg.get("explore", 0.25))
+    obs = hook_stats(state, segment)
+    # tirage de Thompson avec un a priori neutre : ce qui a mieux retenu ce public revient plus souvent, sans exclure le reste
+    draws = []
+    for h in HOOKS:
+        r = obs[h]
+        draws.append((rng.gauss(sum(r) / (N0 + len(r)), (1.0 / math.sqrt(N0 + len(r))) * (0.6 + 2.0 * explore)), h))
+    order = [h for _, h in sorted(draws, reverse=True)]
+    cands = _candidats(allf, segment, bq["themes"], done_topics, done_pairs, order)
+    if not cands:
+        return None
+    f, ht, why = cands[0]
+    after = _candidats(allf, segment, bq["themes"], done_topics | {f["n"]}, done_pairs | {(f["n"], ht)}, order)
+    nxt = next((c for c in after if c[0]["n"] != f["n"]), after[0] if after else None)
+    suite = None if nxt is None else {"n": nxt[0]["n"], "sujet": nxt[0]["sujet"], **({"meme_sujet": True} if nxt[0]["n"] == f["n"] else {})}
+    return {"fiche": dict(f, hook_type=ht), "hook_type": ht, "pourquoi": why, "suite": suite,
+            "themes": themes_ouverts(allf, segment, done_topics, bq["themes"])}
+
+
+def manques(root: str | Path, state: State, faits_ok: dict[str, dict]) -> list[str]:
+    """Ce qu'il faut ajouter pour débloquer des sujets (affiché par « plan » et dans la fiche de production)."""
+    out = []
+    for f in fiches(root, state, faits_ok):
+        if not f["preuve"]:
+            out.append(f"sujet {f['n']} ({'commerçant' if f['segment'] == 'commercant' else 'créateur'}) « {f['sujet']} » — preuve à fournir : {f['preuve_a_montrer']}")
+    return out
+
+
+# --------------------------------------------------------------------------- créneaux
 def posterior(values: list[str], dim: str, state: State) -> dict[str, tuple[float, float]]:
-    obs = arm_stats(state, dim)
-    out = {}
-    for v in values:
-        r = obs.get(v, [])
-        mu0 = PRIOR.get(dim, {}).get(v, 0.0)
-        n = len(r)
-        out[v] = ((N0 * mu0 + sum(r)) / (N0 + n), 1.0 / math.sqrt(N0 + n))
-    return out
-
-
-def sample(values: list[str], dim: str, state: State, rng: random.Random, explore: float, k: int = 1) -> list[str]:
-    post = posterior(values, dim, state)
-    draws = sorted(((rng.gauss(m, s * (0.6 + 2.0 * explore)), v) for v, (m, s) in post.items()), reverse=True)
-    return [v for _, v in draws[:k]]
+    obs: dict[str, list[float]] = {}
+    for p in state.posts:
+        v = (p.get("brief") or {}).get(dim)
+        if v and p.get("score") is not None:
+            obs.setdefault(v, []).append(p["score"])
+    return {v: (sum(obs.get(v, [])) / (N0 + len(obs.get(v, []))), 1.0 / math.sqrt(N0 + len(obs.get(v, [])))) for v in values}
 
 
 def plan_day(state: State, cfg: dict, date: str, rng: random.Random) -> dict:
     days = state.load("day", {})
-    if date in days:
+    if date in days and "segments" in days[date]:
         return days[date]
     sch = cfg.get("schedule", {})
     slots = list(sch.get("slots") or ["07:30", "18:30"])
-    k = min(int(sch.get("videos_per_day", 2)), len(slots))
-    explore = float((cfg.get("strategy") or {}).get("explore", 0.2))
-    # on tire des « tranches » (matin/midi/soir) puis on garde au plus un créneau par tranche si possible
-    order = sample(slots, "slot_exact", state, rng, explore, len(slots))
+    jours = [int(x) for x in (sch.get("jours") or [1, 2, 3, 4, 5, 6, 7])]
+    try:
+        actif = dt.date.fromisoformat(date).isoweekday() in jours
+    except ValueError:
+        actif = True
+    k = min(int(sch.get("videos_per_day", 2)), len(slots)) if actif else 0
+    explore = float((cfg.get("strategy") or {}).get("explore", 0.25))
     buckets = posterior(sorted({slot_bucket(s) for s in slots}), "slot", state)
-    order.sort(key=lambda s: -(buckets[slot_bucket(s)][0] + rng.gauss(0, buckets[slot_bucket(s)][1] * (0.6 + 2 * explore))))
+    order = sorted(slots, key=lambda s: -(buckets[slot_bucket(s)][0] + rng.gauss(0, buckets[slot_bucket(s)][1] * (0.6 + 2 * explore))))
     chosen: list[str] = []
-    for s in order:
+    for s in order:                       # au plus un créneau par tranche (matin, midi, soir) si possible
         if len(chosen) < k and slot_bucket(s) not in {slot_bucket(c) for c in chosen}:
             chosen.append(s)
     for s in order:
         if len(chosen) < k and s not in chosen:
             chosen.append(s)
-    days[date] = {"slots": sorted(chosen), "done": {}}
+    chosen.sort()
+    old = days.get(date) or {}
+    days[date] = {"slots": chosen, "segments": {s: segment_du_creneau(date, chosen, s) for s in chosen}, "done": old.get("done", {})}
     for d in sorted(days)[:-45]:
         del days[d]
     state.save("day", days)
     return days[date]
 
 
-def sample_brief(state: State, cfg: dict, rng: random.Random, slot: str) -> dict:
-    scfg = cfg.get("strategy") or {}
-    explore = float(scfg.get("explore", 0.2))
-    formats = [f for f in (scfg.get("formats") or list(PRIOR["format"])) if f in FORMATS and f != "offre"]
-    n_posts = len(state.posts)
-    offer = cfg.get("offer") or {}
-    every = int(offer.get("pitch_every") or 0)
-    since = 0
-    for p in reversed(state.posts):
-        if (p.get("brief") or {}).get("format") == "offre":
-            break
-        since += 1
-    brief = {"slot": slot_bucket(slot), "slot_exact": slot}
-    if every and n_posts >= every - 1 and since >= every - 1 and offer.get("name") and offer.get("points"):
-        brief["format"] = "offre"
-    else:
-        brief["format"] = sample(formats, "format", state, rng, explore)[0]
-    brief["hook"] = sample(list(HOOKS), "hook", state, rng, explore)[0]
-    brief["length"] = sample(list(LENGTHS), "length", state, rng, explore)[0]
-    rem = int(scfg.get("remake_every") or 0)
-    if rem and brief["format"] != "offre" and n_posts and (n_posts + 1) % rem == 0:
-        scored = [p for p in state.posts if p.get("score") is not None and not p.get("remade")
-                  and (now() - dt.datetime.fromisoformat(p["created"])).days >= 4]
-        if scored:
-            best = max(scored, key=lambda p: p["score"])
-            if best["score"] >= 0.5:
-                brief["remake_of"] = best["id"]
-    return brief
+# --------------------------------------------------------------------------- mesures
+def _latest(snaps: list[dict], min_h: float = 20) -> dict | None:
+    ok = [s for s in snaps or [] if s.get("h", 0) >= min_h and s.get("views") is not None]
+    return max(ok, key=lambda s: s["h"]) if ok else None
 
 
-# --------------------------------------------------------------------------- sujet
-def _tok(s: str) -> set[str]:
-    return {w for w in re.findall(r"[a-zà-ÿ0-9]{3,}", s.lower())}
+def score_posts(state: State, cfg: dict) -> None:
+    """post['score'] : 0 = médiane des vidéos du même public sur le même réseau, +1 = deux fois mieux, -1 = deux fois moins bien.
 
-
-def novelty_filter(cands: list[dict], state: State) -> list[dict]:
-    seen = state.load("seen", {"ids": [], "titles": []})
-    ids = set(seen["ids"])
-    recent = [_tok(t) for t in seen["titles"][-60:]]
-    out = []
-    for c in cands:
-        if c["id"] in ids:
-            continue
-        tk = _tok(c["title"])
-        if tk and any(len(tk & r) / max(1, len(tk | r)) > 0.6 for r in recent):
-            continue
-        out.append(c)
-    return out
-
-
-def rank(cands: list[dict], cfg: dict) -> list[dict]:
-    kws = [k.lower() for k in (cfg.get("niche") or {}).get("keywords", [])]
-
-    def s(c):
-        blob = (c["title"] + " " + " ".join(c["facts"])).lower()
-        hit = sum(1 for k in kws if all(w in blob for w in k.split()))
-        return (2.0 * hit + math.log10(max(10, c.get("stars") or 10)) + (1.0 if c["source"] == "github" else 0.3))
-    return sorted(cands, key=s, reverse=True)
-
-
-def memo(state: State, n: int = 5) -> str:
-    """Résumé des performances, donné au LLM pour qu'il raisonne sur de vraies données."""
-    scored = [p for p in state.posts if p.get("score") is not None]
-    if len(scored) < 3:
-        return "Pas encore assez de statistiques : appuie-toi sur les a priori (listes chiffrées, « Transforme… », vidéos courtes)."
-
-    def line(p):
-        tot = {}
+    Les vues ne rapportent rien par elles-mêmes : elles servent de dénominateur (taux de partage, d'enregistrement, de commentaire).
+    « watch » est la part de la vidéo réellement regardée (durée moyenne vue / durée), quand le réseau la fournit.
+    """
+    w = (cfg.get("stats") or {}).get("weights") or {"watch": 0.35, "shares": 0.25, "saves": 0.20, "comments": 0.20}
+    groups: dict[tuple[str, str], list[tuple[dict, dict]]] = {}
+    for p in state.posts:
+        seg = (p.get("brief") or {}).get("segment") or "?"
         for net, snaps in (p.get("stats") or {}).items():
             s = _latest(snaps)
             if s:
-                for k in ("views", "comments", "shares", "saves"):
-                    tot[k] = tot.get(k, 0) + (s.get(k) or 0)
-        b = p.get("brief") or {}
-        return (f"- « {p.get('title', '')[:70]} » [{b.get('format')}, accroche {b.get('hook')}, {int(p.get('duration', 0))} s, {b.get('slot')}] "
-                f"score {p['score']:+.2f} — {tot.get('views', 0)} vues, {tot.get('comments', 0)} commentaires, {tot.get('shares', 0)} partages, {tot.get('saves', 0)} enregistrements")
-    top = sorted(scored, key=lambda p: -p["score"])
-    out = ["MEILLEURES VIDÉOS :"] + [line(p) for p in top[:n]] + ["MOINS BONNES :"] + [line(p) for p in top[-min(n, max(0, len(top) - n)):]]
-    for dim, label in (("format", "format"), ("hook", "accroche"), ("length", "longueur"), ("slot", "créneau")):
-        a = arm_stats(state, dim)
-        if a:
-            out.append(f"Score moyen par {label} : " + ", ".join(f"{k} {sum(v) / len(v):+.2f} (n={len(v)})" for k, v in sorted(a.items(), key=lambda kv: -sum(kv[1]) / len(kv[1]))))
-    return "\n".join(out)
+                groups.setdefault((seg, net), []).append((p, s))
+    parts: dict[str, list[float]] = {}
+    for (_seg, _net), rows in groups.items():
+        if len(rows) < 3:
+            continue                                  # pas de comparaison honnête avec moins de 3 vidéos du même public sur ce réseau
+
+        def val(p, s, k):
+            if k == "watch":
+                return None if s.get("watch") is None or not p.get("duration") else float(s["watch"]) / float(p["duration"])
+            return None if s.get(k) is None else (s.get(k) or 0) / max(1, s.get("views") or 0)
+        med_views = st.median([s["views"] for _, s in rows]) or 1
+        med = {}
+        for k in w:
+            vals = [v for v in (val(p, s, k) for p, s in rows) if v is not None]
+            med[k] = (st.median(vals) if vals else 0) or 1e-4
+        for p, s in rows:
+            tot, wsum = 0.0, 0.0
+            for k, wk in w.items():
+                v = val(p, s, k)
+                if v is None:
+                    continue
+                if k != "watch":                      # avec peu de vues, un taux est très bruité : on le rapproche de la médiane
+                    v = ((s.get(k) or 0) + med_views * med[k]) / ((s.get("views") or 0) + med_views)
+                tot += wk * max(-3.0, min(3.0, math.log2(max(v, 1e-6) / med[k]))); wsum += wk
+            if wsum:
+                parts.setdefault(p["id"], []).append(tot / wsum)
+    for p in state.posts:
+        if p["id"] in parts:
+            p["score"] = round(sum(parts[p["id"]]) / len(parts[p["id"]]), 3)
+            p["score_at"] = now().isoformat(timespec="seconds")
+    state.save_posts()
 
 
-def pick_topic(state: State, cfg: dict, cands: list[dict], brief: dict, brain=None, log=print) -> dict:
-    """Choisit le(s) candidat(s) et l'angle. Renvoie {items, angle, why}."""
-    if brief["format"] == "offre":
-        return {"items": [], "angle": "présenter la formation", "why": "vidéo d'offre programmée"}
-    if brief.get("remake_of"):
-        old = next((p for p in state.posts if p["id"] == brief["remake_of"]), None)
-        if old and old.get("facts"):
-            return {"items": old["facts"], "angle": f"refaire « {old['title']} » avec une accroche et un angle différents",
-                    "why": f"reprise d'une vidéo gagnante (score {old['score']:+.2f})", "remake": True}
-    pool = rank(novelty_filter(cands, state), cfg)
-    if not pool:
-        return {"items": [], "angle": "", "why": "aucun candidat nouveau"}
-    want = 4 if brief["format"] == "liste" else 2 if brief["format"] == "comparatif" else 1
-    short = pool[:14]
-    if brain is not None:
-        listing = "\n".join(f"{i + 1}. [{c['source']}] {c['title']} — {' | '.join(c['facts'][1:3])[:230]}" for i, c in enumerate(short))
-        niche = cfg.get("niche") or {}
-        sys_ = ("Tu es le stratège éditorial d'un compte de vidéos courtes. Tu choisis le prochain sujet en t'appuyant sur les statistiques "
-                "du compte. Tu réponds uniquement par un objet JSON.")
-        line = f"LIGNE ÉDITORIALE (à respecter absolument) : {niche['line']}\n" if niche.get("line") else ""
-        usr = (f"NICHE : {niche.get('description')}\nCIBLE : {niche.get('audience')}\n{line}\nSTATISTIQUES DU COMPTE\n{memo(state)}\n\n"
-               f"FORMAT IMPOSÉ : {brief['format']} — {FORMATS[brief['format']]}\nACCROCHE IMPOSÉE : {HOOKS[brief['hook']]}\n\n"
-               f"CANDIDATS (issus de la veille du jour)\n{listing}\n\n"
-               f"Choisis exactement {want} candidat(s) qui intéresseront la cible et qui entrent dans la ligne éditoriale "
-               "(s'il y en a plusieurs, ils doivent aller ensemble). "
-               "L'angle ne contient AUCUN chiffre, aucune durée, aucune promesse de résultat, et n'affirme aucun lien entre deux outils "
-               "qui ne figure pas dans leurs descriptions. "
-               'Réponds : {"choix": [numéros], "angle": "l\'angle en une phrase", "pourquoi": "le lien avec les statistiques, en une phrase"}')
-        try:
-            def val(o):
-                idx = [int(x) for x in o.get("choix", []) if str(x).strip().isdigit() and 1 <= int(x) <= len(short)]
-                if not idx:
-                    raise ValueError("« choix » doit contenir des numéros de la liste")
-                return {"items": [short[i - 1] for i in dict.fromkeys(idx)][:want], "angle": str(o.get("angle", ""))[:240],
-                        "why": str(o.get("pourquoi", ""))[:300]}
-            return brain.ask_json(sys_, usr, validate=val, retries=1, temperature=0.5, max_tokens=1200, purpose="sujet")
-        except Exception as e:  # noqa: BLE001 — pas de LLM : classement déterministe
-            log(f"stratège : choix du sujet par le LLM impossible ({str(e)[:120]}), classement automatique")
-    if brief["format"] == "liste":
-        by_kw: dict[str, list[dict]] = {}
-        for c in pool:
-            if c["source"] == "github":
-                by_kw.setdefault(c["kw"], []).append(c)
-        if by_kw:
-            kw, items = max(by_kw.items(), key=lambda kv: len(kv[1]))
-            if len(items) >= 3:
-                return {"items": items[:want], "angle": f"les meilleurs outils « {kw} » du moment", "why": "classement automatique"}
-    return {"items": pool[:want], "angle": "", "why": "classement automatique"}
+def ventes(root: str | Path) -> dict:
+    """Clics et ventes saisis à la main (data/mesures.yaml) : l'agent ne peut pas les lire tout seul."""
+    p = Path(root) / "data" / "mesures.yaml"
+    d = (yaml.safe_load(p.read_text(encoding="utf-8")) if p.exists() else {}) or {}
+    return {str(k): v for k, v in (d.get("videos") or {}).items() if isinstance(v, dict)}
 
 
-def mark_seen(state: State, items: list[dict], title: str) -> None:
-    seen = state.load("seen", {"ids": [], "titles": []})
-    seen["ids"] = (seen["ids"] + [c["id"] for c in items if c.get("id")])[-600:]
-    seen["titles"] = (seen["titles"] + [title])[-200:]
-    state.save("seen", seen)
+def memo(state: State, root: str | Path | None = None, segment: str | None = None) -> str:
+    """Ce que disent les mesures, sans conclure au-delà de ce qu'elles montrent."""
+    posts = [p for p in state.posts if segment is None or (p.get("brief") or {}).get("segment") == segment]
+    scored = [p for p in posts if p.get("score") is not None]
+    lines = []
+    if len(scored) < 3:
+        lines.append(f"Mesures : {len(scored)} vidéo(s) notée(s)" + (f" pour ce public" if segment else "") +
+                     " — pas assez pour comparer (il en faut 3 du même public sur le même réseau). Aucune conclusion.")
+    else:
+        for h in HOOKS:
+            r = [p["score"] for p in scored if (p.get("brief") or {}).get("hook_type") == h]
+            if r:
+                lines.append(f"Accroche « {h} » : note de qualité moyenne {sum(r) / len(r):+.2f} sur {len(r)} vidéo(s).")
+        best = max(scored, key=lambda p: p["score"])
+        lines.append(f"Meilleure note de qualité : « {best.get('title', '')[:60]} » ({best['score']:+.2f}). Ce n'est pas une preuve de vente.")
+    v = ventes(root) if root else {}
+    if v:
+        tot = {}
+        for pid, m in v.items():
+            seg = next(((p.get("brief") or {}).get("segment") for p in state.posts if p["id"] == pid), None) or m.get("segment") or "?"
+            t = tot.setdefault(seg, {"clics": 0, "ventes": 0})
+            t["clics"] += int(m.get("clics") or 0); t["ventes"] += int(m.get("ventes") or 0)
+        lines += [f"Saisi à la main — {seg} : {t['clics']} clic(s), {t['ventes']} vente(s)." for seg, t in tot.items()]
+    else:
+        lines.append("Clics sur le lien et ventes : non renseignés (data/mesures.yaml). Sans eux, on ne peut pas dire qu'une vidéo « vend ».")
+    return "\n".join(lines)

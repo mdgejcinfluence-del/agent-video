@@ -9,42 +9,34 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 
+# Deux séries, deux identités visuelles : on reconnaît le public visé avant d'avoir lu un mot.
+# Chaque clé devient une variable CSS du moteur de rendu (engine/player.css).
 THEMES = {
-    "papier": {"bg": "#F4EFEA", "card": "#FDF9F6", "ink": "#1B1613", "muted": "#8C817A", "accent": "#D8572E",
-               "accent2": "#EC7B50", "soft": "#F3CDBB", "good": "#2F9E5A", "bad": "#D9483F", "stamp": "#2F9E5A",
-               "dot": "rgba(70,45,30,.17)"},
-    "ocean": {"bg": "#EEF3F7", "card": "#FAFCFE", "ink": "#101C26", "muted": "#7B8894", "accent": "#1F6FEB",
-              "accent2": "#4F97F7", "soft": "#C6DCF7", "good": "#1F9D63", "bad": "#D9483F", "stamp": "#E0662F",
-              "dot": "rgba(20,50,80,.16)"},
-    "menthe": {"bg": "#EFF5F0", "card": "#FBFDFB", "ink": "#12201A", "muted": "#7C8A82", "accent": "#178A57",
-               "accent2": "#35AB74", "soft": "#C4E6D3", "good": "#178A57", "bad": "#D9483F", "stamp": "#E0662F",
-               "dot": "rgba(20,70,45,.16)"},
-    "nuit": {"bg": "#15110F", "card": "#221C19", "ink": "#F7F0EA", "muted": "#9C9089", "accent": "#F0774A",
-             "accent2": "#FF9C70", "soft": "#4B2A1B", "good": "#3DBB73", "bad": "#E5564C", "stamp": "#3DBB73",
-             "dot": "rgba(255,230,210,.10)"},
+    # série Créateur / freelance : studio de nuit, violet et citron
+    "nuit": {"bg": "#0E1014", "card": "#181B22", "ink": "#F4F5F7", "muted": "#8D95A3",
+             "accent": "#8B5CF6", "on-accent": "#FFFFFF", "accent2": "#C6F432", "on-accent2": "#0E1014", "em": "#C6F432",
+             "soft": "rgba(139,92,246,.30)", "good": "#3DDC97", "bad": "#FF5C5C", "warn": "#FFB020", "warn-ink": "#FFB020",
+             "dot": "rgba(255,255,255,.07)", "line": "rgba(255,255,255,.10)", "shadow": "rgba(0,0,0,.45)",
+             "code-bg": "#0A0C10", "code-ink": "#D7DCE5", "bezel": "#2A2E38", "rail": "#C6F432", "mark-bg": "#C6F432", "mark-ink": "#0E1014"},
+    # série Commerçant : papier ivoire, vert profond et jaune d'étiquette
+    "ivoire": {"bg": "#FFF8EC", "card": "#FFFFFF", "ink": "#14231B", "muted": "#6E7A72",
+               "accent": "#0B4F3A", "on-accent": "#FFFFFF", "accent2": "#FFC83D", "on-accent2": "#14231B", "em": "#0B4F3A",
+               "soft": "rgba(255,200,61,.34)", "good": "#1E9E61", "bad": "#D9483F", "warn": "#FFB020", "warn-ink": "#8A5200",
+               "dot": "rgba(20,35,27,.09)", "line": "rgba(20,35,27,.11)", "shadow": "rgba(60,40,10,.16)",
+               "code-bg": "#12201A", "code-ink": "#E6EFE9", "bezel": "#14231B", "rail": "#0B4F3A", "mark-bg": "#FFC83D", "mark-ink": "#14231B"},
 }
+SEGMENTS = ("commercant", "createur_freelance")
+DEFAULT_THEME = {"commercant": "ivoire", "createur_freelance": "nuit"}
 
 
-def _hex(c: str) -> tuple[int, int, int]:
-    c = c.lstrip("#")
-    return int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)
+def segment_cfg(cfg: dict, segment: str) -> dict:
+    return ((cfg.get("segments") or {}).get(segment) or {})
 
 
-def _mix(a: str, b: str, k: float) -> str:
-    x, y = _hex(a), _hex(b)
-    return "#%02X%02X%02X" % tuple(round(x[i] + (y[i] - x[i]) * k) for i in range(3))
-
-
-def theme_vars(cfg: dict) -> dict:
-    """Variables CSS du thème ; une couleur de marque (brand.accent) remplace l'accent."""
-    name = (cfg.get("brand") or {}).get("theme") or "papier"
-    th = dict(THEMES.get(name, THEMES["papier"]))
-    acc = ((cfg.get("brand") or {}).get("accent") or "").strip()
-    if acc.startswith("#") and len(acc) == 7:
-        th["accent"] = acc
-        th["accent2"] = _mix(acc, "#FFFFFF", 0.22)
-        th["soft"] = _mix(acc, th["bg"], 0.72)
-    return th
+def theme_vars(cfg: dict, segment: str = "createur_freelance") -> dict:
+    """Variables CSS de la série du segment."""
+    name = segment_cfg(cfg, segment).get("theme") or DEFAULT_THEME.get(segment, "nuit")
+    return dict(THEMES.get(name) or THEMES[DEFAULT_THEME.get(segment, "nuit")])
 
 
 def load_dotenv(path: Path | None = None) -> None:

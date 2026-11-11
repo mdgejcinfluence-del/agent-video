@@ -5,6 +5,7 @@ Une vidéo qui échoue à un contrôle bloquant n'est pas publiée.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -31,7 +32,7 @@ def _frame(path: Path, t: float) -> np.ndarray:
 
 
 def check(video: str | Path, timeline: dict, layout: dict | None = None, audio_info: dict | None = None,
-          target_lufs: float = -14.0) -> dict:
+          target_lufs: float = -14.0, seconds: tuple[float, float] | None = None) -> dict:
     video = Path(video)
     problems, warnings = [], []
     p = probe(video)
@@ -47,6 +48,18 @@ def check(video: str | Path, timeline: dict, layout: dict | None = None, audio_i
         problems.append(f"codec {p['vcodec']}/{p['pix_fmt']} (attendu h264/yuv420p)")
     if not 5 <= p["duration"] <= 90:
         problems.append(f"durée {p['duration']:.1f} s hors limites des Reels (5–90 s)")
+    if seconds:
+        lo, hi = seconds
+        if not lo - 7 <= p["duration"] <= hi + 10:
+            problems.append(f"durée {p['duration']:.1f} s trop éloignée du format visé ({lo:g}–{hi:g} s)")
+        elif not lo <= p["duration"] <= hi:
+            warnings.append(f"durée {p['duration']:.1f} s hors du format visé ({lo:g}–{hi:g} s)")
+    # le résultat doit être à l'image dès la première seconde, et la preuve doit être lisible
+    sc = timeline.get("scenes") or []
+    if sc and (sc[0].get("type") != "resultat" or not sc[0].get("visuel")):
+        problems.append("la première image ne montre pas le résultat produit")
+    if sc and not timeline.get("media"):
+        problems.append("aucun média de preuve dans la vidéo")
     if p["size"] > 100 * 1024 * 1024:
         problems.append("fichier de plus de 100 Mo")
     # images : ni vides ni figées
@@ -68,7 +81,9 @@ def check(video: str | Path, timeline: dict, layout: dict | None = None, audio_i
         if nxt["t0"] < g["t1"] - 0.001:
             problems.append("sous-titres qui se chevauchent"); break
     for w in (layout or {}).get("warnings", []):
-        (problems if "déborde" in w else warnings).append("mise en page : " + w)
+        m = re.search(r"réduit(?:e)? à (\d+) %", w)
+        blocking = "déborde" in w or "descend sous" in w or (m and int(m.group(1)) < 78)      # sous 78 %, le texte n'est plus lisible sur téléphone
+        (problems if blocking else warnings).append("mise en page : " + w)
     if audio_info and audio_info.get("lufs") is not None:
         try:
             if abs(float(audio_info["lufs"]) - target_lufs) > 2.0:

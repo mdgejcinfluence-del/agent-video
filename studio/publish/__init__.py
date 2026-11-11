@@ -8,11 +8,42 @@ from ..config import secret
 from ..state import now
 
 
-def caption_for(story: dict, cfg: dict, network: str) -> str:
+NETWORKS = {"tiktok": "TikTok", "instagram": "Instagram Reels", "youtube": "YouTube Shorts", "facebook": "Facebook Reels"}
+
+
+def packs(story: dict, cfg: dict) -> dict[str, dict]:
+    """Pack de publication par plateforme : titre, légende, mots-clés, hashtags, texte de couverture.
+
+    La phrase de fin est la même partout, mot pour mot. Les hashtags sont peu nombreux et liés au sujet :
+    aucun ne garantit une portée.
+    """
     n = int((cfg.get("publish") or {}).get("hashtags", 5))
-    tags = " ".join("#" + h for h in (story.get("hashtags") or [])[:n])
-    text = (story.get("caption") or story.get("title") or "").strip()
-    return (text + ("\n\n" + tags if tags else "")).strip()[:2100]
+    tags = [h for h in (story.get("hashtags") or [])][:n]
+    title = (story.get("title") or "").strip()
+    body = (story.get("caption_corps") or "").strip()
+    full = (story.get("caption") or title).strip()
+    cta = full[len(body):].strip() if body and full.startswith(body) else ""
+    cover = (story.get("couverture") or title)[:30]
+    mots = ", ".join(dict.fromkeys(w for w in title.replace(":", " ").replace(",", " ").split() if len(w) > 3))
+
+    def text(*parts: str, k: int = n) -> str:
+        t = " ".join("#" + h for h in tags[:k])
+        return "\n\n".join(p for p in [*parts, t] if p).strip()
+    return {
+        # TikTok : le sujet est dit, écrit à l'écran et repris dans la légende (recherche)
+        "tiktok": {"titre": title, "legende": text(f"{title}. {body}".strip(), cta), "mots_cles": mots, "hashtags": tags, "couverture": cover},
+        # Instagram : la première ligne se comprend sans connaître le compte
+        "instagram": {"titre": title, "legende": text(title, body, cta), "mots_cles": mots, "hashtags": tags, "couverture": cover},
+        # YouTube : le titre porte les mots de la recherche ; la description reprend la légende
+        "youtube": {"titre": title[:100], "legende": text(body, cta, k=3), "mots_cles": mots, "hashtags": tags[:3], "couverture": cover},
+        # Facebook : texte court, peu de hashtags
+        "facebook": {"titre": title, "legende": text(body, cta, k=3), "mots_cles": mots, "hashtags": tags[:3], "couverture": cover},
+    }
+
+
+def caption_for(story: dict, cfg: dict, network: str) -> str:
+    p = packs(story, cfg)
+    return (p.get(network) or p["tiktok"])["legende"][:2100]
 
 
 def publish_all(video: str | Path, story: dict, thumb_ms: int, public_url: str | None, cfg: dict, state, log=print) -> dict:

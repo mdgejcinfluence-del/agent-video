@@ -1,0 +1,58 @@
+# =====================================================================
+#  RÉFÉRENCES PUBLIQUES OBSERVÉES — tirées de l'étude de marché du 11 novembre 2026 (section 2).
+#  On en retient la MÉCANIQUE (résultat d'abord, système réutilisable, erreur corrigée…), jamais les phrases,
+#  les images, les musiques ou les montages. Aucun chiffre de vente ni de rétention n'est connu : n'en déduis rien.
+#  L'agent ne revérifie pas ces pages : la date d'observation est celle de l'étude.
+# =====================================================================
+observe_le: "2026-11-11"
+source: "étude de marché du 11 novembre 2026"
+
+references:
+  - nom: "Ben Redissi — workflow Claude Code + Remotion"
+    url: "https://www.youtube.com/watch?v=nkPDTiOueeA"
+    segment: createur_freelance
+    mecanique: "Un système en trois demandes : préparer la charte, créer un lookbook de scènes, produire les animations à partir du script."
+    a_retenir: "Montrer un système reproductible plutôt qu'une demande magique ; isoler une seule étape par vidéo courte."
+    sujets: [2, 4, 7]
+
+  - nom: "Leonardo Grigorio — démonstration Remotion (anglophone)"
+    url: "https://www.youtube.com/watch?v=7OR-L0AySn8"
+    segment: createur_freelance
+    mecanique: "Installation, génération d'une animation d'interface, puis correction visible d'un placement incorrect."
+    a_retenir: "La boucle générer, constater, corriger : montrer le défaut avant la version finale."
+    sujets: [1, 3]
+
+  - nom: "Sabrina Ramonov — tutoriel écrit Claude Code + Remotion"
+    url: "https://www.sabrina.dev/p/claude-just-changed-content-creation-remotion-video"
+    segment: createur_freelance
+    mecanique: "Première vidéo, vérification des ressources, correction d'une erreur du premier brouillon, validation humaine avant publication."
+    a_retenir: "L'honnêteté sur l'erreur, la vérification et l'approbation humaine font la crédibilité."
+    sujets: [1, 3, 15]
+
+  - nom: "Meydeey — plusieurs vidéos avec Remotion"
+    url: "https://www.youtube.com/watch?v=k4_ZG1cAEXI"
+    segment: createur_freelance
+    mecanique: "Démonstration de plusieurs créations et comparaison des possibilités ; l'auteur dit lui-même que certains chiffres sont approximatifs."
+    a_retenir: "Le résultat et la comparaison retiennent l'attention ; ne pas copier les chiffres non vérifiés."
+    sujets: [14]
+
+  - nom: "Amina Marie — « À quoi sert le motion design ? »"
+    url: "https://aminamarie1.substack.com/p/a-quoi-sert-le-motion-design"
+    segment: commercant
+    mecanique: "Chaque vidéo doit avoir un objectif : une belle vidéo ne suffit pas."
+    a_retenir: "Relier chaque vidéo à un but précis du commerce (faire connaître, vendre, répondre à une question)."
+    sujets: [5, 6, 8, 10, 11, 12, 16]
+
+  - nom: "BYL AI — formation vidéos courtes"
+    url: "https://byl-ai.com/formation/videos-courtes-ia"
+    segment: commercant
+    mecanique: "Page de formation orientée résultat pratique pour le commerce, avec inscription et prix promotionnel."
+    a_retenir: "Vendre un résultat utilisable, pas un catalogue d'outils. Le prix affiché n'a pas été revérifié : ne pas le citer."
+    sujets: [5, 8, 12]
+
+  - nom: "M&R Edge Studio — logiciel pour les commerces (Sénégal)"
+    url: "https://michelleandrichedgestudio.com/senegal"
+    segment: commercant
+    mecanique: "Outil annoncé : script, voix off, sous-titres, formats courts, langues locales, paiement mobile."
+    a_retenir: "Un substitut direct à l'apprentissage : expliquer ce qu'une méthode apporte en contrôle, sans dire que l'outil est inutile."
+    sujets: [5, 10, 11, 16]

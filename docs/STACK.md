@@ -25,8 +25,8 @@ ne casse pas à chaque mise à jour de Claude Code. Même cerveau NVIDIA, sans l
 - Bascule automatique : si un fournisseur répond « quota » ou tombe, l'agent passe au suivant ;
   si un modèle est retiré du catalogue (c'est arrivé à Kimi K3 chez NVIDIA le 15/10/2026), il en
   choisit un autre dans la liste `prefer`.
-- Si **aucun** modèle ne répond, l'agent publie une vidéo « de réserve » (3 scénarios écrits et
-  vérifiés à la main dans `examples/evergreen/`). Il ne bascule jamais vers du payant.
+- Si **aucun** modèle ne répond, l'agent prend un scénario « de réserve » (6 scénarios, 3 par série,
+  écrits à l'avance dans `examples/reserve/` et soumis aux mêmes contrôles). Il ne bascule jamais vers du payant.
 - **Le prix caché de NVIDIA** : ses conditions d'essai n'autorisent que le test et l'évaluation,
   pas la production, et l'accès peut être coupé sans préavis (agentdeals.dev, vérifié le
   02/11/2026). Un agent qui publie tous les jours, c'est de la production. À toi de décider ;
@@ -50,13 +50,16 @@ grise, mets `voice.order: ["gemini", "piper"]`.
 
 | Brique | Rôle | Statut |
 |---|---|---|
-| Moteur maison `engine/` (HTML + CSS + JavaScript) | scènes, cartes, sous-titres, mascotte, transitions ; chaque image est calculée à partir du temps, sans hasard | **Vérifié ici** |
+| Moteur maison `engine/` (HTML + CSS + JavaScript) | scènes, cadres de preuve (rendus lus image par image, avant/après, défaut entouré), demande écrite, extraits de code, sous-titres ; chaque image est calculée à partir du temps, sans hasard | **Vérifié ici** |
+| Remotion 4.0.542 (dossier `preuves/projet-remotion/`) | a produit les démonstrations des dossiers de preuve (intro de série, publicité d'exemple). **L'agent ne s'en sert pas pour ses propres vidéos.** | **Vérifié ici** : 4 compositions rendues ; licence relue le 11/11/2026 sur remotion.dev/docs/license/pricing — gratuite pour les particuliers et les organisations jusqu'à 3 personnes, 25 $ par poste et par mois ou 0,01 $ par rendu (minimum 100 $ par mois) au-delà ; logiciel propriétaire, pas open source |
 | Chromium sans écran (Playwright, Apache-2.0) | photographie chaque image | **Vérifié ici** : 14 images/s sur 2 cœurs, 80 s pour une vidéo de 39 s |
 | ffmpeg (LGPL/GPL) | assemble en MP4 H.264 1080×1920, 30 img/s | **Vérifié ici** |
 | Polices Inter Tight, Instrument Serif, JetBrains Mono, Caveat | licence OFL (fournies dans `engine/fonts/` avec leurs licences) | — |
 
-Pas de Remotion (gratuit seulement sous conditions), pas d'After Effects, pas de générateur
-vidéo payant. La mascotte est un dessin original (ce n'est pas celle de Claude).
+Le rendu quotidien se fait sans Remotion, sans After Effects et sans générateur vidéo payant.
+Remotion n'intervient que dans les démonstrations : c'est justement ce que les vidéos de la série
+« créateur » montrent. Les deux séries ont leur identité propre (nuit, violet et citron ; ivoire,
+vert et jaune) : aucune mascotte, aucune couleur empruntée à une autre marque.
 
 **Avatar** : l'agent peut afficher une photo (la tienne, par exemple) dans une
 bulle sur l'écran final (`brand.avatar`). Un avatar qui

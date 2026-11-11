@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
-"""Agent autonome de vidéos motion design — point d'entrée.
+"""Agent autonome de vidéos « preuve à l'appui » — point d'entrée.
 
-  python3 run.py tick              ce que le serveur lance à chaque réveil (statistiques -> décision -> vidéo -> publication)
-  python3 run.py make              fabrique (et publie, sauf mode essai) une vidéo tout de suite
-  python3 run.py make --story f    idem, à partir d'un storyboard JSON écrit à la main
-  python3 run.py demo              rend la vidéo d'exemple (aucune clé nécessaire, rien n'est publié)
-  python3 run.py stats             relève les statistiques et recalcule les scores
-  python3 run.py plan              affiche le plan du jour et ce que le stratège a appris
-  python3 run.py doctor            vérifie l'installation, les clés et les quotas
+  python3 run.py tick              ce que le serveur lance à chaque réveil (mesures -> veille -> choix -> vidéo -> porte de publication)
+  python3 run.py make              fabrique une vidéo tout de suite (--segment commercant|createur_freelance, --story fichier.json, --no-publish)
+  python3 run.py demo              rend une vidéo d'exemple par public (aucune clé nécessaire, rien n'est publié)
+  python3 run.py attente           liste les vidéos qui attendent ta validation
+  python3 run.py valider ID|tout   publie une vidéo que tu as regardée et approuvée
+  python3 run.py preuves           vérifie les dossiers de preuve (preuves/<id>/)
+  python3 run.py sujets            la banque de 16 sujets, notée, avec ce qui manque pour les produire
+  python3 run.py veille            rouvre les pages officielles et reconfirme les faits (prix, licences)
+  python3 run.py stats             relève les mesures et recalcule les notes de qualité
+  python3 run.py plan              le plan du jour, la prochaine vidéo de chaque série, ce que disent les mesures
+  python3 run.py doctor            vérifie l'installation, les clés, les preuves et la porte de publication
+
+Règle de l'agent : pas de preuve, pas de vidéo. Une vidéo ne montre que ce qui existe dans un dossier preuves/<id>/.
 
 Mode essai (publish.dry_run: true, ou --no-publish) : la vidéo est fabriquée et contrôlée, rien n'est publié
-et rien n'est « consommé » (ni sujet, ni storyboard de réserve) : tout reste disponible pour le vrai lancement.
+et rien n'est « consommé » : tous les sujets restent disponibles pour le vrai lancement.
 """
 from __future__ import annotations
 
@@ -27,14 +33,16 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent
+OUT = ROOT / "out"                      # vidéos, couvertures et fiches de production
 sys.path.insert(0, str(ROOT))
 
-from studio import config, llm, mediahost, notify, produce, schema, scout, stats, strategist, writer  # noqa: E402
+from studio import config, fiche, llm, mediahost, notify, porte, preuves, produce, scout, stats, strategist, writer  # noqa: E402
 from studio.config import secret  # noqa: E402
 from studio.publish import caption_for, publish_all  # noqa: E402
 from studio.state import State, now  # noqa: E402
 
 LINES: list[str] = []
+SEG_NAMES = {"commercant": "Commerçant", "createur_freelance": "Créateur"}
 
 
 def log(msg: str) -> None:
@@ -48,15 +56,29 @@ def local_now(cfg: dict) -> dt.datetime:
 
 
 def candidates(state: State, cfg: dict) -> list[dict]:
-    """Veille du jour, mise en cache (une seule série d'appels par jour)."""
+    """Actualité des outils (une seule série d'appels par jour). Ne sert qu'à noter la fraîcheur d'un sujet."""
     cache = state.load("candidates", {})
     today = now().strftime("%Y-%m-%d")
     if cache.get("date") == today and cache.get("items"):
         return cache["items"]
-    items = scout.gather(cfg, log)
+    try:
+        items = scout.gather(cfg, log)
+    except Exception as e:  # noqa: BLE001 — la veille des outils ne doit jamais empêcher de produire
+        log(f"veille : actualité des outils indisponible ({type(e).__name__})")
+        items = []
     if items:
         state.save("candidates", {"date": today, "items": items})
     return items or cache.get("items", [])
+
+
+def veille(state: State, cfg: dict, force: bool = False) -> dict[str, dict]:
+    """Veille du jour sur les faits (pages officielles), puis liste des faits utilisables aujourd'hui."""
+    if (cfg.get("research") or {}).get("faits", True):
+        try:
+            scout.verifier_faits(ROOT, state, log, force=force)
+        except Exception as e:  # noqa: BLE001
+            log(f"veille : vérification des faits impossible ({type(e).__name__}: {str(e)[:120]})")
+    return scout.faits_confirmes(ROOT, state)
 
 
 def is_rehearsal(cfg: dict, publish: bool = True) -> bool:
@@ -64,112 +86,188 @@ def is_rehearsal(cfg: dict, publish: bool = True) -> bool:
     return (not publish) or bool((cfg.get("publish") or {}).get("dry_run", True))
 
 
-def write_story(state: State, cfg: dict, brief: dict, brain, rehearsal: bool = False) -> tuple[dict, dict]:
-    """Décide du sujet puis écrit le storyboard ; bascule sur la réserve si aucun modèle ne répond."""
-    topic = {"items": [], "angle": "", "why": ""}
+def write_story(state: State, cfg: dict, choix: dict, pack: dict, faits: dict, brain, essai: bool) -> tuple[dict, str] | tuple[None, str]:
+    """Écrit le storyboard ; bascule sur la réserve si aucun modèle ne répond. Renvoie (storyboard, origine)."""
+    f = choix["fiche"]
+    taken = {p.get("keyword") for p in state.posts + state.load("attente", [])}
     try:
-        cands = candidates(state, cfg) if brief["format"] != "offre" else []
-        topic = strategist.pick_topic(state, cfg, cands, brief, brain if brain.available() else None, log)
-        log(f"stratège : format « {brief['format']} », accroche « {brief['hook']} », longueur « {brief['length']} » — "
-            f"sujet : {', '.join(i.get('title', '') for i in topic['items']) or '(offre)'} ({topic.get('why') or 'sans commentaire'})")
-        if brief["format"] != "offre" and not topic["items"]:
-            raise RuntimeError("aucun sujet nouveau trouvé par la veille")
-        for it in topic["items"][:4]:
-            if it.get("source") == "github" and not it.get("readme"):
-                it["readme"] = scout.readme(it["id"][3:], 1500)
-        taken = {p.get("keyword") for p in state.posts}
-        story = writer.write(brain, brief, topic, cfg, strategist.memo(state), log, taken=taken)
-        return story, topic
-    except Exception as e:  # noqa: BLE001 — pas de cerveau disponible : on publie une vidéo de réserve
-        log(f"scénariste : écriture par le LLM impossible ({type(e).__name__}: {str(e)[:220]})")
-        story = writer.evergreen(cfg, state, log, rehearsal)
-        if story is None:
-            raise RuntimeError("aucun modèle disponible et plus aucun storyboard de réserve") from e
-        # une réserve n'a pas été écrite pour ce format ni pour cette accroche : elle ne doit pas fausser l'apprentissage
-        brief.update({"format": "reserve", "hook": None})
-        return story, {"items": [{"id": f"evergreen:{story['_evergreen']}", "title": story["title"], "url": "", "facts": []}], "angle": "", "why": "réserve"}
+        if not brain.available():
+            raise RuntimeError("aucune clé de modèle configurée")
+        refs = strategist.references(ROOT, f["segment"], f["n"])
+        story = writer.write(brain, f, pack, faits, cfg, strategist.memo(state, ROOT, f["segment"]), log, taken=taken, refs=refs)
+        return story, f"modèle {brain.used[-1] if brain.used else '?'}"
+    except Exception as e:  # noqa: BLE001 — pas de cerveau disponible : storyboard de réserve
+        log(f"scénariste : écriture par le modèle impossible ({type(e).__name__}: {str(e)[:200]})")
+    days = int((cfg.get("strategy") or {}).get("repeat_days", 21))
+    recent = set() if essai else {(b.get("sujet"), b.get("hook_type")) for b in strategist._used(state, days)}
+    skip = {s["_reserve"] for s in writer.reserves(cfg) if (s.get("sujet"), s.get("hook_type")) in recent}
+    st = writer.reserve_for(cfg, f["segment"], f["n"], pack["id"], f["hook_type"], skip=skip)
+    if st is None:
+        return None, "réserve épuisée"
+    log(f"scénariste : storyboard de réserve « {st['_reserve']} »" + (" (essai : rien n'est consommé)" if essai else ""))
+    return st, f"réserve {st['_reserve']}"
 
 
-def make_one(state: State, cfg: dict, slot: str, story: dict | None = None, publish: bool = True) -> dict | None:
-    t0 = time.time()
-    rng = random.Random(int(time.time()))
-    brain = llm.Brain(cfg, state, log)
-    brief = strategist.sample_brief(state, cfg, rng, slot)
-    topic = {"items": [], "angle": "", "why": "storyboard fourni"}
-    pcfg = cfg.get("publish") or {}
-    essai = is_rehearsal(cfg, publish)
-    if story is None:
-        story, topic = write_story(state, cfg, brief, brain, essai)
-    else:
-        brief.update({"format": "manuel", "hook": None})      # scénario écrit à la main : ni format ni accroche à créditer
-    stamp = local_now(cfg).strftime("%Y%m%d-%H%M")
-    story, _ = schema.check(story, None)
-    story = writer.apply_cta(story, cfg)          # même fin pour toutes les vidéos : commentaire + formation en promo, lien en bio
-    post_id = f"{stamp}-{story['keyword'].lower()}"
-    out_dir = ROOT / "out"
-    res = produce.make_video(story, cfg, out_dir, post_id, log)
-    story = res["story"]
-    # l'apprentissage porte sur ce que la vidéo EST (durée réelle), pas sur ce qui avait été demandé
-    asked = brief.get("length")
-    brief["length"] = strategist.length_bucket(res["duration"])
-    if asked and asked != brief["length"]:
-        brief["length_asked"] = asked
-    post = {"id": post_id, "created": now().isoformat(timespec="seconds"), "slot": slot, "brief": brief, "title": story["title"],
-            "keyword": story["keyword"], "duration": round(res["duration"], 1), "words": res["words"], "llm": brain.used[-1:] or ["aucun"],
-            "why": topic.get("why", ""), "facts": [{k: c.get(k) for k in ("id", "title", "url", "facts")} for c in topic.get("items", [])],
-            "qa": {"ok": res["qa"]["ok"], "problems": res["qa"]["problems"], "warnings": res["qa"]["warnings"]}, "published": {}, "stats": {}}
+def _segment_auto(state: State, cfg: dict, when: dt.datetime, slot: str, essai: bool) -> str:
+    plan = state.load("day", {}).get(when.strftime("%Y-%m-%d")) or {}
+    if slot in (plan.get("segments") or {}):
+        return plan["segments"][slot]
     if essai:
-        # répétition générale : on montre ce qui serait publié, mais on ne retient rien (ni sujet, ni réserve, ni vidéo comptée)
-        if res["qa"]["ok"] and publish:
-            post["published"] = publish_all(res["video"], story, res["thumb_ms"], None, cfg, state, log)
-        elif res["qa"]["ok"]:
-            log("légende prévue :\n" + caption_for(story, cfg, "tiktok"))
-        else:
-            log("contrôle qualité en échec : cette vidéo ne serait PAS publiée")
-        n = state.load("essais", {"n": 0}); n["n"] = int(n.get("n", 0)) + 1; state.save("essais", n)
-        state.log("essai", id=post_id, title=story["title"], seconds=round(time.time() - t0), qa=res["qa"]["ok"], reserve=story.get("_evergreen"))
-        log(f"MODE ESSAI — terminé en {time.time() - t0:.0f} s : « {story['title']} » ({post['duration']} s). Rien n'a été publié ni compté.")
-        return post
-    if not res["qa"]["ok"]:
-        log("contrôle qualité en échec : la vidéo n'est PAS publiée")
-        state.add_post(post)
-        return post
-    # publication réelle : la vidéo doit d'abord être en ligne à une adresse publique (Buffer vient la chercher)
-    public_url = None
+        return strategist.SEGMENTS[int(state.load("essais", {"n": 0}).get("n", 0)) % 2]
+    return strategist.SEGMENTS[(len(state.posts) + len(state.load("attente", []))) % 2]
+
+
+def _host(post_id: str, res: dict, cfg: dict, state: State) -> str | None:
+    """Met la vidéo en ligne à une adresse publique (Buffer vient la chercher ; toi, tu peux la regarder)."""
+    pcfg = cfg.get("publish") or {}
     keep = int(pcfg.get("keep_videos", 30))
     if pcfg.get("media_host", "github_pages") == "cloudinary":
-        public_url = mediahost.cloudinary_upload(Path(res["video"]), f"studio/{post_id}", log)
+        url = mediahost.cloudinary_upload(Path(res["video"]), f"studio/{post_id}", log)
         hosted = state.load("hosted", [])
-        if public_url:
+        if url:
             hosted.append(f"studio/{post_id}")
             for old_id in hosted[:-keep]:
                 mediahost.cloudinary_delete(old_id)
             state.save("hosted", hosted[-keep:])
-    else:
-        base = mediahost.publish({f"v/{post_id}.mp4": Path(res["video"]), f"v/{post_id}.jpg": Path(res["thumb"])}, cfg, ROOT, keep, log)
-        if base:
-            url = f"{base}/v/{post_id}.mp4"
-            if mediahost.wait_public(url, Path(res["video"]).stat().st_size, log=log):
-                public_url = url
-    if public_url:
-        log(f"hébergement : {public_url}")
-    post["published"] = publish_all(res["video"], story, res["thumb_ms"], public_url, cfg, state, log)
+        return url
+    base = mediahost.publish({f"v/{post_id}.mp4": Path(res["video"]), f"v/{post_id}.jpg": Path(res["thumb"])}, cfg, ROOT, keep, log)
+    if base:
+        url = f"{base}/v/{post_id}.mp4"
+        if mediahost.wait_public(url, Path(res["video"]).stat().st_size, log=log):
+            return url
+    return None
+
+
+def _send(post: dict, story: dict, video: str | None, public_url: str | None, cfg: dict, state: State) -> dict:
+    post["published"] = publish_all(video, story, int(post.get("thumb_ms", 1500)), public_url, cfg, state, log)
     if not any(v.get("status") not in ("skipped", "error") for v in post["published"].values()):
-        # personne n'a reçu la vidéo : on ne compte rien (le sujet et la réserve restent disponibles) et l'exécution passe en échec
         detail = " ; ".join(f"{n} : {v.get('error') or v.get('status')}" for n, v in post["published"].items()) or "aucun réseau dans publish.networks"
         raise RuntimeError(f"aucun réseau n'a reçu la vidéo ({detail[:220]})")
-    if story.get("_evergreen"):
-        strategist.mark_seen(state, [{"id": f"evergreen:{story['_evergreen']}"}], story["title"])
-    else:
-        strategist.mark_seen(state, topic.get("items", []), story["title"])
-    if brief.get("remake_of"):
-        for p in state.posts:
-            if p["id"] == brief["remake_of"]:
-                p["remade"] = True
     state.add_post(post)
-    state.log("video", id=post_id, title=story["title"], seconds=round(time.time() - t0), published={k: v.get("status") for k, v in post["published"].items()})
+    state.log("video", id=post["id"], title=post["title"], published={k: v.get("status") for k, v in post["published"].items()})
+    return post
+
+
+def make_one(state: State, cfg: dict, slot: str, story: dict | None = None, publish: bool = True, segment: str | None = None,
+             post_id: str | None = None) -> dict | None:
+    """Fabrique une vidéo. Renvoie la fiche du post, ou None s'il n'y avait rien d'honnête à produire."""
+    t0 = time.time()
+    when = local_now(cfg)
+    rng = random.Random(int(time.time()))
+    essai = is_rehearsal(cfg, publish)
+    brain = llm.Brain(cfg, state, log)
+    faits = veille(state, cfg)
+    items = candidates(state, cfg) if (cfg.get("research") or {}).get("github", True) else []
+    choix, origine = None, "storyboard fourni à la main"
+    if story is None:
+        segment = segment or _segment_auto(state, cfg, when, slot, essai)
+        choix = strategist.choisir(ROOT, state, cfg, segment, faits, rng, items, essai)
+        if choix is None:
+            log(f"stratège : rien à produire pour la série « {SEG_NAMES.get(segment, segment)} » — tous les sujets couverts par une preuve ont été traités "
+                "récemment. Ajoute un dossier de preuve (preuves/LISEZMOI.md) : " + (strategist.manques(ROOT, state, faits) or ["—"])[0])
+            state.log("rien", segment=segment)
+            return None
+        f = choix["fiche"]
+        pack = preuves.charger(ROOT, f["preuve"])
+        log(f"stratège : série « {SEG_NAMES.get(segment, segment)} », sujet n° {f['n']} « {f['sujet']} » (note {f['note']}/5), accroche « {choix['hook_type']} », "
+            f"preuve « {pack['id']} » — {choix['pourquoi']}")
+        suite = choix.get("suite")
+        if not essai:
+            pre = porte.bloquants(cfg, pack, None, suite)
+            if pre:
+                log("PUBLICATION SUSPENDUE — aucune vidéo fabriquée. Ce qui manque :")
+                for k, b in enumerate(pre, 1):
+                    log(f"  {k}. {b}")
+                state.log("suspendu", segment=segment, sujet=f["n"], raisons=pre)
+                return {"id": None, "qa": {"ok": True}, "suspendu": pre}
+        story, origine = write_story(state, cfg, choix, pack, faits, brain, essai)
+        if story is None:
+            log(f"scénariste : aucun modèle disponible et plus de storyboard de réserve inédit pour la série « {SEG_NAMES.get(segment, segment)} » — "
+                "ajoute une clé de modèle (NVIDIA_API_KEY ou GROQ_API_KEY) ou un dossier de preuve")
+            return None
+    else:
+        pack = preuves.charger(ROOT, story.get("preuve"))
+        segment = story.get("segment")
+        other = strategist.choisir(ROOT, state, cfg, segment, faits, rng, items, essai) if segment in strategist.SEGMENTS else None
+        suite = None
+        if other:
+            suite = other["suite"] if other["fiche"]["n"] == story.get("sujet") else {"n": other["fiche"]["n"], "sujet": other["fiche"]["sujet"]}
+    reserve = story.pop("_reserve", None)
+    stamp = when.strftime("%Y%m%d-%H%M")
+    story, _notes = writer.controler(story, cfg, pack, faits, None)
+    post_id = post_id or f"{stamp}-{story['keyword'].lower()}"
+    out_dir = OUT
+    res = produce.make_video(story, cfg, out_dir, post_id, log, pack=pack, faits=faits)
+    story = res["story"]
+    brief = {"segment": story["segment"], "sujet": story["sujet"], "hook_type": story["hook_type"], "preuve": pack["id"],
+             "slot": strategist.slot_bucket(slot), "slot_exact": slot, "origine": origine.split(" ")[0], **({"reserve": reserve} if reserve else {})}
+    refs = strategist.references(ROOT, story["segment"], story["sujet"])
+    fp = fiche.ecrire(out_dir / f"{post_id}.md", story, pack, cfg, res, choix, faits, refs, suite, origine)
+    log(f"fiche de production : {fp.name} (stratégie, sources, accroches, script minuté, storyboard, phrase de fin, packs par plateforme, contrôle)")
+    post = {"id": post_id, "created": now().isoformat(timespec="seconds"), "slot": slot, "brief": brief, "title": story["title"],
+            "keyword": story["keyword"], "duration": round(res["duration"], 1), "words": res["words"], "thumb_ms": res["thumb_ms"],
+            "llm": brain.used[-1:] or ["aucun"], "why": (choix or {}).get("pourquoi", ""), "note": ((choix or {}).get("fiche") or {}).get("note"),
+            "faits": story.get("faits") or [], "suite": suite,
+            "qa": {"ok": res["qa"]["ok"], "problems": res["qa"]["problems"], "warnings": res["qa"]["warnings"]}, "published": {}, "stats": {}}
+    blocs = porte.bloquants(cfg, pack, res["qa"], suite)
+    if essai:
+        # répétition générale : on montre ce qui se passerait, mais on ne retient rien (ni sujet, ni réserve, ni vidéo comptée)
+        if blocs:
+            log("porte de publication : en publication réelle, cette vidéo serait SUSPENDUE —")
+            for k, b in enumerate(blocs, 1):
+                log(f"  {k}. {b}")
+        else:
+            log("porte de publication : rien ne bloque" + (" ; il resterait ta validation" if porte.validation_requise(cfg) else ""))
+        log("légende prévue (TikTok) :\n" + caption_for(story, cfg, "tiktok"))
+        n = state.load("essais", {"n": 0}); n["n"] = int(n.get("n", 0)) + 1; state.save("essais", n)
+        state.log("essai", id=post_id, title=story["title"], segment=story["segment"], sujet=story["sujet"], seconds=round(time.time() - t0),
+                  qa=res["qa"]["ok"], reserve=reserve)
+        log(f"MODE ESSAI — terminé en {time.time() - t0:.0f} s : « {story['title']} » ({post['duration']} s). Rien n'a été publié ni compté.")
+        return post
+    if blocs:
+        log("PUBLICATION SUSPENDUE — la vidéo n'est pas publiée :")
+        for k, b in enumerate(blocs, 1):
+            log(f"  {k}. {b}")
+        state.log("suspendu", id=post_id, raisons=blocs)
+        return post
+    public_url = _host(post_id, res, cfg, state)
+    if public_url:
+        log(f"hébergement : {public_url}")
+    if porte.validation_requise(cfg):
+        if not public_url:
+            raise RuntimeError("la vidéo n'a pas pu être mise en ligne pour validation (hébergement indisponible)")
+        wait = state.load("attente", [])
+        wait.append({**post, "url": public_url, "story": story})
+        state.save("attente", wait)
+        state.log("attente", id=post_id, title=story["title"], url=public_url)
+        log(f"EN ATTENTE DE TA VALIDATION — « {story['title']} » ({post['duration']} s)")
+        log(f"  1. regarde : {public_url}")
+        log(f"  2. relis la fiche de production (Artifacts de cette exécution : {post_id}.md)")
+        log(f"  3. pour publier : onglet Actions > Agent vidéo > Run workflow > commande « valider », vidéo « {post_id} »")
+        return post
+    _send(post, story, res["video"], public_url, cfg, state)
     log(f"terminé en {time.time() - t0:.0f} s : « {story['title']} » ({post['duration']} s)")
     return post
+
+
+def purge_attente(state: State, cfg: dict) -> list[dict]:
+    """Abandonne les vidéos restées trop longtemps sans validation ; renvoie celles qui attendent encore."""
+    days = int((cfg.get("publish") or {}).get("attente_jours", 7))
+    wait = state.load("attente", [])
+    keep = []
+    for w in wait:
+        try:
+            old = (now() - dt.datetime.fromisoformat(w["created"])).days >= days
+        except (KeyError, ValueError):
+            old = True
+        if old:
+            log(f"validation : « {w.get('title', '')[:50]} » abandonnée (aucune validation en {days} jours)")
+            state.log("abandon", id=w.get("id"))
+        else:
+            keep.append(w)
+    if len(keep) != len(wait):
+        state.save("attente", keep)
+    return keep
 
 
 def due_slot(state: State, cfg: dict, when: dt.datetime) -> str | None:
@@ -194,15 +292,21 @@ def cmd_tick(args, cfg, state) -> int:
         n = stats.collect(state, cfg, log)
         strategist.score_posts(state, cfg)
         if n:
-            log(f"statistiques : {n} relevé(s), scores recalculés")
-    except Exception as e:  # noqa: BLE001 — les statistiques ne doivent jamais empêcher de produire
-        log(f"statistiques : erreur ignorée ({type(e).__name__}: {str(e)[:160]})")
+            log(f"mesures : {n} relevé(s), notes de qualité recalculées")
+    except Exception as e:  # noqa: BLE001 — les mesures ne doivent jamais empêcher de produire
+        log(f"mesures : erreur ignorée ({type(e).__name__}: {str(e)[:160]})")
+    wait = purge_attente(state, cfg)
+    if wait:
+        log(f"validation : {len(wait)} vidéo(s) attendent ton accord — " + ", ".join(w["id"] for w in wait))
     when = local_now(cfg)
     date = when.strftime("%Y-%m-%d")
     plan = strategist.plan_day(state, cfg, date, random.Random(when.strftime("%Y%m%d")))     # le plan du jour existe toujours
     slot = when.strftime("%H:%M") if args.force else due_slot(state, cfg, when)
     if not slot:
-        log(f"aucun créneau à traiter maintenant ({when.strftime('%H:%M')} ; plan du jour : {', '.join(plan['slots'])})")
+        veille(state, cfg)                       # la veille du jour a lieu même sans vidéo à produire
+        log(f"aucun créneau à traiter maintenant ({when.strftime('%H:%M')} ; plan du jour : "
+            + (", ".join(f"{s} {SEG_NAMES.get(plan['segments'].get(s), '')}" for s in plan["slots"]) or "pas de publication aujourd'hui") + ")")
+        summary(cfg, notify_user=False)
         return 0
     days = state.load("day", {})
     # une vidéo forcée à la main s'ajoute au plan du jour sans le remplacer
@@ -212,10 +316,10 @@ def cmd_tick(args, cfg, state) -> int:
     code = 0
     try:
         post = make_one(state, cfg, slot)
-        entry["ok"] = bool(post and post["qa"]["ok"])
-        entry["post"] = post and post["id"]
+        entry["ok"] = post is None or bool(post["qa"]["ok"])          # « rien à produire » n'est pas une panne
+        entry["post"] = post and post.get("id")
     except Exception as e:  # noqa: BLE001
-        log(f"ÉCHEC de la production : {type(e).__name__}: {str(e)[:300]}")
+        log(f"ÉCHEC de la production : {type(e).__name__}: {str(e)[:400]}")
         traceback.print_exc()
         state.log("error", slot=slot, error=f"{type(e).__name__}: {str(e)[:300]}")
         code = 1
@@ -224,47 +328,173 @@ def cmd_tick(args, cfg, state) -> int:
     return code
 
 
-def summary(cfg: dict) -> None:
-    text = "\n".join(LINES[-40:])
+def summary(cfg: dict, notify_user: bool = True) -> None:
+    text = "\n".join(LINES[-60:])
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
             f.write("### Agent vidéo\n```\n" + text + "\n```\n")
-    notify.telegram("🎬 Agent vidéo\n" + "\n".join(LINES[-12:]), cfg, log)
+    if notify_user:
+        notify.telegram("🎬 Agent vidéo\n" + "\n".join(LINES[-14:]), cfg, log)
 
 
 def cmd_make(args, cfg, state) -> int:
     story = json.loads(Path(args.story).read_text(encoding="utf-8")) if args.story else None
-    post = make_one(state, cfg, local_now(cfg).strftime("%H:%M"), story, publish=not args.no_publish)
+    post = make_one(state, cfg, local_now(cfg).strftime("%H:%M"), story, publish=not args.no_publish, segment=args.segment)
     summary(cfg)
-    return 0 if post and post["qa"]["ok"] else 1
+    return 0 if post is None or post["qa"]["ok"] else 1
 
 
 def cmd_demo(args, cfg, state) -> int:
-    story = json.loads((ROOT / "examples" / "demo_storyboard.json").read_text(encoding="utf-8"))
-    story, _ = schema.check(story, None)
-    res = produce.make_video(writer.apply_cta(story, cfg), cfg, ROOT / "out", "demo", log)
-    return 0 if res["qa"]["ok"] else 1
+    """Une vidéo d'exemple par public (ou seulement --segment), à partir des storyboards de réserve. Rien n'est publié."""
+    faits = scout.faits_confirmes(ROOT, state)
+    ok = True
+    for seg in ([args.segment] if args.segment else list(strategist.SEGMENTS)):
+        st = writer.reserve_for(cfg, seg)
+        if st is None:
+            log(f"démo : aucun storyboard de réserve pour « {seg} »")
+            ok = False
+            continue
+        name = st.pop("_reserve")
+        pack = preuves.charger(ROOT, st["preuve"])
+        res = produce.make_video(st, cfg, OUT, f"demo-{seg}", log, pack=pack, faits=faits)
+        fiche.ecrire(OUT / f"demo-{seg}.md", res["story"], pack, cfg, res, None, faits,
+                     strategist.references(ROOT, seg, res["story"]["sujet"]), None, f"réserve {name}")
+        ok = ok and res["qa"]["ok"]
+    return 0 if ok else 1
+
+
+def cmd_attente(args, cfg, state) -> int:
+    wait = purge_attente(state, cfg)
+    if not wait:
+        print("Aucune vidéo n'attend de validation.")
+        return 0
+    for w in wait:
+        print(f"- {w['id']} — « {w.get('title')} » ({SEG_NAMES.get((w.get('brief') or {}).get('segment'), '?')}, {w.get('duration')} s)\n    regarder : {w.get('url')}")
+    print("\nPour publier : python3 run.py valider <identifiant>   (ou : valider tout)")
+    return 0
+
+
+def cmd_valider(args, cfg, state) -> int:
+    """Publie une vidéo en attente : c'est TA validation. Les autres conditions sont revérifiées au moment de publier."""
+    wait = purge_attente(state, cfg)
+    todo = wait if args.video.lower() in ("tout", "all") else [w for w in wait if w.get("id") == args.video]
+    if not todo:
+        log(f"validation : aucune vidéo en attente ne porte l'identifiant « {args.video} » (en attente : {', '.join(w['id'] for w in wait) or 'aucune'})")
+        summary(cfg, notify_user=False)
+        return 1
+    if is_rehearsal(cfg):
+        log("validation : publish.dry_run est à true — rien ne peut être publié en mode essai")
+        summary(cfg, notify_user=False)
+        return 1
+    faits = veille(state, cfg)
+    code = 0
+    for w in todo:
+        story = w["story"]
+        try:
+            pack = preuves.charger(ROOT, story["preuve"])
+            writer.controler(story, cfg, pack, faits, None)                       # les faits cités sont-ils toujours confirmés aujourd'hui ?
+            blocs = porte.bloquants(cfg, pack, w.get("qa"), w.get("suite"))
+            if blocs:
+                log(f"validation : « {w['title'][:50]} » reste SUSPENDUE — " + " ; ".join(blocs))
+                code = 1
+                continue
+            video = OUT / f"{w['id']}.mp4"
+            if not video.exists():
+                import requests
+                video.parent.mkdir(exist_ok=True)
+                video.write_bytes(requests.get(w["url"], timeout=120).content)
+            post = {k: v for k, v in w.items() if k not in ("story", "url")}
+            post["validee_le"] = now().isoformat(timespec="seconds")
+            _send(post, story, str(video), w["url"], cfg, state)
+            state.save("attente", [x for x in state.load("attente", []) if x.get("id") != w["id"]])
+            log(f"validation : « {w['title'][:50]} » publiée")
+        except Exception as e:  # noqa: BLE001
+            log(f"validation : « {w.get('title', '')[:50]} » non publiée ({type(e).__name__}: {str(e)[:240]})")
+            code = 1
+    summary(cfg)
+    return code
+
+
+def cmd_preuves(args, cfg, state) -> int:
+    packs = preuves.tous(ROOT)
+    if not packs:
+        print("Aucun dossier de preuve. Lis preuves/LISEZMOI.md.")
+        return 1
+    bad = 0
+    for pid, p in packs.items():
+        pb = preuves.problemes(p)
+        bad += bool(pb)
+        if pb:
+            print(f"❌ {pid}\n     " + "\n     ".join(pb))
+            continue
+        etat = "⚠️  exemple fictif (non publiable par défaut)" if p.get("fictif") else ("✅ réel, signé par " + str(p.get("valide_par")) if preuves.signee(p) else "⏳ réel, à signer (valide_par) avant publication")
+        print(f"{etat} — {pid} [{SEG_NAMES.get(p.get('segment'))}] sujets {p.get('sujets')}\n     {p.get('titre')}\n     médias : {', '.join(p.get('media') or {})}")
+    return 1 if bad else 0
+
+
+def cmd_sujets(args, cfg, state) -> int:
+    faits = scout.faits_confirmes(ROOT, state)
+    rows = strategist.fiches(ROOT, state, faits, state.load("candidates", {}).get("items") or [])
+    print("Note = problème 30 % + preuve 25 % + demande 20 % + adéquation 15 % + fraîcheur 10 % (outil de tri interne, pas une prévision).\n")
+    print(f"{'n°':>2}  {'public':<10} {'thème':<9} {'note':>4}  pb pr de ad fr  preuve                     sujet")
+    for f in rows:
+        c = f["criteres"]
+        print(f"{f['n']:>2}  {SEG_NAMES[f['segment']]:<10} {f['theme']:<9} {f['note']:>4.2f}  {c['probleme']:.0f}  {c['preuve']:.0f}  {c['demande']:.0f}  {c['formation']:.0f}  {c['fraicheur']:.0f}  "
+              f"{(f['preuve'] or '— à fournir —'):<26} {f['sujet']}")
+    miss = strategist.manques(ROOT, state, faits)
+    print(f"\n{len(rows) - len(miss)} sujets sur {len(rows)} ont une preuve. Le signal de demande est inconnu partout tant que tu n'as rien mesuré ni saisi (data/sujets.yaml).")
+    return 0
+
+
+def cmd_veille(args, cfg, state) -> int:
+    scout.verifier_faits(ROOT, state, log, force=True)
+    ok = scout.faits_confirmes(ROOT, state)
+    for fid, f in scout.charger_faits(ROOT)["faits"].items():
+        print(f"  {'✅' if fid in ok else '⛔'} {fid} — {f['affirmation']}\n       {f['url']} (vérifié le {(ok.get(fid) or f).get('verifie_le')})")
+    for ch in state.load("veille", {}).get("changements", [])[-5:]:
+        print(f"  changement du {ch['le']} : {ch['detail']}")
+    return 0
 
 
 def cmd_stats(args, cfg, state) -> int:
     n = stats.collect(state, cfg, log)
     strategist.score_posts(state, cfg)
     log(f"{n} relevé(s)")
-    print(strategist.memo(state))
+    print(strategist.memo(state, ROOT))
     return 0
 
 
 def cmd_plan(args, cfg, state) -> int:
     when = local_now(cfg)
     plan = strategist.plan_day(state, cfg, when.strftime("%Y-%m-%d"), random.Random(when.strftime("%Y%m%d")))
-    print(f"Aujourd'hui ({when.strftime('%Y-%m-%d')}, {cfg['schedule']['timezone']}) : créneaux {plan['slots']} — faits : {plan['done']}")
-    print(f"Vidéos en mémoire : {len(state.posts)} (dont notées : {sum(p.get('score') is not None for p in state.posts)})\n")
-    for dim, values in (("format", [f for f in strategist.FORMATS if f != "offre"]), ("hook", list(strategist.HOOKS)),
-                        ("length", list(strategist.LENGTHS)), ("slot", ["matin", "midi", "soir"])):
-        post = strategist.posterior(values, dim, state)
-        obs = strategist.arm_stats(state, dim)
-        print(f"{dim:8s} " + "  ".join(f"{v}={m:+.2f}±{s:.2f}(n={len(obs.get(v, []))})" for v, (m, s) in sorted(post.items(), key=lambda kv: -kv[1][0])))
-    print("\n" + strategist.memo(state))
+    essai = is_rehearsal(cfg)
+    print(f"Aujourd'hui ({when.strftime('%Y-%m-%d')}, {cfg['schedule']['timezone']}) — " + ("MODE ESSAI (rien n'est publié)" if essai else "publication réelle"))
+    print("  créneaux : " + (", ".join(f"{s} → {SEG_NAMES.get(plan['segments'].get(s), '?')}" for s in plan["slots"]) or "aucun (jour sans publication)")
+          + f" — faits : {plan['done'] or 'rien encore'}")
+    faits = scout.faits_confirmes(ROOT, state)
+    items = state.load("candidates", {}).get("items") or []
+    print("\nProchaine vidéo de chaque série")
+    for seg in strategist.SEGMENTS:
+        c = strategist.choisir(ROOT, state, cfg, seg, faits, random.Random(0), items, essai)
+        if not c:
+            print(f"  {SEG_NAMES[seg]} : rien à produire (aucun sujet couvert par une preuve, ou tous traités récemment)")
+            continue
+        f = c["fiche"]
+        pack = preuves.charger(ROOT, f["preuve"])
+        blocs = porte.bloquants(cfg, pack, None, c.get("suite"))
+        print(f"  {SEG_NAMES[seg]} : sujet n° {f['n']} « {f['sujet']} » — note {f['note']}/5, accroche « {c['hook_type']} », preuve « {f['preuve']} »")
+        print(f"      pourquoi : {c['pourquoi']} ; thèmes ouverts : {', '.join(c['themes'])}")
+        print(f"      la suite : " + (f"sujet n° {c['suite']['n']} « {c['suite']['sujet']} »" if c.get("suite") else "AUCUNE (la publication serait suspendue)"))
+        print("      porte de publication : " + ("rien ne bloque" if not blocs else "SUSPENDUE — " + " | ".join(blocs)))
+    wait = state.load("attente", [])
+    print(f"\nEn attente de ta validation : {len(wait)}" + ("" if not wait else " — " + ", ".join(w["id"] for w in wait)))
+    miss = strategist.manques(ROOT, state, faits)
+    if miss:
+        print(f"\nSujets sans preuve ({len(miss)}) — les 4 premiers :")
+        for m in miss[:4]:
+            print("  - " + m)
+    print(f"\nVidéos publiées : {len(state.posts)} (dont notées : {sum(p.get('score') is not None for p in state.posts)})")
+    print(strategist.memo(state, ROOT))
     return 0
 
 
@@ -289,6 +519,25 @@ def cmd_doctor(args, cfg, state) -> int:
         line(True, "edge-tts (voix)")
     except ImportError:
         line(False, "edge-tts (voix)", "pip install edge-tts")
+    print("Preuves et faits (pas de preuve, pas de vidéo)")
+    packs = preuves.tous(ROOT)
+    for pid, p in packs.items():
+        pb = preuves.problemes(p)
+        if pb:
+            line(False, f"preuve {pid}", " ; ".join(pb))
+        elif p.get("fictif"):
+            line(None, f"preuve {pid}", "exemple fictif : sert aux essais, non publiable par défaut")
+        else:
+            line(True if preuves.signee(p) else None, f"preuve {pid}", f"signée par {p['valide_par']}" if preuves.signee(p) else "non signée (valide_par) : non publiable")
+    faits = veille(state, cfg, force=args.live)
+    allf = scout.charger_faits(ROOT)["faits"]
+    line(len(faits) == len(allf), "faits vérifiés", f"{len(faits)}/{len(allf)} confirmés" + ("" if args.live else " (ajoute --live pour rouvrir les pages officielles)"))
+    for st_ in writer.reserves(cfg):
+        try:
+            writer.controler(dict(st_), cfg, packs[st_["preuve"]], faits, None)
+        except Exception as e:  # noqa: BLE001
+            line(False, f"réserve {st_['_reserve']}", str(e)[:200])
+    line(True, "storyboards de réserve", f"{len(writer.reserves(cfg))} contrôlés")
     print("Cerveau (modèles gratuits)")
     brain = llm.Brain(cfg, state, lambda *_: None)
     for p in cfg["llm"]["providers"]:
@@ -303,9 +552,22 @@ def cmd_doctor(args, cfg, state) -> int:
             line(True, "appel d'essai", f"{brain.used[-1]} a répondu « {txt.strip()[:30]} »")
         except Exception as e:  # noqa: BLE001
             line(False, "appel d'essai", str(e)[:200])
-    print("Publication")
+    print("Porte de publication")
     pcfg = cfg.get("publish") or {}
     line(None if pcfg.get("dry_run", True) else True, "mode", "ESSAI (dry_run: true) : rien n'est publié" if pcfg.get("dry_run", True) else "publication réelle")
+    good, why = porte.promo_etat(cfg)
+    line(True if good else None, "promotion de la phrase de fin", why)
+    line(True if str((cfg.get("offer") or {}).get("lien_bio") or "").strip() else None, "page d'aiguillage (offer.lien_bio)",
+         str((cfg.get("offer") or {}).get("lien_bio") or "non renseignée"))
+    line(True, "validation", "chaque vidéo attend ton accord" if porte.validation_requise(cfg) else "déléguée : un dossier signé suffit")
+    for seg in strategist.SEGMENTS:
+        c = strategist.choisir(ROOT, state, cfg, seg, faits, random.Random(0), None, False)
+        if c is None:
+            line(None, f"série {SEG_NAMES[seg]}", "rien à produire")
+        else:
+            blocs = porte.bloquants(cfg, packs[c["fiche"]["preuve"]], None, c.get("suite"))
+            line(True if not blocs else None, f"série {SEG_NAMES[seg]}", "publiable" if not blocs else f"{len(blocs)} condition(s) manquante(s) : " + " | ".join(blocs))
+    print("Publication")
     if secret("BUFFER_API_KEY"):
         if args.live:
             try:
@@ -346,13 +608,17 @@ def main() -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     t = sub.add_parser("tick"); t.add_argument("--force", action="store_true", help="produit une vidéo maintenant, même hors créneau")
     m = sub.add_parser("make"); m.add_argument("--story"); m.add_argument("--no-publish", action="store_true")
-    sub.add_parser("demo"); sub.add_parser("stats"); sub.add_parser("plan")
-    d = sub.add_parser("doctor"); d.add_argument("--live", action="store_true", help="teste réellement les clés (consomme 1 appel chacune)")
+    m.add_argument("--segment", choices=list(strategist.SEGMENTS))
+    d0 = sub.add_parser("demo"); d0.add_argument("--segment", choices=list(strategist.SEGMENTS))
+    v = sub.add_parser("valider"); v.add_argument("video", help="identifiant de la vidéo en attente, ou « tout »")
+    for name in ("attente", "preuves", "sujets", "veille", "stats", "plan"):
+        sub.add_parser(name)
+    d = sub.add_parser("doctor"); d.add_argument("--live", action="store_true", help="teste réellement les clés et rouvre les pages officielles")
     args = ap.parse_args()
     cfg = config.load()
     state = State(ROOT)
-    return {"tick": cmd_tick, "make": cmd_make, "demo": cmd_demo, "stats": cmd_stats, "plan": cmd_plan,
-            "doctor": cmd_doctor}[args.cmd](args, cfg, state)
+    return {"tick": cmd_tick, "make": cmd_make, "demo": cmd_demo, "valider": cmd_valider, "attente": cmd_attente, "preuves": cmd_preuves,
+            "sujets": cmd_sujets, "veille": cmd_veille, "stats": cmd_stats, "plan": cmd_plan, "doctor": cmd_doctor}[args.cmd](args, cfg, state)
 
 
 if __name__ == "__main__":

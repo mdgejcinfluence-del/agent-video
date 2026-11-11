@@ -16,12 +16,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from studio import llm, writer  # noqa: E402
+from studio import config, llm, preuves, scout, strategist, writer  # noqa: E402
 from studio.publish import publish_all  # noqa: E402
 from studio.publish.buffer import Buffer, Enum, lit  # noqa: E402
 from studio.state import State  # noqa: E402
 
-DEMO = json.loads((ROOT / "examples" / "demo_storyboard.json").read_text(encoding="utf-8"))
+DEMO = json.loads((ROOT / "examples" / "reserve" / "c1_defaut_corrige.json").read_text(encoding="utf-8"))
 SEEN: list[dict] = []
 SCRIPT: dict[str, list] = {}
 
@@ -94,22 +94,32 @@ class Net(unittest.TestCase):
         return b
 
     def test_bascule_et_correction(self):
-        """A est en panne (429) -> on passe à B. B invente un chiffre -> refusé, l'erreur lui est renvoyée -> il corrige."""
+        """A est en panne (429) -> on passe à B. B reformule la demande écrite -> refusé, le refus lui est renvoyé -> il corrige."""
+        import random
         import studio.llm as L
         L.time.sleep = lambda *_: None
-        bad = json.loads(json.dumps(DEMO)); bad["scenes"][1]["blocks"][1]["rows"][2] = "45 fois plus net"
+        bad = json.loads(json.dumps(DEMO)); bad["scenes"][2]["blocks"][0]["text"] = "Rends le titre plus petit, avec 45 px de marge."
+        bad["scenes"][2]["blocks"][0]["hl"] = []
         SCRIPT["a"] = [(429, "")] * 9
         SCRIPT["b"] = [(200, "Voici :\n```json\n" + json.dumps(bad) + "\n```"), (200, "<think>hmm</think>" + json.dumps(DEMO))]
-        facts = [{"title": "démo", "url": "u", "facts": ["Étoiles GitHub : 72 000", "Gratuit jusqu'à 3 employés"]}]
-        brief = {"format": "tuto", "hook": "promesse", "length": "moyen"}
-        st = writer.write(self.brain(), brief, {"items": facts, "angle": ""}, self.cfg)
-        self.assertEqual(st["keyword"], "MOTION")
+        cfg = {**config.load(), "llm": self.cfg["llm"]}
+        faits = scout.faits_confirmes(ROOT, self.state, today="2026-11-11")
+        choix = strategist.choisir(ROOT, self.state, cfg, "createur_freelance", faits, random.Random(0))
+        fiche = dict(choix["fiche"], n=3, hook_type="probleme")
+        pack = preuves.charger(ROOT, "createur-intro-serie")
+        st = writer.write(self.brain(), fiche, pack, faits, cfg)
+        self.assertEqual(st["keyword"], "RENDU")
+        self.assertEqual(st["scenes"][-1]["say"], "[kw]Commente RENDU si tu veux la suite. [sub]La formation complète est en promo, lien en bio.")
         calls_b = [s for s in SEEN if s["path"].startswith("/b/")]
         self.assertEqual(len(calls_b), 2)
         self.assertEqual(calls_b[0]["auth"], "Bearer kb")
         self.assertEqual(calls_b[0]["body"]["model"], "nvidia/nemotron-3-ultra-550b-a55b", "modèle retiré -> remplacé par un modèle du catalogue")
+        consigne = calls_b[0]["body"]["messages"][-1]["content"]
+        for attendu in ("PUBLIC DE CETTE VIDÉO (un seul)", "DEMANDE ÉCRITE", "Réduis le titre pour qu'il tienne dans le cadre", "CODE SOURCE", "taille: 168"):
+            self.assertIn(attendu, consigne)
+        self.assertNotIn("3 500 FCFA", consigne, "le dossier de l'autre public n'est jamais donné au modèle")
         retry_msgs = calls_b[1]["body"]["messages"]
-        self.assertIn("45", retry_msgs[-1]["content"]); self.assertIn("refusée", retry_msgs[-1]["content"])
+        self.assertIn("mot pour mot", retry_msgs[-1]["content"]); self.assertIn("refusée", retry_msgs[-1]["content"])
         self.assertFalse(any(s["path"].startswith("/c/") for s in SEEN), "un fournisseur sans clé n'est jamais appelé")
         self.assertGreaterEqual(self.state.quota_used("llm:b"), 2)
 
@@ -169,7 +179,7 @@ class Net(unittest.TestCase):
         cfg = {"stats": {"check_after_hours": [24, 72, 168]}}
         for i, hours in enumerate([25, 26, 30, 2]):
             at = (now() - dt.timedelta(hours=hours)).isoformat(timespec="seconds")
-            self.state.add_post({"id": f"p{i}", "created": at, "title": f"vidéo {i}", "brief": {"format": "liste"},
+            self.state.add_post({"id": f"p{i}", "created": at, "title": f"vidéo {i}", "brief": {"segment": "commercant", "sujet": 5}, "duration": 40,
                                  "published": {"tiktok": {"via": "buffer", "id": f"post_{i}", "status": "sent", "at": at},
                                                "facebook": {"status": "skipped"}}, "stats": {}})
         n = stats.collect(self.state, cfg, lambda *_: None)
@@ -181,7 +191,7 @@ class Net(unittest.TestCase):
 
     def test_mode_essai_ne_publie_rien(self):
         cfg = {"publish": {"dry_run": True, "via": "buffer", "networks": ["tiktok"]}}
-        out = publish_all("/tmp/x.mp4", {"caption": "c", "hashtags": []}, 0, None, cfg, self.state, lambda *_: None)
+        out = publish_all("/tmp/x.mp4", {"title": "t", "caption": "c", "hashtags": []}, 0, None, cfg, self.state, lambda *_: None)
         self.assertEqual(out["tiktok"]["status"], "dry_run")
         self.assertEqual(SEEN, [])
 
