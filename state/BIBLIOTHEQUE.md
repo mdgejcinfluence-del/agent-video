@@ -9,7 +9,7 @@
 
 | Identifiant | Titre | Catégorie | Outil | Type | Statut | Vérification | Date | Vidéos |
 |---|---|---|---|---|---|---|---|---|
-| P-0002 | Tes consignes permanentes pour ChatGPT | Commandes et fonctions méconnues | ChatGPT | reglage | validé | page officielle relue | 2026-11-11 | demo-p2_consignes |
+| P-0002 | Tes consignes permanentes pour ChatGPT | Commandes et fonctions méconnues | ChatGPT | reglage | validé | page officielle relue | 2026-11-11 | demo-p2_consignes, 20261112-2005-consignes |
 | P-0001 | Cinq idées de business adaptées à ton budget | Business et entrepreneuriat | ChatGPT | prompt | à vérifier | non testé (aucune clé GEMINI_API_KEY) | — | demo-p1_business, 20261112-1458-business |
 
 ## P-0002 — Tes consignes permanentes pour ChatGPT
@@ -17,7 +17,7 @@
 - **Catégorie** : Commandes et fonctions méconnues · **Outil** : ChatGPT · **Type** : reglage
 - **Fonction recherchée** : Texte à coller une fois dans les instructions personnalisées : ChatGPT en tient compte dans toutes les discussions
 - **Statut** : validé — page officielle relue (help.openai.com — ChatGPT Custom Instructions), le 2026-11-11
-- **Vidéo(s)** : demo-p2_consignes (essai)
+- **Vidéo(s)** : demo-p2_consignes (essai), 20261112-2005-consignes (essai)
 
 **Prompt complet**
 

@@ -47,6 +47,11 @@
      "id": "demo-p2_consignes",
      "le": "2026-11-11",
      "publiee": false
+    },
+    {
+     "id": "20261112-2005-consignes",
+     "le": "2026-11-12",
+     "publiee": false
     }
    ],
    "titre": "Tes consignes permanentes pour ChatGPT",
