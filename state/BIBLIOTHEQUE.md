@@ -10,7 +10,7 @@
 | Identifiant | Titre | Catégorie | Outil | Type | Statut | Vérification | Date | Vidéos |
 |---|---|---|---|---|---|---|---|---|
 | P-0002 | Tes consignes permanentes pour ChatGPT | Commandes et fonctions méconnues | ChatGPT | reglage | validé | page officielle relue | 2026-11-11 | demo-p2_consignes, 20261112-2005-consignes, 20261114-1329-consignes, 20261115-1356-consignes, 20261116-1954-consignes, 20261117-2059-consignes, 20261119-2037-consignes, 20261120-1814-consignes, 20261121-1910-consignes, 20261122-2143-consignes |
-| P-0001 | Cinq idées de business adaptées à ton budget | Business et entrepreneuriat | ChatGPT | prompt | à vérifier | non testé (aucune clé GEMINI_API_KEY) | — | demo-p1_business, 20261112-1458-business, 20261113-1424-business, 20261114-2008-business, 20261115-1857-business, 20261117-1552-business, 20261118-1830-business, 20261120-1519-business, 20261121-1441-business, 20261122-1434-business |
+| P-0001 | Cinq idées de business adaptées à ton budget | Business et entrepreneuriat | ChatGPT | prompt | à vérifier | non testé (aucune clé GEMINI_API_KEY) | — | demo-p1_business, 20261112-1458-business, 20261113-1424-business, 20261114-2008-business, 20261115-1857-business, 20261117-1552-business, 20261118-1830-business, 20261120-1519-business, 20261121-1441-business, 20261122-1434-business, 20261124-2041-business |
 
 ## P-0002 — Tes consignes permanentes pour ChatGPT
 
@@ -36,7 +36,7 @@ Je m'appelle [prénom] et je vis à [ville]. Je suis [métier]. Réponds-moi tou
 - **Catégorie** : Business et entrepreneuriat · **Outil** : ChatGPT · **Type** : prompt
 - **Fonction recherchée** : Obtenir cinq activités possibles avec un petit capital : investissement, clients, risques, prix, premières étapes
 - **Statut** : à vérifier — non testé (aucune clé GEMINI_API_KEY)
-- **Vidéo(s)** : demo-p1_business (essai), 20261112-1458-business (essai), 20261113-1424-business (essai), 20261114-2008-business (essai), 20261115-1857-business (essai), 20261117-1552-business (essai), 20261118-1830-business (essai), 20261120-1519-business (essai), 20261121-1441-business (essai), 20261122-1434-business (essai)
+- **Vidéo(s)** : demo-p1_business (essai), 20261112-1458-business (essai), 20261113-1424-business (essai), 20261114-2008-business (essai), 20261115-1857-business (essai), 20261117-1552-business (essai), 20261118-1830-business (essai), 20261120-1519-business (essai), 20261121-1441-business (essai), 20261122-1434-business (essai), 20261124-2041-business (essai)
 
 **Prompt complet**
 
